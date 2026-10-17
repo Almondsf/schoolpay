@@ -1,0 +1,93 @@
+# Full stack: Postgres, Redis, migrations, API, Celery worker + beat, web app.
+#   cp .env.example .env      # fill in the secrets
+#   docker compose up -d --build
+#   open http://localhost:8080 (API health: http://localhost:8080/api/v1/health)
+x-backend: &backend
+  build: ./backend
+  image: schoolpay-backend:local
+  environment: &backend-env
+    ENVIRONMENT: production
+    SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+    FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:?set FIELD_ENCRYPTION_KEYS in .env}
+    DATABASE_URL: postgresql+psycopg://schoolpay_app:${APP_DB_PASSWORD}@db:5432/schoolpay
+    REDIS_URL: redis://redis:6379/0
+    RATE_LIMIT_STORAGE_URL: redis://redis:6379/1
+    FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+    CORS_ORIGINS: ${FRONTEND_URL:-http://localhost:8080}
+    NUM_PROXIES: "1"
+  read_only: true
+  tmpfs: [/tmp]
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: schoolpay
+      POSTGRES_USER: schoolpay
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schoolpay -d schoolpay"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # One-shot: applies migrations as the schema owner, under an advisory lock
+  migrate:
+    <<: *backend
+    environment:
+      MIGRATION_DATABASE_URL: postgresql+psycopg://schoolpay:${POSTGRES_PASSWORD}@db:5432/schoolpay
+    command: ["python", "-m", "app.core.migrate"]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: "no"
+
+  backend:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      FORWARDED_ALLOW_IPS: "*"  # only reachable through the frontend proxy on the compose network
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "-l", "info", "--concurrency", "2"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck: {disable: true}
+
+  beat:
+    <<: *backend
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "-l", "info", "--schedule", "/tmp/celerybeat-schedule"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck: {disable: true}
+
+  frontend:
+    build: ./frontend
+    image: schoolpay-frontend:local
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on: [backend]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

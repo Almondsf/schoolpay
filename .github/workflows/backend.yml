@@ -1,0 +1,60 @@
+name: Backend
+
+on:
+  push:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: backend}}
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env: {POSTGRES_DB: schoolpay_test, POSTGRES_USER: schoolpay, POSTGRES_PASSWORD: schoolpay}
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://schoolpay:schoolpay@localhost:5432/schoolpay_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with: {version: "0.13.1", enable-cache: true}
+      - uses: actions/setup-python@v6
+        with: {python-version: "3.12"}
+      - run: uv sync --locked
+      - name: requirements.lock matches uv.lock
+        run: |
+          uv export --locked --no-dev --no-emit-project --format requirements-txt -o /tmp/requirements.lock
+          diff <(grep -v '^#' requirements.lock) <(grep -v '^#' /tmp/requirements.lock)
+      - run: uv run ruff check app tests alembic
+      - run: uv run ruff format --check app tests alembic
+      - run: uv run mypy app
+      - name: Migrations apply with only the migration URL (no API secrets)
+        run: env -i PATH="$PATH" MIGRATION_DATABASE_URL="$TEST_DATABASE_URL" uv run --no-sync python -m app.core.migrate
+      - name: Models and migrations agree
+        run: env -i PATH="$PATH" MIGRATION_DATABASE_URL="$TEST_DATABASE_URL" uv run --no-sync alembic check
+      - run: uv run pytest
+      - name: Frontend API types are up to date
+        run: |
+          uv run python -m app.openapi > /tmp/openapi.json
+          diff -u ../frontend/openapi.json /tmp/openapi.json
+        env:
+          SECRET_KEY: ci-only-openapi-export-key-0123456789abcdef
+          DATABASE_URL: postgresql+psycopg://x@localhost/x
+          FIELD_ENCRYPTION_KEYS: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          ENVIRONMENT: test
+      - name: Dependency audit
+        run: uv run pip-audit -r requirements.lock --require-hashes --disable-pip
+
+  image:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build --target runtime -t schoolpay-backend:ci backend

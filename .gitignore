@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+*.egg-info/
+
+# Environments and secrets
+.env
+.venv/
+venv/
+
+.ruff_cache/
+*.sqlite3
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# Local planning / AI context (kept out of the repo)
+CLAUDE.md
+PLAN.md
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# TypeScript build info
+*.tsbuildinfo

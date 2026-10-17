@@ -1,0 +1,61 @@
+name: Frontend
+
+on:
+  push:
+    paths: ["frontend/**", "backend/app/**", ".github/workflows/frontend.yml"]
+  pull_request:
+    paths: ["frontend/**", "backend/app/**", ".github/workflows/frontend.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: {node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci --no-audit --no-fund
+      - name: Generated API types match openapi.json
+        run: npm run gen:api && git diff --exit-code src/api/schema.d.ts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  image:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t schoolpay-frontend:ci frontend
+
+  # Browser tests: real API + Vite servers on a seeded throwaway database, driven by Playwright
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env: {POSTGRES_DB: schoolpay_e2e, POSTGRES_USER: schoolpay, POSTGRES_PASSWORD: schoolpay}
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgresql+psycopg://schoolpay:schoolpay@localhost:5432/schoolpay_e2e
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with: {version: "0.13.1", enable-cache: true}
+      - uses: actions/setup-python@v6
+        with: {python-version: "3.12"}
+      - run: uv sync --locked --no-dev
+        working-directory: backend
+      - uses: actions/setup-node@v5
+        with: {node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci --no-audit --no-fund
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run e2e
+        working-directory: frontend

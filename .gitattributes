@@ -1,0 +1,6 @@
+# LF everywhere: shell scripts and Dockerfiles run in Linux containers
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.xlsx binary

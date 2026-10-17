@@ -1,0 +1,97 @@
+[project]
+name = "schoolpay-backend"
+version = "0.1.0"
+description = "SchoolPay API: school fee invoicing, payment reconciliation and parent portal"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.143.3",
+    "uvicorn[standard]==0.54.0",
+    "pydantic==2.14.1",
+    "pydantic-settings==2.16.0",
+    "email-validator==2.3.0",
+    "python-multipart==0.0.32",
+    "sqlalchemy==2.1.5",
+    "alembic==1.20.0",
+    "psycopg[binary]==3.3.6",
+    "celery[redis]==5.6.3",
+    "redis==6.4.0",
+    "pyjwt==2.15.1",
+    "pwdlib[argon2]==0.3.1",
+    "pyotp==2.10.0",
+    "cryptography==50.0.2",
+    "httpx==0.28.1",
+    "limits==5.8.0",
+    "reportlab==5.0.1",
+    "qrcode==8.2",
+    "openpyxl==3.1.5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "factory-boy==3.3.3",
+    "ruff==0.17.1",
+    "mypy==2.4.0",
+    "celery-types==0.26.0",
+    "pip-audit==2.10.1",
+]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "-q --strict-markers"
+filterwarnings = ["error::sqlalchemy.exc.SAWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "N", "C4", "PT", "DTZ"]
+ignore = [
+    "B008",    # FastAPI's Depends() in defaults is the idiom
+    "RUF012",  # class-level mutable defaults are fine on SQLAlchemy/Pydantic models
+    "N818",    # HTTP-style error names (NotFound, Conflict) read better than NotFoundError
+    "N805",    # SQLAlchemy declared_attr methods take cls
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["alembic"]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S311", "PT018"]
+# Names like PASSWORD_CHANGED / token_type / password_reset_rate aren't secrets
+"app/modules/audit/models.py" = ["S105"]
+"app/modules/accounts/schemas.py" = ["S105"]
+"app/core/config.py" = ["S105"]
+"alembic/**" = ["S608"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/versions/"]
+
+[[tool.mypy.overrides]]
+module = ["qrcode.*", "reportlab.*", "openpyxl.*", "factory.*", "kombu.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
