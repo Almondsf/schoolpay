@@ -22,7 +22,9 @@ from app.models import load_all_models
 from app.modules.accounts.router import auth_router, staff_router
 from app.modules.audit.router import audit_router, platform_audit_router
 from app.modules.health.router import router as health_router
+from app.modules.schools.academics_router import router as academics_router
 from app.modules.schools.router import platform_schools_router, school_router
+from app.modules.students.router import router as students_router
 
 API_PREFIX = "/api/v1"
 
@@ -37,6 +39,8 @@ def build_api_router() -> APIRouter:
         audit_router,
         platform_schools_router,
         platform_audit_router,
+        academics_router,
+        students_router,
     ):
         api.include_router(router)
     return api

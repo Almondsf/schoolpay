@@ -15,13 +15,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 5. [Tenancy: one deployment, many schools](#5-tenancy-one-deployment-many-schools)
 6. [Accounts, sign-in and roles](#6-accounts-sign-in-and-roles)
 7. [Audit trail](#7-audit-trail)
-8. [Backend layout and conventions](#8-backend-layout-and-conventions)
-9. [Background jobs and the outbox](#9-background-jobs-and-the-outbox)
-10. [API](#10-api)
-11. [Configuration](#11-configuration)
-12. [Frontend](#12-frontend)
-13. [Testing](#13-testing)
-14. [Known gaps](#14-known-gaps)
+8. [School setup: calendar, classes, students](#8-school-setup-calendar-classes-students)
+9. [Backend layout and conventions](#9-backend-layout-and-conventions)
+10. [Background jobs and the outbox](#10-background-jobs-and-the-outbox)
+11. [API](#11-api)
+12. [Configuration](#12-configuration)
+13. [Frontend](#13-frontend)
+14. [Testing](#14-testing)
+15. [Known gaps](#15-known-gaps)
 
 ---
 
@@ -194,7 +195,59 @@ values, IP, user agent and request id. Values pass through redaction first.
 - Both tables are **append-only in the database**: triggers refuse UPDATE,
   DELETE and TRUNCATE, whatever the application does.
 
-## 8. Backend layout and conventions
+## 8. School setup: calendar, classes, students
+
+**Calendar** (`app/modules/schools`). An `AcademicSession` ("2026/2027") has
+exactly three `Term`s, whose dates must fall inside the session and not
+overlap. Exactly one term per school is **current** (a partial unique index
+enforces it). The console defaults to it, new students are enrolled into it,
+and later chunks bill it.
+
+**Classes.** A `ClassLevel` ("JSS 1", "Primary 4") has one or more `Arm`s
+("A", "Gold"). `rank` orders levels for promotion and can be changed
+(`PUT /class-levels/order`). Levels and arms are retired (`is_active`), never
+deleted, because enrolment history refers to them.
+
+**Students** (`app/modules/students`). A `Student` has an admission number
+(unique per school), names, and optional gender and date of birth; `status`
+is `active`, `withdrawn` or `graduated`. Where a student is each term is an
+`Enrollment` (one row per student per term). That keeps class history, and
+each term's fees use that term's class. A composite foreign key
+(`arm_id`, `class_level_id`) → `arms(id, class_level_id)` guarantees an
+enrolment's level matches its arm.
+
+**Guardians.** One `Guardian` can have several children at the school
+(`GuardianStudent`), and each child has exactly one **primary** guardian
+(partial unique index), who receives fee notices. Guardians are matched by
+phone, so siblings share one guardian. Phones are normalised to E.164
+(`app/core/phone.py`: `0803…`, `234803…` and `+234 803…` are the same
+number). Phone and email are **encrypted**, and `phone_index` (a keyed blind
+index) is what lookups and the per-school uniqueness constraint use. The same
+parent at two schools is two separate guardian rows, one per school.
+Consent is recorded per guardian (`consent_at`, `consent_method`). Staff must
+confirm the school has it before guardian details are saved.
+
+**Spreadsheet import** (`students/importer.py`, `POST /students/import`).
+It reads `.xlsx` or `.csv` and matches headers loosely: "Adm No", "Reg No"
+and "Admission Number" are all the admission number, and
+Guardian/Parent/Father/Mother columns are recognised. Classes can be one
+column ("JSS 1A", "Primary 4 Gold") or class + arm. The whole file is
+validated first and every problem is reported with its row number.
+`dry_run=true` previews without saving. A real run imports the valid rows.
+Re-importing is safe: existing admission numbers are skipped, or updated with
+`mode=update`. **It runs a fixed number of queries whatever the file size**
+(tests assert this). 500 students import in about 4 seconds. Limit: 5,000
+rows per file. `GET /students/import-template` gives an Excel template that
+lists the school's classes.
+
+**Moving to the next term** (`students/promotion.py`,
+`POST /terms/{id}/roll-forward`). Within a session, enrolments are copied.
+Between sessions (`promote=true`), students move to the next active level by
+rank, into the arm with the same name (or the only arm). Students in the top
+level graduate, and anyone who can't be placed is listed. Already-enrolled
+students are left alone, so it's safe to re-run. `dry_run` previews it.
+
+## 9. Backend layout and conventions
 
 ```
 backend/app/
@@ -238,7 +291,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 9. Background jobs and the outbox
+## 10. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -273,7 +326,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 10. API
+## 11. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -288,17 +341,23 @@ production.
 | School | `GET/PATCH /school` |
 | Audit | `GET /audit` |
 | Platform | `GET/POST /platform/schools`; `POST /platform/schools/{id}/suspend`, `/reactivate`; `GET /platform/audit` |
+| Calendar | `GET/POST /academic-sessions`; `PATCH /academic-sessions/{id}`; `GET /terms/current`; `PATCH /terms/{id}`; `POST /terms/{id}/make-current` |
+| Classes | `GET/POST /class-levels`; `PUT /class-levels/order`; `PATCH /class-levels/{id}`; `POST /class-levels/{id}/arms`; `PATCH /arms/{id}` |
+| Students | `GET/POST /students`; `GET/PATCH /students/{id}`; `PUT /students/{id}/class`; `POST /students/{id}/withdraw`, `/reinstate` |
+| Guardians | `POST /students/{id}/guardians`; `DELETE /students/{id}/guardians/{gid}`; `POST /students/{id}/guardians/{gid}/primary`; `GET /guardians`; `PATCH /guardians/{id}` |
+| Import | `GET /students/import-template`; `POST /students/import` (multipart) |
+| Promotion | `POST /terms/{id}/roll-forward` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 11. Configuration
+## 12. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 12. Frontend
+## 13. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -311,12 +370,17 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - **Console** (`src/console/`): sign-in (with the two-factor step), forgot
   and set password, account (password, MFA enrolment with a QR code and
   recovery codes), staff, activity log, school profile, and platform schools.
+  School setup: **Calendar** (sessions and terms, make current, move students
+  to the next term with a preview), **Classes** (levels in promotion order,
+  arms, retire/restore), **Students** (search and filter by term, class and
+  status; add; detail with class history, guardians, withdraw/reinstate) and
+  **Import** (template, upload, preview with row-by-row problems, import).
   Navigation and routes are filtered by the user's capabilities. Users who
   must enrol in MFA can only reach their account page until they do.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 13. Testing
+## 14. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -327,14 +391,19 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - **End-to-end:** Playwright (`frontend/e2e/`) starts its own API (port 8102) and
   Vite (5185) against a throwaway database seeded by `python -m app.cli seed-demo
   --reset`. Run `npm run e2e`; on Windows `PW_CHANNEL=msedge` uses the installed Edge.
-- **Demo data:** `python -m app.cli seed-demo` creates "Demo Model College"
-  with a proprietor, bursar, school admin and platform admin (password
-  `demo-password-123`, MFA secret `JBSWY3DPEHPK3PXP`). It refuses to run in production.
+- **Demo data:** `python -m app.cli seed-demo` (`app/demo.py`) creates "Demo
+  Model College" with a proprietor, bursar, school admin and platform admin
+  (password `demo-password-123`, MFA secret `JBSWY3DPEHPK3PXP`), the 2026/2027
+  calendar (first term current), classes Primary 1 to SSS 3, and 60 students
+  with guardians (siblings share a parent). It refuses to run in production.
+- **Query counts:** `tests/factories.py` has a `QueryCounter`. Bulk operations
+  (import, roll-forward, outbox dispatch) have tests asserting their query
+  count doesn't grow with the number of rows.
 - **CI** (`.github/workflows/`): lint, types, tests, migration check, lockfile
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 14. Known gaps
+## 15. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

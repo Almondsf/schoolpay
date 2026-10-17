@@ -448,3 +448,124 @@ hr {
     padding: 8px 10px;
   }
 }
+
+/* --- Setup and students ----------------------------------------------------------------------- */
+
+.section {
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filters input,
+.filters select {
+  width: auto;
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+
+.grid-2.tight {
+  gap: 0 12px;
+}
+
+.checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0 12px;
+}
+
+.checkbox input {
+  width: auto;
+  margin-top: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.chip.retired,
+tr.retired td {
+  color: var(--muted);
+}
+
+.chip.retired {
+  text-decoration: line-through;
+}
+
+.row.between {
+  justify-content: space-between;
+}
+
+.guardian {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+}
+
+.details dt {
+  color: var(--muted);
+}
+
+.details dd {
+  margin: 0;
+}
+
+ul.plain {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.plain li {
+  padding: 4px 0;
+}
+
+.problems {
+  max-height: 240px;
+  overflow-y: auto;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+a.button {
+  display: inline-block;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: #fff;
+  text-decoration: none;
+}
+
+a.button.secondary {
+  background: #fff;
+  color: var(--green);
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 12px 0 8px;
+}

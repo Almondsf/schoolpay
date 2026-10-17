@@ -2,10 +2,10 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, String, func
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.base import Base, Timestamped, UUIDPrimaryKey
+from app.core.base import Base, Timestamped, UUIDPrimaryKey, enum_type
 from app.core.crypto import EncryptedString
 from app.modules.schools.models import School
 
@@ -19,10 +19,6 @@ class Role(enum.StrEnum):
 
 
 STAFF_ROLES = (Role.PROPRIETOR, Role.BURSAR, Role.SCHOOL_ADMIN)
-
-
-def enum_column(enum_cls: type[enum.StrEnum], name: str) -> Enum:
-    return Enum(enum_cls, name=name, values_callable=lambda e: [m.value for m in e])
 
 
 class User(UUIDPrimaryKey, Timestamped, Base):
@@ -49,7 +45,7 @@ class User(UUIDPrimaryKey, Timestamped, Base):
     school_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("schools.id", ondelete="RESTRICT"), index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     full_name: Mapped[str] = mapped_column(String(150))
-    role: Mapped[Role] = mapped_column(enum_column(Role, "user_role"))
+    role: Mapped[Role] = mapped_column(enum_type(Role, "user_role"))
     # Null until the invited person sets a password
     password_hash: Mapped[str | None] = mapped_column(String(255))
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

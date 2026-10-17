@@ -44,6 +44,20 @@ class AuditAction(enum.StrEnum):
     SCHOOL_UPDATED = "school.updated"
     SCHOOL_SUSPENDED = "school.suspended"
     SCHOOL_REACTIVATED = "school.reactivated"
+    ACADEMIC_SESSION_CREATED = "calendar.session_created"
+    ACADEMIC_CALENDAR_UPDATED = "calendar.updated"
+    CURRENT_TERM_CHANGED = "calendar.current_term_changed"
+    CLASS_STRUCTURE_CHANGED = "classes.changed"
+    STUDENT_CREATED = "students.created"
+    STUDENT_UPDATED = "students.updated"
+    STUDENT_CLASS_CHANGED = "students.class_changed"
+    STUDENT_WITHDRAWN = "students.withdrawn"
+    STUDENT_REINSTATED = "students.reinstated"
+    STUDENTS_IMPORTED = "students.imported"
+    STUDENTS_ROLLED_FORWARD = "students.rolled_forward"
+    GUARDIAN_LINKED = "guardians.linked"
+    GUARDIAN_UNLINKED = "guardians.unlinked"
+    GUARDIAN_CONTACT_CHANGED = "guardians.contact_changed"
 
 
 class _AuditColumns(UUIDPrimaryKey):

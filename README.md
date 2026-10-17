@@ -44,7 +44,7 @@ API docs: http://localhost:8002/api/docs (not served in production).
 Demo data and the first admin:
 
 ```bash
-uv run python -m app.cli seed-demo        # "Demo Model College"; every password is demo-password-123
+uv run python -m app.cli seed-demo        # "Demo Model College": staff, calendar, classes, 60 students; password demo-password-123
 uv run python -m app.cli create-platform-admin --email you@example.com --name "Your Name"   # prints a set-password link
 ```
 

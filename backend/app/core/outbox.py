@@ -25,11 +25,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import DateTime, Enum, Index, Integer, String, event, func, select, update
+from sqlalchemy import DateTime, Index, Integer, String, event, func, select, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from app.core.base import Base, UUIDPrimaryKey
+from app.core.base import Base, UUIDPrimaryKey, enum_type
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +52,7 @@ class OutboxTask(UUIDPrimaryKey, Base):
 
     task_name: Mapped[str] = mapped_column(String(100))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
-    status: Mapped[OutboxStatus] = mapped_column(
-        Enum(OutboxStatus, name="outbox_status", values_callable=lambda e: [m.value for m in e]),
-        default=OutboxStatus.PENDING,
-    )
+    status: Mapped[OutboxStatus] = mapped_column(enum_type(OutboxStatus, "outbox_status"), default=OutboxStatus.PENDING)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_error: Mapped[str] = mapped_column(String(300), default="")

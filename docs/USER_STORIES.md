@@ -19,8 +19,12 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## School admin
 - ✅ Keep the school's profile (name, address, phone, email) up to date.
-- Set up sessions, terms, classes and arms.
-- Load the student list from the school's existing spreadsheet.
+- ✅ Set up the session and its three terms, and say which term is current.
+- ✅ Set up classes and arms in promotion order, and retire ones no longer used.
+- ✅ Load the student list from the school's existing spreadsheet (Excel or CSV), see every problem by row number before saving, and re-import safely.
+- ✅ Add a student by hand with their parent, change their class, withdraw or reinstate them.
+- ✅ Link parents to children; brothers and sisters share one parent record.
+- ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
 - Sign in with a phone number and a one-time code (no password to forget).

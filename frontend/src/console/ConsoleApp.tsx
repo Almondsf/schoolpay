@@ -10,6 +10,11 @@ import { ForgotPassword, SetPassword } from './auth/PasswordPages';
 import { Dashboard } from './Dashboard';
 import { PlatformSchools } from './platform/Schools';
 import { SchoolProfile } from './SchoolProfile';
+import { Calendar } from './setup/Calendar';
+import { Classes } from './setup/Classes';
+import { ImportStudents } from './students/ImportStudents';
+import { StudentDetail } from './students/StudentDetail';
+import { Students } from './students/Students';
 import { StaffPage } from './Staff';
 
 interface NavItem {
@@ -20,6 +25,9 @@ interface NavItem {
 
 const SCHOOL_NAV: NavItem[] = [
   { to: '/console', label: 'Overview', capability: 'school.view' },
+  { to: '/console/students', label: 'Students', capability: 'students.view' },
+  { to: '/console/classes', label: 'Classes', capability: 'school.view' },
+  { to: '/console/calendar', label: 'Calendar', capability: 'school.view' },
   { to: '/console/staff', label: 'Staff', capability: 'staff.view' },
   { to: '/console/audit', label: 'Activity log', capability: 'audit.view' },
   { to: '/console/school', label: 'School profile', capability: 'school.view' },
@@ -40,6 +48,11 @@ export function ConsoleApp() {
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="account" element={<Account />} />
+          <Route path="students" element={<Guard capability="students.view"><Students /></Guard>} />
+          <Route path="students/import" element={<Guard capability="students.manage"><ImportStudents /></Guard>} />
+          <Route path="students/:studentId" element={<Guard capability="students.view"><StudentDetail /></Guard>} />
+          <Route path="classes" element={<Guard capability="school.view"><Classes /></Guard>} />
+          <Route path="calendar" element={<Guard capability="school.view"><Calendar /></Guard>} />
           <Route path="staff" element={<Guard capability="staff.view"><StaffPage /></Guard>} />
           <Route path="audit" element={<Guard capability="audit.view"><AuditLog /></Guard>} />
           <Route path="school" element={<Guard capability="school.view"><SchoolProfile /></Guard>} />

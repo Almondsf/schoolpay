@@ -43,6 +43,8 @@ It is updated with every change that affects security.
   known), so the staff service pins `school_id` explicitly. Tests prove a school
   can't list, view, edit, deactivate or reset another school's staff by ID.
 - Platform admins have no school capabilities, and school staff have no platform ones.
+- IDs in request bodies (arm, term, guardian) are loaded through the same scoped
+  session, so another school's IDs are simply "not found". Tests cover each one.
 
 ## Platform
 - Safe defaults: `ENVIRONMENT=production`, `DEBUG=false`, empty CORS allowlist.
@@ -67,6 +69,12 @@ It is updated with every change that affects security.
 - Logs pass through a redaction filter that masks passwords, OTPs, tokens,
   BVNs and account/card numbers. One list of sensitive keys
   (`app/core/redaction.py`) covers logs, audit entries and stored gateway payloads.
+
+## Input handling
+- Spreadsheet imports accept only `.xlsx` and `.csv`, at most 5,000 rows, within
+  the request body limit, and are rate limited per school. Workbooks are read
+  values-only (no formulas or macros run). Every cell is validated before
+  anything is saved.
 
 ## Audit
 - Sign-ins (including failures), session reuse, password/MFA changes, staff and

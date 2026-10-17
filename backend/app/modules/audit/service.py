@@ -8,7 +8,7 @@ before storage, so secrets can't end up in the trail by accident.
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date
 from typing import Any
 
 from sqlalchemy import Select, select
@@ -31,8 +31,8 @@ class Actor:
 
 
 def _jsonable(value: Any) -> Any:
-    if isinstance(value, uuid.UUID | datetime):
-        return str(value)
+    if isinstance(value, uuid.UUID | date):  # datetime is a date too
+        return value.isoformat() if isinstance(value, date) else str(value)
     if hasattr(value, "value") and isinstance(value.value, str):  # enums
         return value.value
     if isinstance(value, dict):

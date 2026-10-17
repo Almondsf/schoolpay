@@ -6,10 +6,11 @@ Primary keys are random UUIDs: they appear in URLs, and sequential integers
 would let one school estimate another's size or probe neighbouring IDs.
 """
 
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import DateTime, Enum, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # Stable constraint names, so Alembic autogenerate and downgrades work predictably
@@ -35,3 +36,8 @@ class Timestamped:
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+def enum_type(enum_cls: type[enum.StrEnum], name: str) -> Enum:
+    """A Postgres enum stored by value ("school_admin"), not by Python member name."""
+    return Enum(enum_cls, name=name, values_callable=lambda e: [m.value for m in e])

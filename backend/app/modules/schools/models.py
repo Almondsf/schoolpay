@@ -1,9 +1,12 @@
 import enum
+import uuid
+from datetime import date
 
-from sqlalchemy import CheckConstraint, Enum, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Index, SmallInteger, String, UniqueConstraint, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.base import Base, Timestamped, UUIDPrimaryKey
+from app.core.base import Base, Timestamped, UUIDPrimaryKey, enum_type
+from app.core.tenancy import TenantMixin
 
 
 class SchoolStatus(enum.StrEnum):
@@ -20,13 +23,91 @@ class School(UUIDPrimaryKey, Timestamped, Base):
     name: Mapped[str] = mapped_column(String(200))
     # Short, URL-safe and unique: used in support lookups and receipt numbers
     slug: Mapped[str] = mapped_column(String(60), unique=True)
-    status: Mapped[SchoolStatus] = mapped_column(
-        Enum(SchoolStatus, name="school_status", values_callable=lambda e: [m.value for m in e]),
-        default=SchoolStatus.ACTIVE,
-    )
+    status: Mapped[SchoolStatus] = mapped_column(enum_type(SchoolStatus, "school_status"), default=SchoolStatus.ACTIVE)
     address: Mapped[str] = mapped_column(String(300), default="")
     phone: Mapped[str] = mapped_column(String(20), default="")
     email: Mapped[str] = mapped_column(String(255), default="")
 
     def __repr__(self) -> str:
         return f"<School {self.slug}>"
+
+
+# --- Academic calendar and structure -----------------------------------------------------------
+
+
+class AcademicSession(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """A school year, e.g. "2026/2027" (September to July), split into three terms."""
+
+    __tablename__ = "academic_sessions"
+    __table_args__ = (
+        UniqueConstraint("school_id", "name"),
+        CheckConstraint("start_date < end_date", name="dates_in_order"),
+    )
+
+    name: Mapped[str] = mapped_column(String(20))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+
+    terms: Mapped[list["Term"]] = relationship(back_populates="session", order_by="Term.number", lazy="raise")
+
+
+class Term(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    One of a session's three terms. Fees are billed per term. Exactly one term
+    per school is current: it's what the console shows by default and where new
+    students are enrolled.
+    """
+
+    __tablename__ = "terms"
+    __table_args__ = (
+        UniqueConstraint("session_id", "number"),
+        CheckConstraint("number BETWEEN 1 AND 3", name="number_range"),
+        CheckConstraint("start_date < end_date", name="dates_in_order"),
+        Index("uq_terms_one_current_per_school", "school_id", unique=True, postgresql_where=text("is_current")),
+    )
+
+    session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("academic_sessions.id", ondelete="RESTRICT"), index=True)
+    number: Mapped[int] = mapped_column(SmallInteger)
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    session: Mapped[AcademicSession] = relationship(back_populates="terms", lazy="raise")
+
+    @property
+    def label(self) -> str:
+        return f"{('First', 'Second', 'Third')[self.number - 1]} term"
+
+
+class ClassLevel(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    A year group, e.g. "JSS 1" or "Primary 4". `rank` orders levels for
+    promotion: at the end of a session students move to the next active level
+    by rank, and students in the highest level graduate.
+    """
+
+    __tablename__ = "class_levels"
+    __table_args__ = (UniqueConstraint("school_id", "name"), UniqueConstraint("school_id", "rank"))
+
+    name: Mapped[str] = mapped_column(String(50))
+    rank: Mapped[int] = mapped_column(SmallInteger)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    arms: Mapped[list["Arm"]] = relationship(back_populates="class_level", order_by="Arm.name", lazy="raise")
+
+
+class Arm(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """A stream within a class level, e.g. JSS 1 "A" or "Gold". Every level has at least one."""
+
+    __tablename__ = "arms"
+    __table_args__ = (
+        UniqueConstraint("class_level_id", "name"),
+        # Target of enrollments' composite FK, which keeps an enrolment's level and arm consistent
+        UniqueConstraint("id", "class_level_id", name="uq_arms_id_level"),
+    )
+
+    class_level_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("class_levels.id", ondelete="RESTRICT"), index=True)
+    name: Mapped[str] = mapped_column(String(30))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    class_level: Mapped[ClassLevel] = relationship(back_populates="arms", lazy="raise")

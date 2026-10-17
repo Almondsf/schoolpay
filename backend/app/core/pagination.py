@@ -27,7 +27,7 @@ class Page[T](BaseModel):
     offset: int
 
 
-def paginate(session: Session, stmt: Select[Any], params: PageParams) -> tuple[list[Any], int]:
+def paginate(session: Session, stmt: Select[*tuple[Any, ...]], params: PageParams) -> tuple[list[Any], int]:
     """Run `stmt` for one page, plus a count of all matching rows. Both are tenant-scoped."""
     total = session.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     rows = list(session.scalars(stmt.limit(params.limit).offset(params.offset)))
