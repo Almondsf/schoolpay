@@ -120,12 +120,12 @@ def make_calendar(school: School, year: int = 2026, current_term: int = 1) -> tu
     return session, terms
 
 
-def make_levels(school: School, spec: dict[str, list[str]] | None = None) -> list[ClassLevel]:
+def make_levels(school: School, spec: dict[str, list[str]] | None = None, first_rank: int = 1) -> list[ClassLevel]:
     """Class levels in rank order with their arms, e.g. {"JSS 1": ["A", "B"], "JSS 2": ["A"]}."""
     spec = spec or {"JSS 1": ["A", "B"], "JSS 2": ["A", "B"], "JSS 3": ["A"]}
     levels = []
     with tenant_writer() as w:
-        for rank, (name, arms) in enumerate(spec.items(), start=1):
+        for rank, (name, arms) in enumerate(spec.items(), start=first_rank):
             level = ClassLevel(id=uuid.uuid4(), school_id=school.id, name=name, rank=rank)
             level.arms = [Arm(id=uuid.uuid4(), school_id=school.id, class_level_id=level.id, name=a) for a in arms]
             levels.append(level)

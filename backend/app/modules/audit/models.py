@@ -58,6 +58,11 @@ class AuditAction(enum.StrEnum):
     GUARDIAN_LINKED = "guardians.linked"
     GUARDIAN_UNLINKED = "guardians.unlinked"
     GUARDIAN_CONTACT_CHANGED = "guardians.contact_changed"
+    FEES_CHANGED = "fees.changed"
+    INVOICES_GENERATED = "invoices.generated"
+    INVOICE_CREATED = "invoices.created"
+    INVOICE_ADJUSTED = "invoices.adjusted"
+    INVOICE_VOIDED = "invoices.voided"
 
 
 class _AuditColumns(UUIDPrimaryKey):

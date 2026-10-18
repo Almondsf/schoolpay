@@ -70,6 +70,16 @@ It is updated with every change that affects security.
   BVNs and account/card numbers. One list of sensitive keys
   (`app/core/redaction.py`) covers logs, audit entries and stored gateway payloads.
 
+## Money
+- All amounts are integer kobo in the database and API; the frontend parses
+  naira text without floating point.
+- Invoice lines are append-only (database trigger) and an invoice can't total
+  below zero (deferred constraint trigger). Corrections are new lines with a
+  reason, and generation, adjustments and voids are audited.
+- Balances are computed from the ledger, never stored, so they can't be edited
+  or drift.
+- Invoice numbers are gapless per school (row-locked counter).
+
 ## Input handling
 - Spreadsheet imports accept only `.xlsx` and `.csv`, at most 5,000 rows, within
   the request body limit, and are rate limited per school. Workbooks are read

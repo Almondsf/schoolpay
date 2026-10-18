@@ -29,3 +29,26 @@ export const ROLE_LABELS: Record<string, string> = {
   platform_admin: 'Platform admin',
   parent: 'Parent',
 };
+
+/**
+ * "150,000.50" / "₦150000" / "-2,000" -> kobo as an integer, or null if it isn't a valid amount.
+ * Parsed as text (never via floats), so 0.1 + 0.2 problems can't creep into money.
+ */
+export function parseNairaToKobo(input: string, { allowNegative = false } = {}): number | null {
+  const cleaned = input.replace(/[₦,\s]/g, '');
+  const match = /^(-)?(\d{1,12})(?:\.(\d{1,2}))?$/.exec(cleaned);
+  if (!match) return null;
+  const [, minus, naira, kobo = ''] = match;
+  if (minus && !allowNegative) return null;
+  const value = Number(naira) * 100 + Number(kobo.padEnd(2, '0'));
+  return minus ? -value : value;
+}
+
+/** kobo -> "150000.50" for editable inputs (no currency sign or separators). */
+export function koboToInput(kobo: number): string {
+  const sign = kobo < 0 ? '-' : '';
+  const abs = Math.abs(kobo);
+  const naira = Math.floor(abs / 100);
+  const rest = abs % 100;
+  return `${sign}${naira}${rest ? `.${String(rest).padStart(2, '0')}` : ''}`;
+}

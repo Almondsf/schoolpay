@@ -1,12 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-async function signInAsAdmin(page: Page) {
-  await page.goto('/console/login');
-  await page.getByLabel('Email').fill('admin@demo.schoolpay.ng');
-  await page.getByLabel('Password').fill('demo-password-123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
-}
+import { signIn } from './helpers';
+
+const signInAsAdmin = (page: Parameters<typeof signIn>[0]) => signIn(page, 'admin@demo.schoolpay.ng');
 
 test('school admin imports students from a spreadsheet', async ({ page }) => {
   await signInAsAdmin(page);

@@ -32,3 +32,10 @@ def paginate(session: Session, stmt: Select[*tuple[Any, ...]], params: PageParam
     total = session.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     rows = list(session.scalars(stmt.limit(params.limit).offset(params.offset)))
     return rows, total
+
+
+def paginate_rows(session: Session, stmt: Select[*tuple[Any, ...]], params: PageParams) -> tuple[list[Any], int]:
+    """Like `paginate`, for multi-column selects: returns whole rows instead of the first column."""
+    total = session.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    rows = list(session.execute(stmt.limit(params.limit).offset(params.offset)).all())
+    return rows, total

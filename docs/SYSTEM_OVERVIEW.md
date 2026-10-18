@@ -16,13 +16,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 6. [Accounts, sign-in and roles](#6-accounts-sign-in-and-roles)
 7. [Audit trail](#7-audit-trail)
 8. [School setup: calendar, classes, students](#8-school-setup-calendar-classes-students)
-9. [Backend layout and conventions](#9-backend-layout-and-conventions)
-10. [Background jobs and the outbox](#10-background-jobs-and-the-outbox)
-11. [API](#11-api)
-12. [Configuration](#12-configuration)
-13. [Frontend](#13-frontend)
-14. [Testing](#14-testing)
-15. [Known gaps](#15-known-gaps)
+9. [Fees and invoices](#9-fees-and-invoices)
+10. [Backend layout and conventions](#10-backend-layout-and-conventions)
+11. [Background jobs and the outbox](#11-background-jobs-and-the-outbox)
+12. [API](#12-api)
+13. [Configuration](#13-configuration)
+14. [Frontend](#14-frontend)
+15. [Testing](#15-testing)
+16. [Known gaps](#16-known-gaps)
 
 ---
 
@@ -247,7 +248,65 @@ rank, into the arm with the same name (or the only arm). Students in the top
 level graduate, and anyone who can't be placed is listed. Already-enrolled
 students are left alone, so it's safe to re-run. `dry_run` previews it.
 
-## 9. Backend layout and conventions
+## 9. Fees and invoices
+
+Module: `app/modules/fees`. All amounts are **integer kobo** (`BigInteger`);
+the frontend parses naira text to kobo without floats.
+
+**Setup** (`setup_service.py`):
+
+- `FeeItem`: something the school charges for (Tuition, School bus, PTA levy),
+  with a category. Items are retired, not deleted.
+- `FeeSchedule`: what an item costs for one class level in one term. An entry
+  can be **optional** (bus, lunch): optional items are billed only to students
+  opted in for that term (`StudentFeeChoice`). Schedules are set in bulk
+  (`PUT /terms/{id}/fee-schedule`, a grid in the console) and can be copied
+  from another term.
+- `Discount`: a percentage (basis points, 1000 = 10%) or a fixed amount, on all
+  fees or one item. `manual` discounts are given to chosen students
+  (`StudentDiscount`: scholarship, staff child). `sibling` discounts apply
+  automatically: students sharing any guardian form a family, the eldest
+  (highest class, then lowest admission number) pays in full, and every
+  younger child gets the discount.
+
+Changing setup affects invoices generated afterwards only. Issued invoices are
+ledger records and are never rewritten.
+
+**The ledger** (`models.py`). An `Invoice` belongs to one student and is one of:
+`term` (the term's fees; at most one live one per student per term),
+`opening_balance` (debt from before the school joined SchoolPay) or `adhoc` (a
+one-off charge). Its total is the **sum of its `InvoiceLine`s**: `fee` lines
+(positive), `discount` lines (negative) and `adjustment` lines (later
+corrections, either sign, with a reason). Rules enforced by the database:
+
+- Lines are **append-only**: a trigger refuses UPDATE, DELETE and TRUNCATE. A
+  mistake is fixed with a new adjustment line, so the history stays visible.
+- An invoice can never total below zero (deferred constraint trigger, checked
+  at commit).
+- Voiding is allowed only while nothing has been paid. A voided invoice keeps
+  its lines but no longer counts as owed.
+- Invoice numbers are per school and **gapless**: `app/core/sequences.py`
+  reserves a block in one statement under a row lock, and a rollback gives the
+  numbers back.
+
+**Balances are never stored.** Every figure (an invoice's paid and balance, a
+student's billed, paid and owed, a term's billed, collected and outstanding)
+is computed from lines and payments. `ledger.paid_subquery()` is the one place
+the "paid" side comes from. Arrears carry forward naturally: earlier unpaid
+invoices stay open, the student's "owed" figure includes them, and payments
+(next chunk) clear the oldest first. Tests check that the term summary, the
+invoice list and the sum of all lines agree.
+
+**Generating a term's invoices** (`invoicing.py`,
+`POST /terms/{id}/invoices/generate`): one click invoices every active student
+enrolled that term. Each gets their class's compulsory fees, the optional items
+they're opted in to, and their discounts (capped so an invoice never goes
+negative). Students already invoiced are skipped, so it's safe to re-run after
+adding students. `dry_run` returns a preview with totals per class and any
+classes with no fees set. It runs **a fixed number of queries** whatever the
+number of students (tested), and 60 invoices take about 0.4 s.
+
+## 10. Backend layout and conventions
 
 ```
 backend/app/
@@ -291,7 +350,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 10. Background jobs and the outbox
+## 11. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -326,7 +385,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 11. API
+## 12. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -347,17 +406,20 @@ production.
 | Guardians | `POST /students/{id}/guardians`; `DELETE /students/{id}/guardians/{gid}`; `POST /students/{id}/guardians/{gid}/primary`; `GET /guardians`; `PATCH /guardians/{id}` |
 | Import | `GET /students/import-template`; `POST /students/import` (multipart) |
 | Promotion | `POST /terms/{id}/roll-forward` |
+| Fee setup | `GET/POST /fee-items`; `PATCH /fee-items/{id}`; `GET/PUT /terms/{id}/fee-schedule`; `POST /terms/{id}/fee-schedule/copy`; `GET/PUT /terms/{id}/optional-fees` |
+| Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
+| Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 12. Configuration
+## 13. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 13. Frontend
+## 14. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -375,12 +437,19 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   arms, retire/restore), **Students** (search and filter by term, class and
   status; add; detail with class history, guardians, withdraw/reinstate) and
   **Import** (template, upload, preview with row-by-row problems, import).
+  Money: **Fees** (fee items, a per-term grid of amounts per class with
+  optional flags and copy-from-term, discounts), **Billing** (term summary,
+  one-click generation with preview, invoice list filtered by status, class and
+  search), **Invoice** detail (lines, add a charge, correct an amount, void),
+  and a **Fees** panel on each student (owed/billed/paid, invoices, discounts,
+  opening balance, one-off charges). `src/lib/format.ts` converts between naira
+  text and kobo with string arithmetic.
   Navigation and routes are filtered by the user's capabilities. Users who
   must enrol in MFA can only reach their account page until they do.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 14. Testing
+## 15. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -394,8 +463,10 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - **Demo data:** `python -m app.cli seed-demo` (`app/demo.py`) creates "Demo
   Model College" with a proprietor, bursar, school admin and platform admin
   (password `demo-password-123`, MFA secret `JBSWY3DPEHPK3PXP`), the 2026/2027
-  calendar (first term current), classes Primary 1 to SSS 3, and 60 students
-  with guardians (siblings share a parent). It refuses to run in production.
+  calendar (first term current), classes Primary 1 to SSS 3, 60 students
+  with guardians (siblings share a parent), and first-term fees (tuition by
+  class, optional bus, levies, a sibling discount); invoices are left for you
+  to generate. It refuses to run in production.
 - **Query counts:** `tests/factories.py` has a `QueryCounter`. Bulk operations
   (import, roll-forward, outbox dispatch) have tests asserting their query
   count doesn't grow with the number of rows.
@@ -403,7 +474,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 15. Known gaps
+## 16. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

@@ -2,8 +2,10 @@
 Demo data for local development and browser tests: `python -m app.cli seed-demo`.
 
 Builds "Demo Model College" with staff, the 2026/2027 calendar, classes from
-Primary 1 to SSS 3, and 60 students with guardians (some siblings share a
-parent). Refuses to run in production. Everything is inserted in a few bulk
+Primary 1 to SSS 3, 60 students with guardians (some siblings share a
+parent), and first-term fees (tuition by class, optional bus, levies, a
+sibling discount). Invoices aren't generated, so that step can be tried.
+Refuses to run in production. Everything is inserted in a few bulk
 statements.
 """
 
@@ -21,6 +23,7 @@ from app.core.tenancy import scope_platform_wide
 from app.models import load_all_models
 from app.modules.accounts.models import Role, User
 from app.modules.accounts.security import hash_password
+from app.modules.fees.models import Discount, DiscountKind, DiscountRule, FeeCategory, FeeItem, FeeSchedule
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, School, Term
 from app.modules.students.models import (
     ConsentMethod,
@@ -93,7 +96,8 @@ def seed_demo(mfa_secret: str, reset: bool) -> None:
         _staff(session, school, mfa_secret)
         term = _calendar(session, school)
         arms = _classes(session, school)
-        _students(session, school, term, arms)
+        levels = _students(session, school, term, arms)
+        _fees(session, school, term, levels)
         session.commit()
 
 
@@ -170,7 +174,7 @@ def _classes(session: Session, school: School) -> list[Arm]:
     return arms
 
 
-def _students(session: Session, school: School, term: Term, arms: list[Arm], count: int = 60) -> None:
+def _students(session: Session, school: School, term: Term, arms: list[Arm], count: int = 60) -> list[uuid.UUID]:
     rng = random.Random(2026)  # noqa: S311  (demo data, not security)
     now = datetime.now(UTC)
     students, guardians, links, enrollments = [], [], [], []
@@ -240,3 +244,50 @@ def _students(session: Session, school: School, term: Term, arms: list[Arm], cou
     session.add_all([*students, *guardians])
     session.flush()
     session.add_all([*enrollments, *links])
+    return list(dict.fromkeys(a.class_level_id for a in arms))
+
+
+def _fees(session: Session, school: School, term: Term, level_ids: list[uuid.UUID]) -> None:
+    """Tuition rising by class, an optional bus fee, PTA and development levies, and a sibling discount."""
+    items = {
+        name: FeeItem(id=uuid.uuid4(), school_id=school.id, name=name, category=category)
+        for name, category in (
+            ("Tuition", FeeCategory.TUITION),
+            ("School bus", FeeCategory.SERVICE),
+            ("PTA levy", FeeCategory.LEVY),
+            ("Development levy", FeeCategory.LEVY),
+        )
+    }
+    session.add_all(items.values())
+    session.flush()  # no ORM relationship tells the flush to insert items before the discount
+    session.add(
+        Discount(
+            id=uuid.uuid4(),
+            school_id=school.id,
+            name="Sibling discount (10% of tuition)",
+            kind=DiscountKind.PERCENT,
+            value=1000,
+            rule=DiscountRule.SIBLING,
+            fee_item_id=items["Tuition"].id,
+        )
+    )
+    session.flush()
+    schedules = []
+    for rank, level_id in enumerate(level_ids):
+        for item, naira, optional in (
+            ("Tuition", 120_000 + rank * 15_000, False),
+            ("School bus", 45_000, True),
+            ("PTA levy", 5_000, False),
+            ("Development levy", 10_000, False),
+        ):
+            schedules.append(
+                FeeSchedule(
+                    school_id=school.id,
+                    term_id=term.id,
+                    class_level_id=level_id,
+                    fee_item_id=items[item].id,
+                    amount_kobo=naira * 100,
+                    is_optional=optional,
+                )
+            )
+    session.add_all(schedules)

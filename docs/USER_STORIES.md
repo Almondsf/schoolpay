@@ -11,8 +11,14 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - Trust that the numbers are right without asking the bursar.
 
 ## Bursar
+- ✅ Sign in safely with a password and a code from my phone.
+- ✅ Set what each class pays per term in one grid, copy last term's fees, and mark fees like the bus as optional.
+- ✅ Set up discounts: automatic sibling discounts, and scholarships or staff-child discounts I give to chosen students.
+- ✅ Generate the whole term's invoices in one click, after previewing the total per class; arrears from earlier terms stay owed.
+- ✅ Add a charge or correct an invoice without losing the history, and void an invoice issued by mistake.
+- ✅ Record what a student owed before we started using SchoolPay.
+- ✅ See billed, paid and outstanding for the term, and every invoice's balance.
 - Have bank transfers matched to students automatically.
-- Generate a whole term's invoices in one go, with arrears carried forward.
 - Record cash and teller payments, with approval.
 - Keep a debtors list that's always current.
 - Send polite reminders without phoning every parent.
