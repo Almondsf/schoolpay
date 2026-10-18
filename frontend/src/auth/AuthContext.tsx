@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { api, refreshSession, setAccessToken, setSessionExpiredHandler, unwrap, type Me } from '../api/client';
+import { api, refreshSession, setAccessToken, setAuthRealm, setSessionExpiredHandler, unwrap, type Me } from '../api/client';
 
 export type Capability =
   | 'school.view' | 'school.manage' | 'staff.view' | 'staff.manage' | 'audit.view'
@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   useEffect(() => {
+    setAuthRealm('staff');
     setSessionExpiredHandler(signOutLocally);
     // Restore the session from the refresh cookie after a page reload
     refreshSession()

@@ -26,7 +26,7 @@ from app.modules.accounts.security import hash_password
 from app.modules.fees.models import Discount, DiscountKind, DiscountRule, FeeCategory, FeeItem, FeeSchedule
 from app.modules.payments.gateways import GatewayCode, enabled_gateways
 from app.modules.payments.models import SchoolPaymentAccount, VirtualAccount
-from app.modules.schools.models import AcademicSession, Arm, ClassLevel, School, Term
+from app.modules.schools.models import AcademicSession, Arm, ClassLevel, School, SchoolStatus, Term
 from app.modules.students.models import (
     ConsentMethod,
     Enrollment,
@@ -106,10 +106,24 @@ def seed_demo(mfa_secret: str, reset: bool) -> None:
 
 
 def _retire_old_demo(session: Session) -> None:
-    """Remove the old demo staff and rename the old school out of the way (its audit rows are append-only)."""
+    """
+    Retire the previous demo school: remove its staff, suspend it (so its parents
+    and account numbers stop working) and rename it out of the way. Its rows stay,
+    because money and audit records are never deleted.
+    """
     old_ids = select(School.id).where(School.slug == DEMO_SLUG).scalar_subquery()
     session.execute(delete(User).where(or_(User.school_id == old_ids, User.email == PLATFORM_EMAIL)))
-    session.execute(update(School).where(School.slug == DEMO_SLUG).values(slug=f"old-demo-{uuid.uuid4().hex[:8]}"))
+    session.execute(
+        update(School)
+        .where(School.slug == DEMO_SLUG)
+        .values(slug=f"old-demo-{uuid.uuid4().hex[:8]}", status=SchoolStatus.SUSPENDED)
+    )
+    # Demo schools retired before suspension was added
+    session.execute(
+        update(School)
+        .where(School.slug.like("old-demo-%"), School.status == SchoolStatus.ACTIVE)
+        .values(status=SchoolStatus.SUSPENDED)
+    )
     session.flush()
 
 

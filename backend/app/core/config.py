@@ -103,6 +103,17 @@ class Settings(BaseSettings):
     # Where the gateway sends parents after a card payment (the web app verifies and shows the result)
     payment_callback_path: str = "/pay/complete"
 
+    # Text messages (parent sign-in codes; reminders come later): console (log only), memory (tests) or termii
+    sms_backend: Literal["console", "memory", "termii"] = "console"
+    termii_api_key: str = ""
+    # Registered Termii sender ID (up to 11 characters), e.g. "SchoolPay"
+    termii_sender_id: str = "SchoolPay"
+    # Parent sign-in codes
+    otp_minutes: int = Field(default=5, ge=2, le=15)
+    otp_max_attempts: int = Field(default=5, ge=3, le=10)
+    otp_rate_per_phone: str = "3/10minutes"
+    otp_rate_per_ip: str = "20/hour"
+
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @field_validator("payment_gateways", mode="before")
@@ -139,6 +150,10 @@ class Settings(BaseSettings):
                 self.flutterwave_secret_key and self.flutterwave_webhook_hash
             ):
                 raise ValueError("FLUTTERWAVE_SECRET_KEY and FLUTTERWAVE_WEBHOOK_HASH are required for flutterwave")
+            if self.sms_backend == "memory":
+                raise ValueError("SMS_BACKEND=memory is for tests only")
+            if self.sms_backend == "termii" and not self.termii_api_key:
+                raise ValueError("TERMII_API_KEY is required when SMS_BACKEND=termii")
             if self.email_backend == "memory":
                 raise ValueError("EMAIL_BACKEND=memory is for tests only")
             if self.email_backend == "smtp" and not self.smtp_host:

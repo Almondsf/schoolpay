@@ -41,6 +41,12 @@ because they're given to the parent. The public verification page behind the
 QR code shows only the school, receipt number, amount, date, status and the
 student's initials.
 
+## Parent portal
+Parents sign in with the phone number the school holds for them. We store a
+hash of each sign-in code for at most a day, and their portal sessions for 30
+days after they end. A parent sees only their own children. Sign-in codes are
+sent by SMS through Termii (a processor).
+
 ## Shared with payment gateways
 To issue a student's account number, the gateway (Paystack) receives the
 student's first and last name, the primary guardian's phone number, and the

@@ -39,10 +39,13 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## Parent
 - ✅ Pay by card from a link the school sends, and see straight away whether it went through.
-- Sign in with a phone number and a one-time code (no password to forget).
-- See all their children at the school in one place, with balances.
-- Pay by bank transfer to each child's own account number, or by card.
-- Get a receipt on WhatsApp, and download receipts any time.
+- ✅ Sign in with a phone number and a one-time code (no password to forget).
+- ✅ See all their children at the school in one place, with what's owed and any credit.
+- ✅ Pay by bank transfer to each child's own account number (copy it with one tap), or by card.
+- ✅ See each bill's details and every payment, and download receipts any time.
+- ✅ Choose the school when I have children at more than one.
+- ✅ Use it comfortably on a phone.
+- Get a receipt on WhatsApp.
 
 ## Anyone with a receipt
 - ✅ Check that a receipt is genuine on a public page (scan its QR code), without seeing the child's details. A reversed payment shows as reversed; a fake receipt doesn't match anything.

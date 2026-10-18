@@ -32,6 +32,18 @@ It is updated with every change that affects security.
   password reset per IP and per email, refresh per IP, MFA changes and invites
   per user/school. Limits use shared Redis storage in production.
 
+## Parents
+- Phone sign-in codes: 6 digits from a CSPRNG, stored only as a keyed HMAC, valid
+  for 5 minutes, 5 attempts, replaced by any newer code, and rate limited per
+  phone and per IP. Requesting a code answers the same for unknown numbers. The
+  code travels to the SMS task encrypted and never appears in logs.
+- Parent sessions are server-side and bound to one guardian in one school.
+  Tokens have their own type, rotating refresh cookies detect replay, and
+  suspended schools lock parents out.
+- Parents only ever see children linked to them: every portal lookup goes
+  through the guardian's links (tested for a non-linked child in the same school
+  and for children at other schools).
+
 ## Tenant isolation
 - Every school-owned table has a non-null `school_id`. Scoping is applied
   automatically to every ORM query in a school-scoped session, and unscoped

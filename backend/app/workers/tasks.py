@@ -11,6 +11,8 @@ from app.core import outbox
 from app.core.db import SessionLocal
 from app.core.tenancy import scope_to_school
 from app.modules.accounts import tasks as accounts_tasks
+from app.modules.notifications.sms import SmsError
+from app.modules.parents import tasks as parents_tasks
 from app.modules.payments import accounts as payment_accounts
 from app.modules.payments import webhooks
 from app.workers.celery_app import celery_app
@@ -63,3 +65,13 @@ def provision_virtual_accounts(school_id: str, student_ids: list[str]) -> int:
             session, uuid.UUID(school_id), [uuid.UUID(s) for s in student_ids]
         )
     return result.created
+
+
+@celery_app.task(name="parents.send_code", autoretry_for=(SmsError,), retry_backoff=True, max_retries=3)
+def send_parent_code(to: str, code: str) -> None:
+    parents_tasks.send_code(to, code)
+
+
+@celery_app.task(name="parents.prune")
+def prune_parent_records() -> int:
+    return parents_tasks.prune()

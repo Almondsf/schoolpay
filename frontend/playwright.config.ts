@@ -33,6 +33,7 @@ const backendEnv = {
   CELERY_TASK_ALWAYS_EAGER: 'true',
   EMAIL_BACKEND: 'console',
   PAYMENT_GATEWAYS: 'fake', // simulated gateway: no real money moves
+  SMS_BACKEND: 'memory', // texts are kept in memory; tests read sign-in codes from /api/v1/dev/sms/latest
   // Every test signs in from the same address
   LOGIN_RATE_PER_IP: '1000/minute',
   LOGIN_RATE_PER_ACCOUNT: '1000/hour',

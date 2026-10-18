@@ -44,8 +44,17 @@ export const api = createClient<paths>({
 });
 
 let accessToken: string | null = null;
-let refreshing: Promise<SignedIn | null> | null = null;
+let refreshing: Promise<{ access_token: string } | null> | null = null;
 let onSessionExpired: () => void = () => {};
+
+/** Staff and parents sign in separately; each has its own refresh cookie and endpoint. */
+export type AuthRealm = 'staff' | 'parent';
+const REFRESH_URL: Record<AuthRealm, string> = { staff: '/api/v1/auth/refresh', parent: '/api/v1/parent/auth/refresh' };
+let realm: AuthRealm = 'staff';
+
+export function setAuthRealm(next: AuthRealm): void {
+  realm = next;
+}
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
@@ -56,12 +65,12 @@ export function setSessionExpiredHandler(handler: () => void): void {
 }
 
 /** Exchange the refresh cookie for a new access token. Concurrent callers share one request. */
-export function refreshSession(): Promise<SignedIn | null> {
+export function refreshSession<T extends { access_token: string } = SignedIn>(): Promise<T | null> {
   refreshing ??= globalThis
-    .fetch(`${baseUrl}/api/v1/auth/refresh`, { method: 'POST', credentials: 'include' })
+    .fetch(`${baseUrl}${REFRESH_URL[realm]}`, { method: 'POST', credentials: 'include' })
     .then(async (response) => {
       if (!response.ok) return null;
-      const body = (await response.json()) as SignedIn;
+      const body = (await response.json()) as T;
       setAccessToken(body.access_token);
       return body;
     })
@@ -69,11 +78,11 @@ export function refreshSession(): Promise<SignedIn | null> {
     .finally(() => {
       refreshing = null;
     });
-  return refreshing;
+  return refreshing as Promise<T | null>;
 }
 
 // Endpoints where a 401 means "wrong credentials", not "token expired"
-const NO_RETRY = ['/api/v1/auth/login', '/api/v1/auth/refresh', '/api/v1/auth/password/'];
+const NO_RETRY = ['/api/v1/auth/login', '/api/v1/auth/refresh', '/api/v1/auth/password/', '/api/v1/parent/auth/'];
 const originals = new WeakMap<Request, Request>();
 
 const authMiddleware: Middleware = {

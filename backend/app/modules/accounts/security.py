@@ -17,7 +17,7 @@ from pwdlib import PasswordHash
 from app.core.config import get_settings
 from app.core.errors import DomainError
 
-TokenType = Literal["access", "mfa", "password"]
+TokenType = Literal["access", "mfa", "password", "parent", "parent_choice"]
 ISSUER = "schoolpay"
 ALGORITHM = "HS256"
 MIN_PASSWORD_LENGTH = 10

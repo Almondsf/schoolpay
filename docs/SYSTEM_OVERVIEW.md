@@ -19,13 +19,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 9. [Fees and invoices](#9-fees-and-invoices)
 10. [Payments](#10-payments)
 11. [Receipts](#11-receipts)
-12. [Backend layout and conventions](#12-backend-layout-and-conventions)
-13. [Background jobs and the outbox](#13-background-jobs-and-the-outbox)
-14. [API](#14-api)
-15. [Configuration](#15-configuration)
-16. [Frontend](#16-frontend)
-17. [Testing](#17-testing)
-18. [Known gaps](#18-known-gaps)
+12. [Parent portal](#12-parent-portal)
+13. [Backend layout and conventions](#13-backend-layout-and-conventions)
+14. [Background jobs and the outbox](#14-background-jobs-and-the-outbox)
+15. [API](#15-api)
+16. [Configuration](#16-configuration)
+17. [Frontend](#17-frontend)
+18. [Testing](#18-testing)
+19. [Known gaps](#19-known-gaps)
 
 ---
 
@@ -394,7 +395,47 @@ Module: `app/modules/receipts`.
   student's initials. A made-up receipt matches no code and is reported as not
   genuine.
 
-## 12. Backend layout and conventions
+## 12. Parent portal
+
+Module: `app/modules/parents`. Web app: `/parent` (mobile first).
+
+**Signing in with a phone number.** Parents are guardians, found by the blind
+index of their phone.
+
+1. `POST /parent/auth/request-code {phone}`: if the number belongs to a guardian
+   at an active school, a 6-digit code is texted to it. The answer is the same
+   whether or not the number is registered, so it can't be used to find out who
+   is. Only a keyed HMAC of the code is stored (`parent_otps`). A new code
+   retires the old one. The code reaches the SMS task through the outbox
+   **encrypted**, and the SMS backends never log message text.
+2. `POST /parent/auth/verify {phone, code}`: valid for `OTP_MINUTES` (5), with at
+   most `OTP_MAX_ATTEMPTS` (5) tries before the code is burned. Requests and
+   attempts are rate limited per phone and per IP.
+3. A parent with children at more than one school gets a short-lived ticket and
+   chooses (`POST /parent/auth/choose-school`). Each option lists the children's
+   first names, so similar school names can be told apart.
+
+Each **portal session** (`parent_sessions`) is bound to one guardian record,
+and so to one school. Parent access tokens have their own type (`parent`), so
+staff and parent tokens can't stand in for each other. The refresh token is an
+httpOnly cookie scoped to `/api/v1/parent/auth`. It rotates on every use, and
+presenting the previous one again (a copied cookie) ends the session.
+
+**What a parent sees** (`portal.py`): every lookup goes through the guardian's
+links (`GuardianStudent`), so another child's ID is "not found", even in the
+same school. `GET /parent/home` returns each child's class, amount owed, credit
+and account number in a fixed number of queries. A child's page lists bills
+(with lines), payments and receipts (PDF download). "Pay by card" starts a
+checkout with the parent's email, or a routing address if the school has none,
+and returns to `/pay/complete`.
+
+**Text messages** (`app/modules/notifications/sms.py`): `SMS_BACKEND=console`
+logs only a masked number and the message length; `termii` sends through
+Termii on the DND route (needed for sign-in codes); `memory` is for tests. The
+full messaging layer (WhatsApp first, templates, opt-outs, log) arrives with
+notifications.
+
+## 13. Backend layout and conventions
 
 ```
 backend/app/
@@ -438,7 +479,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 13. Background jobs and the outbox
+## 14. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -468,6 +509,7 @@ All tasks are declared in `app/workers/tasks.py`. Scheduled tasks (Celery beat):
 | `outbox.sweep` | 30 s | Hands pending outbox rows to the queue |
 | `accounts.prune_sessions` | 6 h | Deletes sessions that ended more than 30 days ago |
 | `payments.requeue_webhooks` | 5 min | Retries gateway events that couldn't be processed yet |
+| `parents.prune` | 6 h | Deletes sign-in codes after a day and ended parent sessions after 30 days |
 
 On-demand tasks: `accounts.send_password_link`, `payments.process_webhook`,
 `payments.provision_virtual_accounts`.
@@ -477,7 +519,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 14. API
+## 15. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -504,21 +546,23 @@ production.
 | Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
+| Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |
+| Parent portal | `GET /parent/home`; `GET /parent/children/{id}`; `GET /parent/invoices/{id}`; `POST /parent/children/{id}/pay`; `GET /parent/receipts/{id}/pdf` |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
-| Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only, never in production) |
+| Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |
 | Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 15. Configuration
+## 16. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 16. Frontend
+## 17. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -549,6 +593,12 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   school's bank account, issue students' account numbers), and on each
   student a **Paying in** panel (their account number, a card payment link,
   recent payments). Receipt numbers on payments download the PDF.
+- **Parent portal** (`src/parent/`): phone, then texted code, then (if needed)
+  the school; a home page with a card per child (amount owed, their account
+  number with a copy button, pay by card); and a child page (bills with lines,
+  payments, receipt downloads). It has its own auth provider. The API client's
+  "realm" (`setAuthRealm`) picks the staff or parent refresh endpoint, so the
+  two never share a session.
 - **Public pages:** `/verify/:code` checks a receipt (genuine, reversed or not
   genuine) from its QR code. `/pay/complete` is where the gateway returns parents after a
   card payment. It shows the outcome from `POST /payments/verify` (never from
@@ -558,7 +608,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 17. Testing
+## 18. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -586,7 +636,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 18. Known gaps
+## 19. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

@@ -36,5 +36,6 @@ celery_app.conf.update(
         "prune-sessions": {"task": "accounts.prune_sessions", "schedule": 6 * 3600.0},
         # Gateway webhooks that couldn't be processed yet (gateway down) are tried again
         "requeue-webhooks": {"task": "payments.requeue_webhooks", "schedule": 300.0},
+        "prune-parent-records": {"task": "parents.prune", "schedule": 6 * 3600.0},
     },
 )

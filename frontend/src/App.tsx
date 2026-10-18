@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AuthProvider } from './auth/AuthContext';
 import { ConsoleApp } from './console/ConsoleApp';
-import { ParentHome } from './parent/ParentHome';
+import { ParentApp } from './parent/ParentApp';
 import { NotFound } from './public/NotFound';
 import { PayComplete } from './public/PayComplete';
 import { VerifyReceipt } from './public/VerifyReceipt';
@@ -25,7 +25,7 @@ export function App() {
           </AuthProvider>
         }
       />
-      <Route path="/parent/*" element={<ParentHome />} />
+      <Route path="/parent/*" element={<ParentApp />} />
       <Route path="/pay/complete" element={<PayComplete />} />
       <Route path="/verify/:code" element={<VerifyReceipt />} />
       <Route path="*" element={<NotFound />} />
