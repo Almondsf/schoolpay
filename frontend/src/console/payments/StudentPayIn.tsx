@@ -5,6 +5,7 @@ import { api, unwrap } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate, formatKobo, humanize, parseNairaToKobo } from '../../lib/format';
 import { ErrorAlert, Field, Modal } from '../../lib/ui';
+import { ReceiptLink } from './ReceiptLink';
 
 /** How a student's fees can be paid: their own account number, or a card payment link for the parent. */
 export function StudentPayIn({ studentId }: { studentId: string }) {
@@ -60,6 +61,7 @@ function RecentPayments({ studentId }: { studentId: string }) {
               <td>{formatDate(p.received_at)}</td>
               <td>{p.kind === 'reversal' ? 'Reversal' : humanize(p.method)}</td>
               <td className="num">{formatKobo(p.amount_kobo)}</td>
+              <td>{p.receipt_id && p.receipt_number && <ReceiptLink receiptId={p.receipt_id} number={p.receipt_number} />}</td>
             </tr>
           ))}
         </tbody>

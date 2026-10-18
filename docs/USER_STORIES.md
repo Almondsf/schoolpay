@@ -24,6 +24,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ See every payment and which invoices it paid, oldest debt first; overpayments are kept as credit and used on the next invoice.
 - ✅ Send a parent a card payment link.
 - ✅ Reverse a payment recorded in error (e.g. a bounced teller) without deleting anything.
+- ✅ Every payment gets a numbered receipt (no gaps) that I can download as a PDF.
 - Keep a debtors list that's always current.
 - Send polite reminders without phoning every parent.
 
@@ -44,7 +45,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - Get a receipt on WhatsApp, and download receipts any time.
 
 ## Anyone with a receipt
-- Check that a receipt is genuine on a public page, without seeing the child's details.
+- ✅ Check that a receipt is genuine on a public page (scan its QR code), without seeing the child's details. A reversed payment shows as reversed; a fake receipt doesn't match anything.
 
 ## Platform admin
 - ✅ Create a school and invite its proprietor.

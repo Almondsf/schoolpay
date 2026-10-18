@@ -704,3 +704,27 @@ tfoot td {
 .success-text {
   color: var(--green);
 }
+
+/* --- Receipt verification --------------------------------------------------------------------- */
+
+.verdict {
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+}
+
+.verdict p {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+}
+
+.verdict.good {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.verdict.bad {
+  background: var(--danger-light);
+  color: var(--danger);
+}

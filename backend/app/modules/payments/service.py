@@ -22,6 +22,8 @@ from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import Actor, record
 from app.modules.fees.models import Invoice
+from app.modules.receipts.models import Receipt
+from app.modules.receipts.service import issue_receipt
 from app.modules.students.models import Student
 
 from .allocation import NewAllocation, allocate
@@ -35,6 +37,7 @@ AUTOMATIC = Actor.system("gateway")
 class Recorded:
     payment: Payment
     allocations: list[NewAllocation]
+    receipt: "Receipt"
 
 
 def record_payment(
@@ -85,6 +88,7 @@ def record_payment(
     if payment is None:  # inserted a moment ago in this transaction, so only a scoping bug lands here
         raise RuntimeError("Recorded payment not visible in this session's school scope.")
     allocations = allocate(session, [student_id])
+    receipt = issue_receipt(session, school_id=school_id, payment=payment, allocations=allocations)
     record(
         session,
         AuditAction.PAYMENT_RECORDED,
@@ -98,9 +102,10 @@ def record_payment(
             "method": method,
             "gateway_reference": gateway_reference,
             "applied_kobo": sum(a.amount_kobo for a in allocations),
+            "receipt_number": receipt.number,
         },
     )
-    return Recorded(payment, allocations)
+    return Recorded(payment, allocations, receipt)
 
 
 def reverse_payment(session: Session, ctx: StaffContext, payment_id: uuid.UUID, reason: str) -> Payment:

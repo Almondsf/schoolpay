@@ -35,6 +35,12 @@ No BVNs, NINs, photos, addresses, religion or health data are collected.
   to the guardians linked to each child. A parent with children at two schools
   is a separate guardian record in each; the schools never see each other's records.
 
+## Receipts
+Printed and PDF receipts carry the student's name, admission number and class,
+because they're given to the parent. The public verification page behind the
+QR code shows only the school, receipt number, amount, date, status and the
+student's initials.
+
 ## Shared with payment gateways
 To issue a student's account number, the gateway (Paystack) receives the
 student's first and last name, the primary guardian's phone number, and the

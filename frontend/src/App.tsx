@@ -5,6 +5,7 @@ import { ConsoleApp } from './console/ConsoleApp';
 import { ParentHome } from './parent/ParentHome';
 import { NotFound } from './public/NotFound';
 import { PayComplete } from './public/PayComplete';
+import { VerifyReceipt } from './public/VerifyReceipt';
 
 /**
  * Three areas in one app:
@@ -26,6 +27,7 @@ export function App() {
       />
       <Route path="/parent/*" element={<ParentHome />} />
       <Route path="/pay/complete" element={<PayComplete />} />
+      <Route path="/verify/:code" element={<VerifyReceipt />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

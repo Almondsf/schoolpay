@@ -25,6 +25,8 @@ from app.modules.fees.router import router as fees_router
 from app.modules.health.router import router as health_router
 from app.modules.payments.router import dev_router, webhook_router
 from app.modules.payments.router import router as payments_router
+from app.modules.receipts.router import public_router as public_receipts_router
+from app.modules.receipts.router import router as receipts_router
 from app.modules.schools.academics_router import router as academics_router
 from app.modules.schools.router import platform_schools_router, school_router
 from app.modules.students.router import router as students_router
@@ -46,6 +48,8 @@ def build_api_router() -> APIRouter:
         students_router,
         fees_router,
         payments_router,
+        receipts_router,
+        public_receipts_router,
         webhook_router,
         dev_router,
     ):

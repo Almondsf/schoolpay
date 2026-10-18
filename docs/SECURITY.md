@@ -103,6 +103,14 @@ It is updated with every change that affects security.
   must handle it).
 - The fake gateway and its development endpoint can't be enabled in production.
 
+## Receipts
+- Receipts are numbered per school with no gaps, issued in the payment's own
+  transaction, and immutable (database trigger). A reversed payment shows its
+  receipt as reversed rather than changing it.
+- The public verification page is reached through a random 128-bit code, not
+  the receipt number, so receipts can't be enumerated. It's rate limited and
+  shows no personal data beyond the student's initials.
+
 ## Input handling
 - Spreadsheet imports accept only `.xlsx` and `.csv`, at most 5,000 rows, within
   the request body limit, and are rate limited per school. Workbooks are read

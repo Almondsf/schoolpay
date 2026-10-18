@@ -18,6 +18,7 @@ from app.core.repo import get_or_404
 from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
+from app.modules.receipts.service import receipts_for_payments
 from app.modules.students.models import Student
 
 from . import accounts, checkout, manual, service, webhooks
@@ -119,6 +120,8 @@ class PaymentOut(BaseModel):
     reverses_payment_id: uuid.UUID | None
     applied: list[AppliedOut]
     unapplied_kobo: int = Field(description="Kept as credit for the student's next invoices")
+    receipt_id: uuid.UUID | None
+    receipt_number: int | None
 
 
 class ReverseIn(BaseModel):
@@ -186,9 +189,11 @@ def _brief(student: Student) -> StudentBrief:
 def _payments_out(db: Session, rows: list[tuple[Payment, Student]]) -> list[PaymentOut]:
     ids = [p.id for p, _ in rows]
     applied, reversed_ = service.applied_to(db, ids), service.reversed_ids(db, ids)
+    receipts = receipts_for_payments(db, ids)
     out = []
     for payment, student in rows:
         used = [AppliedOut(**a.__dict__) for a in applied[payment.id]]
+        receipt = receipts.get(payment.id)
         out.append(
             PaymentOut(
                 id=payment.id,
@@ -205,6 +210,8 @@ def _payments_out(db: Session, rows: list[tuple[Payment, Student]]) -> list[Paym
                 reverses_payment_id=payment.reverses_payment_id,
                 applied=used,
                 unapplied_kobo=payment.amount_kobo - sum(a.amount_kobo for a in used),
+                receipt_id=receipt.id if receipt else None,
+                receipt_number=receipt.number if receipt else None,
             )
         )
     return out

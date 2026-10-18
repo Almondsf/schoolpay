@@ -6,6 +6,7 @@ import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate, formatDateTime, formatKobo, humanize, parseNairaToKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, Notice, PageHeader, Pager } from '../../lib/ui';
+import { ReceiptLink } from './ReceiptLink';
 import { StudentPicker, type PickedStudent } from './StudentPicker';
 
 type Payment = Schemas['PaymentOut'];
@@ -91,6 +92,11 @@ function Received() {
                     {p.kind === 'reversal' ? 'Reversal' : humanize(p.method)}
                     {(p.reference || p.gateway_reference) && <div className="muted small">{p.reference || p.gateway_reference}</div>}
                     {p.reversed && <span className="badge danger">Reversed</span>}
+                    {p.receipt_id && p.receipt_number && (
+                      <div>
+                        <ReceiptLink receiptId={p.receipt_id} number={p.receipt_number} />
+                      </div>
+                    )}
                   </td>
                   <td className="num">{formatKobo(p.amount_kobo)}</td>
                   <td className="small">

@@ -18,13 +18,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 8. [School setup: calendar, classes, students](#8-school-setup-calendar-classes-students)
 9. [Fees and invoices](#9-fees-and-invoices)
 10. [Payments](#10-payments)
-11. [Backend layout and conventions](#11-backend-layout-and-conventions)
-12. [Background jobs and the outbox](#12-background-jobs-and-the-outbox)
-13. [API](#13-api)
-14. [Configuration](#14-configuration)
-15. [Frontend](#15-frontend)
-16. [Testing](#16-testing)
-17. [Known gaps](#17-known-gaps)
+11. [Receipts](#11-receipts)
+12. [Backend layout and conventions](#12-backend-layout-and-conventions)
+13. [Background jobs and the outbox](#13-background-jobs-and-the-outbox)
+14. [API](#14-api)
+15. [Configuration](#15-configuration)
+16. [Frontend](#16-frontend)
+17. [Testing](#17-testing)
+18. [Known gaps](#18-known-gaps)
 
 ---
 
@@ -369,7 +370,31 @@ and after 10 attempts the event is parked as `failed` for an operator.
 Transfers to an unknown account, or in a currency other than NGN, are parked
 as `needs_review` and never guessed at.
 
-## 11. Backend layout and conventions
+## 11. Receipts
+
+Module: `app/modules/receipts`.
+
+- **One receipt per payment**, created by `record_payment()` in the same
+  transaction as the payment, so neither exists without the other. Reversals
+  don't get receipts; they make the original receipt show as reversed.
+- **Numbered per school with no gaps** (`app/core/sequences.py`, sequence
+  `receipt`): the number is reserved in the payment's transaction, so a
+  rollback gives it back.
+- **Immutable** (append-only trigger). Each receipt keeps a **snapshot**: school
+  name and contact, student name, admission number and class at the time, method
+  and reference, which invoices it paid, credit left over, and the balance still
+  owed. A reprint years later reads the same even if the student is renamed.
+- **PDF** (`pdf.py`, reportlab, `GET /receipts/{id}/pdf`): an A4 page with the
+  amount in figures and in words (`words.py`: "Seventy-five thousand, five
+  hundred naira, fifty kobo only") and a QR code.
+- **Public verification.** The QR code links to `/verify/<code>`. The code is a
+  random 128-bit token, so receipts can't be enumerated by number.
+  `GET /public/receipts/{code}` (no sign-in, rate limited) returns only the
+  school, receipt number, amount, date, status (`valid` or `reversed`) and the
+  student's initials. A made-up receipt matches no code and is reported as not
+  genuine.
+
+## 12. Backend layout and conventions
 
 ```
 backend/app/
@@ -413,7 +438,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 12. Background jobs and the outbox
+## 13. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -452,7 +477,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 13. API
+## 14. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -479,20 +504,21 @@ production.
 | Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
+| Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only, never in production) |
 | Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 14. Configuration
+## 15. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 15. Frontend
+## 16. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -522,8 +548,9 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   Approve on your own entries, reversals), **Payment settings** (connect the
   school's bank account, issue students' account numbers), and on each
   student a **Paying in** panel (their account number, a card payment link,
-  recent payments).
-- **Public pages:** `/pay/complete` is where the gateway returns parents after a
+  recent payments). Receipt numbers on payments download the PDF.
+- **Public pages:** `/verify/:code` checks a receipt (genuine, reversed or not
+  genuine) from its QR code. `/pay/complete` is where the gateway returns parents after a
   card payment. It shows the outcome from `POST /payments/verify` (never from
   the URL) and polls while the payment is pending.
   Navigation and routes are filtered by the user's capabilities. Users who
@@ -531,7 +558,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 16. Testing
+## 17. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -559,7 +586,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 17. Known gaps
+## 18. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

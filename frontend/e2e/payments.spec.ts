@@ -19,6 +19,15 @@ test('a transfer into a student account number is matched automatically', async 
   await expect(page.getByRole('cell', { name: 'Virtual account' })).toBeVisible();
   await page.getByRole('link', { name: 'Payments' }).click();
   await expect(page.getByRole('cell', { name: /₦25,000\.00/ }).first()).toBeVisible();
+
+  // Its numbered receipt downloads as a PDF
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Receipt #\d+$/ }).first().click()]);
+  expect(download.suggestedFilename()).toMatch(/^receipt-\d+\.pdf$/);
+});
+
+test('a made-up receipt code is reported as not genuine', async ({ page }) => {
+  await page.goto('/verify/ThisCodeIsMadeUp123456');
+  await expect(page.getByText('Not genuine')).toBeVisible();
 });
 
 test('cash recorded by the admin is approved by the bursar', async ({ browser }) => {
