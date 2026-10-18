@@ -17,13 +17,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 7. [Audit trail](#7-audit-trail)
 8. [School setup: calendar, classes, students](#8-school-setup-calendar-classes-students)
 9. [Fees and invoices](#9-fees-and-invoices)
-10. [Backend layout and conventions](#10-backend-layout-and-conventions)
-11. [Background jobs and the outbox](#11-background-jobs-and-the-outbox)
-12. [API](#12-api)
-13. [Configuration](#13-configuration)
-14. [Frontend](#14-frontend)
-15. [Testing](#15-testing)
-16. [Known gaps](#16-known-gaps)
+10. [Payments](#10-payments)
+11. [Backend layout and conventions](#11-backend-layout-and-conventions)
+12. [Background jobs and the outbox](#12-background-jobs-and-the-outbox)
+13. [API](#13-api)
+14. [Configuration](#14-configuration)
+15. [Frontend](#15-frontend)
+16. [Testing](#16-testing)
+17. [Known gaps](#17-known-gaps)
 
 ---
 
@@ -306,7 +307,69 @@ adding students. `dry_run` returns a preview with totals per class and any
 classes with no fees set. It runs **a fixed number of queries** whatever the
 number of students (tested), and 60 invoices take about 0.4 s.
 
-## 10. Backend layout and conventions
+## 10. Payments
+
+Module: `app/modules/payments`.
+
+**Money never touches the platform.** Each school connects its own bank account
+(`PUT /payment-settings`, proprietor only). The gateway confirms the account
+name and creates a **subaccount**. Every card payment and every transfer into a
+student's account number is split by the gateway: the school's share settles
+to the school, and the platform fee (`PLATFORM_FEE_BP`, recorded per school)
+settles to us. The school bears the gateway's own charges.
+
+**Gateways** (`gateways/`): Paystack, Flutterwave and a fake one share one
+interface: list banks, resolve an account, create a subaccount, create a
+virtual account, start a checkout, verify a transaction, parse a webhook.
+`get_gateway()` only hands out gateways enabled in `PAYMENT_GATEWAYS`. Calls go
+through `app/core/outbound.py`, which logs every call with secrets and card
+details redacted. The **fake gateway** issues account numbers, checkout links
+and signed webhooks in-process, so the whole flow works in development and
+tests without real money. Production refuses it. (Flutterwave requires a BVN
+for permanent virtual accounts, which we don't collect, so it offers card
+payments only. See PLAN §3.2.)
+
+**How money arrives:**
+
+| Route | Flow |
+|---|---|
+| Transfer into a student's account number | The gateway sends a webhook. We verify its signature, store it in the `webhook_events` inbox (a unique key ignores repeats), and enqueue processing via the outbox. The worker asks the gateway to verify the transaction, finds the `VirtualAccount` it was paid into, and records the payment. |
+| Card (payment link) | Staff create a link (`POST /students/{id}/payment-link`); a `PaymentIntent` holds our reference. The parent pays on the gateway's page and comes back to `/pay/complete`, which calls `POST /payments/verify`. The webhook arrives too. Both end in `checkout.confirm()`, which locks the intent, verifies with the gateway, and records the payment once. |
+| Cash, teller, POS, direct transfer | Staff record a `ManualPayment`; **a different person** approves it (maker-checker, also a database constraint), and only then is it a payment. Rejections keep a reason. |
+
+**The ledger.** `Payment` rows are receipts (positive) or reversals (negative,
+one per payment, pointing at the original). `Allocation` rows apply payments to
+invoices. Both tables are append-only (database triggers), and deferred
+constraint triggers guarantee that a payment is never allocated beyond its
+amount and an invoice is never paid beyond its total. A payment is recorded
+once per gateway reference (unique constraint), however many times the webhook
+or redirect arrives.
+
+**Allocation** (`allocation.py`). A student's unallocated money pays their
+oldest debt first: the opening balance, then invoices in issue order. Whatever
+is left is the student's **credit** (payments minus allocations, never stored),
+and new invoices consume it automatically when generated. Allocation locks the
+students' rows, so concurrent payments for one student queue up. It runs a
+fixed number of queries for any number of students.
+
+**Reversals** (`POST /payments/{id}/reverse`, bursar or proprietor) add a
+negative payment and negative allocations that undo the original's. The debt
+it paid is owed again, and nothing is edited or deleted.
+
+**Virtual accounts.** `POST /virtual-accounts/provision` queues account numbers
+for active students without one (batches of 100, background task, one gateway
+call per student, one insert per batch). The gateway needs an email per
+customer, so a student without a parent email gets a routing address
+(`student-<id>@<school>.schoolpay.ng`). Each student's number is shown on
+their page and, later, in the parent portal.
+
+**Failures.** If the gateway is down while processing, the event stays
+`received`. The `payments.requeue_webhooks` beat task retries every 5 minutes,
+and after 10 attempts the event is parked as `failed` for an operator.
+Transfers to an unknown account, or in a currency other than NGN, are parked
+as `needs_review` and never guessed at.
+
+## 11. Backend layout and conventions
 
 ```
 backend/app/
@@ -350,7 +413,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 11. Background jobs and the outbox
+## 12. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -379,13 +442,17 @@ All tasks are declared in `app/workers/tasks.py`. Scheduled tasks (Celery beat):
 |---|---|---|
 | `outbox.sweep` | 30 s | Hands pending outbox rows to the queue |
 | `accounts.prune_sessions` | 6 h | Deletes sessions that ended more than 30 days ago |
+| `payments.requeue_webhooks` | 5 min | Retries gateway events that couldn't be processed yet |
+
+On-demand tasks: `accounts.send_password_link`, `payments.process_webhook`,
+`payments.provision_virtual_accounts`.
 
 In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Redis.
 
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 12. API
+## 13. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -408,18 +475,24 @@ production.
 | Promotion | `POST /terms/{id}/roll-forward` |
 | Fee setup | `GET/POST /fee-items`; `PATCH /fee-items/{id}`; `GET/PUT /terms/{id}/fee-schedule`; `POST /terms/{id}/fee-schedule/copy`; `GET/PUT /terms/{id}/optional-fees` |
 | Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
+| Payment setup | `GET/PUT /payment-settings`; `GET /payment-settings/banks`; `POST /virtual-accounts/provision`; `GET /students/{id}/virtual-account` |
+| Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
+| Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
+| Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
+| Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
+| Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only, never in production) |
 | Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 13. Configuration
+## 14. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 14. Frontend
+## 15. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -444,12 +517,21 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and a **Fees** panel on each student (owed/billed/paid, invoices, discounts,
   opening balance, one-off charges). `src/lib/format.ts` converts between naira
   text and kobo with string arithmetic.
+  Payments: **Payments** (received payments with where each was applied, a
+  record-cash/teller form with a student search, an approval queue that hides
+  Approve on your own entries, reversals), **Payment settings** (connect the
+  school's bank account, issue students' account numbers), and on each
+  student a **Paying in** panel (their account number, a card payment link,
+  recent payments).
+- **Public pages:** `/pay/complete` is where the gateway returns parents after a
+  card payment. It shows the outcome from `POST /payments/verify` (never from
+  the URL) and polls while the payment is pending.
   Navigation and routes are filtered by the user's capabilities. Users who
   must enrol in MFA can only reach their account page until they do.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 15. Testing
+## 16. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -466,7 +548,10 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   calendar (first term current), classes Primary 1 to SSS 3, 60 students
   with guardians (siblings share a parent), and first-term fees (tuition by
   class, optional bus, levies, a sibling discount); invoices are left for you
-  to generate. It refuses to run in production.
+  to generate. With the fake gateway enabled it also connects the school's
+  bank account and gives every student an account number. Simulate a parent's
+  transfer with `POST /api/v1/dev/fake-gateway/transfers`. It refuses to run
+  in production.
 - **Query counts:** `tests/factories.py` has a `QueryCounter`. Bulk operations
   (import, roll-forward, outbox dispatch) have tests asserting their query
   count doesn't grow with the number of rows.
@@ -474,7 +559,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 16. Known gaps
+## 17. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

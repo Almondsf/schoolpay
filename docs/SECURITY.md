@@ -80,6 +80,29 @@ It is updated with every change that affects security.
   or drift.
 - Invoice numbers are gapless per school (row-locked counter).
 
+## Payments
+- The platform never holds school money: payments settle to each school's own
+  account via a gateway subaccount, and the platform fee is taken by the split.
+- Card data never touches the system (hosted checkout). Stored gateway payloads
+  are redacted, and outbound gateway calls are logged without keys, card
+  authorisations or account numbers.
+- Webhooks are accepted only with a valid signature (Paystack HMAC-SHA512 over
+  the raw body, Flutterwave secret hash, compared in constant time). Even then
+  the outcome is **re-verified with the gateway API** before anything is
+  recorded. Webhook processing is idempotent (unique event key; unique gateway
+  reference per payment). Forged webhooks get 401 and are not stored.
+- The checkout redirect URL is fixed server-side; `/payments/verify` takes only a
+  reference of our own format, is rate limited, and reads the outcome from the gateway.
+- Cash, teller and POS payments need **maker-checker** approval: the approver
+  must be a different person (service rule and database constraint).
+- Payments and allocations are append-only. Reversals are new negative entries,
+  and only bursars and proprietors can make them. Database triggers stop a
+  payment being over-allocated or an invoice overpaid.
+- Changing where a school's money settles is proprietor-only, confirmed against
+  the bank, audited, and blocked once students have account numbers (support
+  must handle it).
+- The fake gateway and its development endpoint can't be enabled in production.
+
 ## Input handling
 - Spreadsheet imports accept only `.xlsx` and `.csv`, at most 5,000 rows, within
   the request body limit, and are rate limited per school. Workbooks are read

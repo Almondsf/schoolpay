@@ -90,7 +90,25 @@ class Settings(BaseSettings):
     # How long invite and password-reset links stay valid
     password_link_hours: int = Field(default=48, ge=1, le=168)
 
+    # Payment gateways schools may use. "fake" simulates a gateway (development and tests only).
+    payment_gateways: Annotated[list[Literal["paystack", "flutterwave", "fake"]], NoDecode] = ["paystack"]
+    paystack_secret_key: str = ""
+    # Bank Paystack issues dedicated virtual accounts from ("wema-bank", "titan-paystack", ...)
+    paystack_preferred_bank: str = "wema-bank"
+    flutterwave_secret_key: str = ""
+    # The "secret hash" set in the Flutterwave dashboard; sent back in the verif-hash header
+    flutterwave_webhook_hash: str = ""
+    # Platform fee taken through the gateway split, in basis points (100 = 1%). Schools can be set individually.
+    platform_fee_bp: int = Field(default=100, ge=0, le=2000)
+    # Where the gateway sends parents after a card payment (the web app verifies and shows the result)
+    payment_callback_path: str = "/pay/complete"
+
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+
+    @field_validator("payment_gateways", mode="before")
+    @classmethod
+    def _gateways_csv(cls, value: object) -> object:
+        return _split_csv(value)
 
     @field_validator("cors_origins", "field_encryption_keys", mode="before")
     @classmethod
@@ -113,6 +131,14 @@ class Settings(BaseSettings):
                 raise ValueError("CORS_ORIGINS can't be '*' in production")
             if self.rate_limit_storage_url.startswith("memory"):
                 raise ValueError("RATE_LIMIT_STORAGE_URL must be shared storage (Redis) in production")
+            if "fake" in self.payment_gateways:
+                raise ValueError("The fake payment gateway can't be enabled in production")
+            if "paystack" in self.payment_gateways and not self.paystack_secret_key:
+                raise ValueError("PAYSTACK_SECRET_KEY is required when paystack is enabled")
+            if "flutterwave" in self.payment_gateways and not (
+                self.flutterwave_secret_key and self.flutterwave_webhook_hash
+            ):
+                raise ValueError("FLUTTERWAVE_SECRET_KEY and FLUTTERWAVE_WEBHOOK_HASH are required for flutterwave")
             if self.email_backend == "memory":
                 raise ValueError("EMAIL_BACKEND=memory is for tests only")
             if self.email_backend == "smtp" and not self.smtp_host:

@@ -52,6 +52,25 @@ tasks wait in the `outbox_tasks` table and go out when it's back. Rows that fail
 docker compose run --rm backend python -c "from app.core import outbox; print(outbox.requeue_failed())"
 ```
 
+## Payment gateways
+
+1. Set `PAYMENT_GATEWAYS` and the keys (`PAYSTACK_SECRET_KEY`;
+   `FLUTTERWAVE_SECRET_KEY` and `FLUTTERWAVE_WEBHOOK_HASH`). The app refuses to
+   start in production with a gateway enabled but its keys missing, or with
+   the fake gateway enabled.
+2. In each gateway's dashboard, set the webhook URL:
+   - Paystack: `https://<your-domain>/api/v1/webhooks/paystack`
+   - Flutterwave: `https://<your-domain>/api/v1/webhooks/flutterwave` (and set the secret hash)
+3. Confirm with Paystack that dedicated virtual accounts are enabled for the
+   business and which bank to issue them from (`PAYSTACK_PREFERRED_BANK`).
+   Test a transfer in the sandbox end to end before onboarding a school
+   (PLAN §3.2).
+4. Run the worker and beat: webhooks are processed in the background and
+   retried every 5 minutes if the gateway is unreachable.
+
+Events that couldn't be matched (`needs_review`) or kept failing (`failed`) are
+in the `webhook_events` table for an operator to look at.
+
 ## Database roles
 
 `deploy/postgres-init.sh` runs when the database volume is first created. It

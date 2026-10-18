@@ -23,6 +23,8 @@ class Capability(enum.StrEnum):
     PAYMENTS_RECORD = "payments.record"
     PAYMENTS_APPROVE = "payments.approve"
     PAYMENTS_REVERSE = "payments.reverse"
+    # Choosing the bank account school money settles into: proprietors only
+    PAYMENTS_SETUP = "payments.setup"
     REPORTS_VIEW = "reports.view"
     MESSAGING_MANAGE = "messaging.manage"
     PLATFORM_MANAGE = "platform.manage"

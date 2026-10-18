@@ -7,5 +7,6 @@ def load_all_models() -> None:
     from app.modules.accounts import models as accounts  # noqa: F401
     from app.modules.audit import models as audit  # noqa: F401
     from app.modules.fees import models as fees  # noqa: F401
+    from app.modules.payments import models as payments  # noqa: F401
     from app.modules.schools import models as schools  # noqa: F401
     from app.modules.students import models as students  # noqa: F401

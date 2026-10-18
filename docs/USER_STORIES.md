@@ -3,6 +3,7 @@
 What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ Connect the school's own bank account so all payments settle there (the platform never holds our money).
 - ✅ Invite staff by email, choose their role, rename them, change their role, deactivate or reactivate them.
 - ✅ Reset a staff member's two-factor sign-in when they lose their phone.
 - ✅ See an activity log of every sign-in and change in the school, which nobody can edit.
@@ -18,8 +19,11 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Add a charge or correct an invoice without losing the history, and void an invoice issued by mistake.
 - ✅ Record what a student owed before we started using SchoolPay.
 - ✅ See billed, paid and outstanding for the term, and every invoice's balance.
-- Have bank transfers matched to students automatically.
-- Record cash and teller payments, with approval.
+- ✅ Have bank transfers matched to students automatically: each student has their own account number, and a transfer shows as paid within seconds.
+- ✅ Record cash, teller, POS and direct-transfer payments, approved by a second person before they count.
+- ✅ See every payment and which invoices it paid, oldest debt first; overpayments are kept as credit and used on the next invoice.
+- ✅ Send a parent a card payment link.
+- ✅ Reverse a payment recorded in error (e.g. a bounced teller) without deleting anything.
 - Keep a debtors list that's always current.
 - Send polite reminders without phoning every parent.
 
@@ -33,6 +37,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
+- ✅ Pay by card from a link the school sends, and see straight away whether it went through.
 - Sign in with a phone number and a one-time code (no password to forget).
 - See all their children at the school in one place, with balances.
 - Pay by bank transfer to each child's own account number, or by card.

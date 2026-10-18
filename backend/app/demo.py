@@ -24,6 +24,8 @@ from app.models import load_all_models
 from app.modules.accounts.models import Role, User
 from app.modules.accounts.security import hash_password
 from app.modules.fees.models import Discount, DiscountKind, DiscountRule, FeeCategory, FeeItem, FeeSchedule
+from app.modules.payments.gateways import GatewayCode, enabled_gateways
+from app.modules.payments.models import SchoolPaymentAccount, VirtualAccount
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, School, Term
 from app.modules.students.models import (
     ConsentMethod,
@@ -98,6 +100,8 @@ def seed_demo(mfa_secret: str, reset: bool) -> None:
         arms = _classes(session, school)
         levels = _students(session, school, term, arms)
         _fees(session, school, term, levels)
+        if GatewayCode.FAKE in enabled_gateways():
+            _fake_payments_setup(session, school)
         session.commit()
 
 
@@ -291,3 +295,38 @@ def _fees(session: Session, school: School, term: Term, level_ids: list[uuid.UUI
                 )
             )
     session.add_all(schedules)
+
+
+def _fake_payments_setup(session: Session, school: School) -> None:
+    """With the fake gateway: a connected bank account and a virtual account for every student."""
+    session.add(
+        SchoolPaymentAccount(
+            school_id=school.id,
+            gateway=GatewayCode.FAKE,
+            subaccount_code="FAKE_SUB_DEMO",
+            bank_code="058",
+            bank_name="GTBank",
+            account_number="0123456789",
+            account_number_last4="6789",
+            account_name="DEMO MODEL COLLEGE",
+            platform_fee_bp=100,
+        )
+    )
+    students = session.execute(
+        select(Student.id, Student.first_name, Student.last_name)
+        .where(Student.school_id == school.id)
+        .order_by(Student.admission_number)
+    ).all()
+    prefix = uuid.uuid4().int % 90 + 10  # keeps numbers unique across re-seeds
+    session.add_all(
+        VirtualAccount(
+            school_id=school.id,
+            student_id=sid,
+            gateway=GatewayCode.FAKE,
+            account_number=f"9{prefix}{n:07d}",
+            account_name=f"DMC/{last.upper()} {first.upper()}",
+            bank_name="Fake Bank",
+            provider_reference=f"FAKE_CUS_{n}",
+        )
+        for n, (sid, first, last) in enumerate(students, start=1)
+    )

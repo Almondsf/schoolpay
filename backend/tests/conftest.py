@@ -46,6 +46,7 @@ os.environ.update(
         "ENFORCE_MFA": "true",
         "LOG_LEVEL": "WARNING",
         "EMAIL_BACKEND": "memory",
+        "PAYMENT_GATEWAYS": "fake",
         "FRONTEND_URL": "https://app.test",
     }
 )
@@ -60,6 +61,7 @@ from app.core import email  # noqa: E402
 from app.core.migrate import upgrade  # noqa: E402
 from app.core.ratelimit import get_limiter  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.modules.payments.gateways import FakeGateway  # noqa: E402
 
 _admin_url = _parsed.render_as_string(hide_password=False)
 
@@ -104,6 +106,7 @@ def db(connection: Connection) -> Iterator[Session]:
 def _reset_shared_state() -> None:
     get_limiter().reset()
     email.sent_messages.clear()
+    FakeGateway.reset()
 
 
 @pytest.fixture(scope="session")

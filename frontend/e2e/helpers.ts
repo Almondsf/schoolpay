@@ -18,13 +18,27 @@ export function totp(secretBase32: string = MFA_SECRET, at = Date.now()): string
   return ((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).toString().padStart(6, '0');
 }
 
+// The server never accepts the same code twice (replay protection), so a second sign-in within one
+// 30-second window has to wait for the next code. Tests run in one worker, so this is shared.
+let lastUsedStep = 0;
+
+async function freshTotp(): Promise<string> {
+  let step = Math.floor(Date.now() / 30_000);
+  if (step <= lastUsedStep) {
+    await new Promise((resolve) => setTimeout(resolve, (lastUsedStep + 1) * 30_000 - Date.now() + 250));
+    step = Math.floor(Date.now() / 30_000);
+  }
+  lastUsedStep = step;
+  return totp(MFA_SECRET, step * 30_000);
+}
+
 export async function signIn(page: Page, email: string, { mfa = false } = {}) {
   await page.goto('/console/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   if (mfa) {
-    await page.getByLabel('Code').fill(totp());
+    await page.getByLabel('Code').fill(await freshTotp());
     await page.getByRole('button', { name: 'Continue' }).click();
   }
   await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();

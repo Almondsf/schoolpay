@@ -432,6 +432,7 @@ def generate_term_invoices(
     session.add_all(invoices)
     session.flush()
     session.add_all(lines)
+    _apply_credit(session, [invoice.student_id for invoice in invoices])
     record(
         session,
         AuditAction.INVOICES_GENERATED,
@@ -449,6 +450,14 @@ def generate_term_invoices(
     )
     session.commit()
     return report
+
+
+def _apply_credit(session: Session, student_ids: list[uuid.UUID]) -> None:
+    """Money students already paid in advance (credit) pays their new invoices straight away."""
+    from app.modules.payments.allocation import allocate  # payments builds on fees; this is the one call back
+
+    session.flush()
+    allocate(session, student_ids)
 
 
 # --- Changing invoices -----------------------------------------------------------------------------
@@ -597,6 +606,7 @@ def create_invoice(
         )
         for i, ln in enumerate(lines, start=1)
     )
+    _apply_credit(session, [student.id])
     record(
         session,
         AuditAction.INVOICE_CREATED,

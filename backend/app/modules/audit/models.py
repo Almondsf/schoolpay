@@ -63,6 +63,15 @@ class AuditAction(enum.StrEnum):
     INVOICE_CREATED = "invoices.created"
     INVOICE_ADJUSTED = "invoices.adjusted"
     INVOICE_VOIDED = "invoices.voided"
+    PAYMENT_ACCOUNT_SET_UP = "payments.account_set_up"
+    VIRTUAL_ACCOUNTS_ISSUED = "payments.virtual_accounts_issued"
+    PAYMENT_RECORDED = "payments.recorded"
+    PAYMENT_REVERSED = "payments.reversed"
+    PAYMENT_NEEDS_REVIEW = "payments.needs_review"
+    PAYMENT_LINK_CREATED = "payments.link_created"
+    MANUAL_PAYMENT_RECORDED = "payments.manual_recorded"
+    MANUAL_PAYMENT_APPROVED = "payments.manual_approved"
+    MANUAL_PAYMENT_REJECTED = "payments.manual_rejected"
 
 
 class _AuditColumns(UUIDPrimaryKey):

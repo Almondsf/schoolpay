@@ -98,6 +98,8 @@ def _settings(**overrides):
         # Override what the test environment sets, so only the explicit values count
         "debug": False,
         "email_backend": "console",
+        "payment_gateways": "paystack",
+        "paystack_secret_key": "sk_live_example",
         "celery_task_always_eager": False,
         "cors_origins": "https://app.example",
     }
@@ -120,6 +122,8 @@ def test_production_settings_are_safe_by_default():
         {"rate_limit_storage_url": "memory://"},
         {"secret_key": "short"},
         {"database_url": "sqlite:///x.db"},
+        {"payment_gateways": "fake"},
+        {"paystack_secret_key": ""},
     ],
 )
 def test_production_refuses_unsafe_settings(overrides):

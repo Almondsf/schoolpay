@@ -11,6 +11,8 @@ import { Billing } from './billing/Billing';
 import { InvoiceDetail } from './billing/InvoiceDetail';
 import { Dashboard } from './Dashboard';
 import { FeeSetup } from './fees/FeeSetup';
+import { Payments } from './payments/Payments';
+import { PaymentSettings } from './payments/PaymentSettings';
 import { PlatformSchools } from './platform/Schools';
 import { SchoolProfile } from './SchoolProfile';
 import { Calendar } from './setup/Calendar';
@@ -30,12 +32,14 @@ const SCHOOL_NAV: NavItem[] = [
   { to: '/console', label: 'Overview', capability: 'school.view' },
   { to: '/console/students', label: 'Students', capability: 'students.view' },
   { to: '/console/billing', label: 'Billing', capability: 'fees.view' },
+  { to: '/console/payments', label: 'Payments', capability: 'payments.view' },
   { to: '/console/fees', label: 'Fees', capability: 'fees.view' },
   { to: '/console/classes', label: 'Classes', capability: 'school.view' },
   { to: '/console/calendar', label: 'Calendar', capability: 'school.view' },
   { to: '/console/staff', label: 'Staff', capability: 'staff.view' },
   { to: '/console/audit', label: 'Activity log', capability: 'audit.view' },
   { to: '/console/school', label: 'School profile', capability: 'school.view' },
+  { to: '/console/payment-settings', label: 'Payment settings', capability: 'payments.view' },
 ];
 
 const PLATFORM_NAV: NavItem[] = [
@@ -58,6 +62,8 @@ export function ConsoleApp() {
           <Route path="students/:studentId" element={<Guard capability="students.view"><StudentDetail /></Guard>} />
           <Route path="billing" element={<Guard capability="fees.view"><Billing /></Guard>} />
           <Route path="invoices/:invoiceId" element={<Guard capability="fees.view"><InvoiceDetail /></Guard>} />
+          <Route path="payments" element={<Guard capability="payments.view"><Payments /></Guard>} />
+          <Route path="payment-settings" element={<Guard capability="payments.view"><PaymentSettings /></Guard>} />
           <Route path="fees" element={<Guard capability="fees.view"><FeeSetup /></Guard>} />
           <Route path="classes" element={<Guard capability="school.view"><Classes /></Guard>} />
           <Route path="calendar" element={<Guard capability="school.view"><Calendar /></Guard>} />

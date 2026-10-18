@@ -34,5 +34,7 @@ celery_app.conf.update(
         # Hands outbox rows to the queue if the immediate dispatch after commit failed
         "outbox-sweep": {"task": "outbox.sweep", "schedule": 30.0},
         "prune-sessions": {"task": "accounts.prune_sessions", "schedule": 6 * 3600.0},
+        # Gateway webhooks that couldn't be processed yet (gateway down) are tried again
+        "requeue-webhooks": {"task": "payments.requeue_webhooks", "schedule": 300.0},
     },
 )

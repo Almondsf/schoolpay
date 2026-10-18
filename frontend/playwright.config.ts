@@ -32,6 +32,7 @@ const backendEnv = {
   DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'postgresql+psycopg://schoolpay@localhost:5433/schoolpay_e2e',
   CELERY_TASK_ALWAYS_EAGER: 'true',
   EMAIL_BACKEND: 'console',
+  PAYMENT_GATEWAYS: 'fake', // simulated gateway: no real money moves
   // Every test signs in from the same address
   LOGIN_RATE_PER_IP: '1000/minute',
   LOGIN_RATE_PER_ACCOUNT: '1000/hour',

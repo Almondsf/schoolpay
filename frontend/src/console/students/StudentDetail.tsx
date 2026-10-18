@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { formatDate, humanize } from '../../lib/format';
 import { ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
 import { StudentAccount } from '../billing/StudentAccount';
+import { StudentPayIn } from '../payments/StudentPayIn';
 import { armOptions, useClassLevels } from '../hooks';
 
 type Detail = Schemas['StudentDetailOut'];
@@ -156,6 +157,7 @@ export function StudentDetail() {
         </div>
       </div>
       {can('fees.view') && <StudentAccount studentId={s.id} />}
+      {can('payments.view') && <StudentPayIn studentId={s.id} />}
       {dialog === 'edit' && <EditStudent student={s} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === 'class' && <ChangeClass student={s} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === 'withdraw' && <Withdraw student={s} onClose={() => setDialog(null)} onDone={refresh} />}

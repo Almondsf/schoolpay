@@ -4,6 +4,7 @@ import { AuthProvider } from './auth/AuthContext';
 import { ConsoleApp } from './console/ConsoleApp';
 import { ParentHome } from './parent/ParentHome';
 import { NotFound } from './public/NotFound';
+import { PayComplete } from './public/PayComplete';
 
 /**
  * Three areas in one app:
@@ -24,6 +25,7 @@ export function App() {
         }
       />
       <Route path="/parent/*" element={<ParentHome />} />
+      <Route path="/pay/complete" element={<PayComplete />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

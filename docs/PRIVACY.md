@@ -35,6 +35,14 @@ No BVNs, NINs, photos, addresses, religion or health data are collected.
   to the guardians linked to each child. A parent with children at two schools
   is a separate guardian record in each; the schools never see each other's records.
 
+## Shared with payment gateways
+To issue a student's account number, the gateway (Paystack) receives the
+student's first and last name, the primary guardian's phone number, and the
+guardian's email (or a routing address we generate if there isn't one). Card
+payments send the payer's email to the gateway. Gateways are processors under
+their own NDPA obligations. No BVNs are sent or stored, and card details never
+reach SchoolPay.
+
 ## Still to build (tracked in the roadmap)
 - Guardian consent records, data export and erasure, retention rules (chunk 10).
 - NDPC registration and a Data Processing Agreement template for schools.
