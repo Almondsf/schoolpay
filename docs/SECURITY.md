@@ -163,6 +163,18 @@ It is updated with every change that affects security.
   The message log is visible only to staff with `messaging.manage` in that
   school.
 
+## Reports and downloads
+- Reports need `reports.view` (proprietor and bursar only); school admins
+  can't see money.
+- Every download is recorded in the activity log (who, which report,
+  format, row count, scope; never the contents), rate limited per school
+  (60 an hour), capped at 5,000 rows, and sent `Cache-Control: no-store`.
+- Spreadsheet formula injection: text starting with `= + - @` (e.g. a parent
+  name from an import) is written to Excel with a leading apostrophe, so it's
+  shown as text and never run.
+- Report queries are scoped to the school like every other query; isolation
+  is tested, including another school's term and class IDs.
+
 ## Background tasks
 - Tasks go through a transactional outbox: a rolled-back request never sends
   its email, and a broker outage delays tasks instead of losing them.

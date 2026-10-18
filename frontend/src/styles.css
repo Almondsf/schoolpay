@@ -113,9 +113,68 @@ code {
 
 .topbar nav {
   display: flex;
+  align-items: center;
   gap: 16px;
   flex: 1;
   flex-wrap: wrap;
+}
+
+.nav-menu {
+  position: relative;
+}
+
+.nav-menu summary {
+  cursor: pointer;
+  opacity: 0.85;
+  list-style: none;
+}
+
+.nav-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-menu summary::after {
+  content: ' ▾';
+  font-size: 0.8em;
+}
+
+.nav-menu summary:hover,
+.nav-menu summary.active,
+.nav-menu[open] summary {
+  opacity: 1;
+}
+
+.nav-menu summary.active {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.nav-menu-list {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -12px;
+  z-index: 20;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.topbar .nav-menu-list a {
+  color: var(--ink);
+  opacity: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.topbar .nav-menu-list a:hover,
+.topbar .nav-menu-list a.active {
+  background: var(--green-light);
+  text-decoration: none;
 }
 
 .user-menu {
@@ -836,4 +895,111 @@ button.full {
 table.lines {
   margin-top: 6px;
   background: var(--bg);
+}
+
+/* --- Dashboard and reports ------------------------------------------------------------------- */
+
+.section-title {
+  margin: 8px 0 12px;
+  font-size: 1.05rem;
+}
+
+.stat.ok .stat-value {
+  color: var(--green);
+}
+
+.small-stat .stat-value {
+  font-size: 1.1rem;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+}
+
+.progress {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green-light);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 999px;
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px 0 4px;
+}
+
+.chart-bar {
+  fill: var(--green);
+}
+
+.chart-bar:hover {
+  fill: var(--green-dark);
+}
+
+.chart-bar.negative {
+  fill: var(--danger);
+}
+
+.chart-axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.aging {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.aging-cell {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.aging-cell.warn {
+  background: var(--warn-light);
+}
+
+.aging-cell.danger {
+  background: var(--danger-light);
+}
+
+.card-pad {
+  padding: 12px 16px 0;
+}
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filters .checkbox {
+  flex: 0 0 auto;
+}
+
+.filters .checkbox input {
+  min-width: 0;
+  flex: none;
 }

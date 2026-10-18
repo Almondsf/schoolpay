@@ -7,9 +7,11 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Invite staff by email, choose their role, rename them, change their role, deactivate or reactivate them.
 - ✅ Reset a staff member's two-factor sign-in when they lose their phone.
 - ✅ See an activity log of every sign-in and change in the school, which nobody can edit.
-- See billed vs collected vs outstanding for the current term at a glance.
-- See collections per class and per day, and the total owed by debtors.
-- Trust that the numbers are right without asking the bursar.
+- ✅ See billed vs collected vs outstanding for the current term at a glance, for any term.
+- ✅ See collections per class and per day, how parents pay, and the total owed by debtors.
+- ✅ See how late the debts are (not yet due, 1–30, 31–60, 61–90, over 90 days) and what's still owed from earlier terms.
+- ✅ Trust that the numbers are right without asking the bursar: every figure comes from the same ledger as invoices and receipts.
+- ✅ Download the debtors list and money received as Excel or PDF to share with the board.
 
 ## Bursar
 - ✅ Sign in safely with a password and a code from my phone.
@@ -25,7 +27,8 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Send a parent a card payment link.
 - ✅ Reverse a payment recorded in error (e.g. a bounced teller) without deleting anything.
 - ✅ Every payment gets a numbered receipt (no gaps) that I can download as a PDF.
-- Keep a debtors list that's always current.
+- ✅ Keep a debtors list that's always current: filter by class, amount or overdue, sort by most owed or longest overdue, call the parent from the list, and download it for Excel or to print.
+- ✅ Report money received for any period, by day and by method, with the full payment list in Excel.
 - ✅ Send polite reminders without phoning every parent: reminders go automatically before and after the due date on a schedule I set, stop as soon as the bill is paid, and never exceed a cap per bill.
 - ✅ Tell every parent about their new bill when I generate the term's invoices.
 - ✅ Send one parent a reminder right now from the student's page.

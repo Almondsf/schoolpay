@@ -76,6 +76,7 @@ class AuditAction(enum.StrEnum):
     MESSAGING_CHANGED = "messaging.changed"
     REMINDERS_PREFERENCE_CHANGED = "messaging.reminders_preference"
     REMINDER_SENT_MANUALLY = "messaging.reminder_sent"
+    REPORT_EXPORTED = "reports.exported"
 
 
 class _AuditColumns(UUIDPrimaryKey):

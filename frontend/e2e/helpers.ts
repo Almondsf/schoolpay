@@ -43,3 +43,10 @@ export async function signIn(page: Page, email: string, { mfa = false } = {}) {
   }
   await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
 }
+
+/** Go to a console page from the main menu, opening the Setup menu when the link lives there. */
+export async function navigate(page: Page, name: string) {
+  const link = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
+  if (!(await link.isVisible())) await page.locator('summary', { hasText: 'Setup' }).click();
+  await link.click();
+}

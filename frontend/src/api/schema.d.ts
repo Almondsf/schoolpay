@@ -1119,6 +1119,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Money received over a period */
+        get: operations["reports_get_collections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/collections/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download money received over a period (Excel or PDF) */
+        get: operations["reports_export_collections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/debtors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Students who owe, most first */
+        get: operations["reports_get_debtors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/debtors/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download the debtors list (Excel or PDF) */
+        get: operations["reports_export_debtors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Billed, collected and outstanding for a term */
+        get: operations["reports_get_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/school": {
         parameters: {
             query?: never;
@@ -1816,6 +1901,19 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * AgingBucket
+         * @enum {string}
+         */
+        AgingBucket: "not_due" | "1_30" | "31_60" | "61_90" | "over_90";
+        /** AgingRowOut */
+        AgingRowOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            bucket: components["schemas"]["AgingBucket"];
+            /** Invoices */
+            invoices: number;
+        };
         /** AppliedOut */
         AppliedOut: {
             /** Amount Kobo */
@@ -2054,6 +2152,23 @@ export interface components {
             /** Class Level Name */
             class_level_name: string;
         };
+        /** ClassRowOut */
+        ClassRowOut: {
+            /** Billed Kobo */
+            billed_kobo: number;
+            /** Class Level Id */
+            class_level_id: string | null;
+            /** Class Name */
+            class_name: string;
+            /** Collected Kobo */
+            collected_kobo: number;
+            /** Invoices */
+            invoices: number;
+            /** Outstanding Kobo */
+            outstanding_kobo: number;
+            /** Students Owing */
+            students_owing: number;
+        };
         /** ClassTotalOut */
         ClassTotalOut: {
             /**
@@ -2079,6 +2194,31 @@ export interface components {
             code: string;
             /** Phone */
             phone: string;
+        };
+        /** CollectionsOut */
+        CollectionsOut: {
+            /** By Day */
+            by_day: components["schemas"]["DayTotalOut"][];
+            /** By Method */
+            by_method: components["schemas"]["MethodTotalOut"][];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Net Kobo */
+            net_kobo: number;
+            /** Payments */
+            payments: number;
+            /** Received Kobo */
+            received_kobo: number;
+            /** Reversed Kobo */
+            reversed_kobo: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /** CopyResult */
         CopyResult: {
@@ -2123,6 +2263,67 @@ export interface components {
              * Format: date
              */
             start_date: string;
+        };
+        /** DayTotalOut */
+        DayTotalOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Payments */
+            payments: number;
+        };
+        /** DebtorOut */
+        DebtorOut: {
+            /** Admission Number */
+            admission_number: string;
+            /** Class Name */
+            class_name: string;
+            /** Days Overdue */
+            days_overdue: number;
+            /** Full Name */
+            full_name: string;
+            /** Guardian Name */
+            guardian_name: string;
+            /** Guardian Phone */
+            guardian_phone: string;
+            /** Last Paid At */
+            last_paid_at: string | null;
+            /** Oldest Due */
+            oldest_due: string | null;
+            /** Owed Kobo */
+            owed_kobo: number;
+            /** Reminders Off */
+            reminders_off: boolean;
+            /** Reminders Sent */
+            reminders_sent: number;
+            status: components["schemas"]["StudentStatus"];
+            /**
+             * Student Id
+             * Format: uuid
+             */
+            student_id: string;
+        };
+        /**
+         * DebtorSort
+         * @enum {string}
+         */
+        DebtorSort: "owed" | "oldest" | "name" | "class";
+        /** DebtorsOut */
+        DebtorsOut: {
+            /** Items */
+            items: components["schemas"]["DebtorOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+            /** Total Owed Kobo */
+            total_owed_kobo: number;
         };
         /** DiscountIn */
         DiscountIn: {
@@ -2719,6 +2920,14 @@ export interface components {
          * @enum {string}
          */
         MessageStatus: "queued" | "sent" | "failed" | "skipped";
+        /** MethodTotalOut */
+        MethodTotalOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            method: components["schemas"]["PaymentMethod"];
+            /** Payments */
+            payments: number;
+        };
         /** MfaCodeIn */
         MfaCodeIn: {
             /** Totp Code */
@@ -2793,6 +3002,60 @@ export interface components {
             description: string;
             /** Fee Item Id */
             fee_item_id?: string | null;
+        };
+        /** OverviewOut */
+        OverviewOut: {
+            /** Aging */
+            aging: components["schemas"]["AgingRowOut"][];
+            /** Billed Kobo */
+            billed_kobo: number;
+            /** By Class */
+            by_class: components["schemas"]["ClassRowOut"][];
+            /** By Day */
+            by_day: components["schemas"]["DayTotalOut"][];
+            /** By Method */
+            by_method: components["schemas"]["MethodTotalOut"][];
+            /** Collected Kobo */
+            collected_kobo: number;
+            /** Credit Kobo */
+            credit_kobo: number;
+            /** Invoices */
+            invoices: number;
+            /** Older Outstanding Kobo */
+            older_outstanding_kobo: number;
+            /** Outstanding Kobo */
+            outstanding_kobo: number;
+            /** Pending Approval */
+            pending_approval: number;
+            /** Pending Approval Kobo */
+            pending_approval_kobo: number;
+            /** Received 7 Days Kobo */
+            received_7_days_kobo: number;
+            /** Received This Term Kobo */
+            received_this_term_kobo: number;
+            /** Received Today Kobo */
+            received_today_kobo: number;
+            /** Students Owing */
+            students_owing: number;
+            /**
+             * Term End
+             * Format: date
+             */
+            term_end: string;
+            /**
+             * Term Id
+             * Format: uuid
+             */
+            term_id: string;
+            /** Term Label */
+            term_label: string;
+            /**
+             * Term Start
+             * Format: date
+             */
+            term_start: string;
+            /** Total Outstanding Kobo */
+            total_outstanding_kobo: number;
         };
         /** Page[AuditEntryOut] */
         Page_AuditEntryOut_: {
@@ -10092,6 +10355,452 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReminderSettingsIO"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_get_collections: {
+        parameters: {
+            query?: {
+                /** @description Lagos date; default: 30 days ago */
+                start?: string | null;
+                /** @description Lagos date, inclusive; default: today */
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_export_collections: {
+        parameters: {
+            query?: {
+                format?: "xlsx" | "pdf";
+                /** @description Lagos date; default: 30 days ago */
+                start?: string | null;
+                /** @description Lagos date, inclusive; default: today */
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_get_debtors: {
+        parameters: {
+            query?: {
+                class_level_id?: string | null;
+                min_owed_kobo?: number;
+                overdue_only?: boolean;
+                search?: string;
+                sort?: components["schemas"]["DebtorSort"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebtorsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_export_debtors: {
+        parameters: {
+            query?: {
+                format?: "xlsx" | "pdf";
+                class_level_id?: string | null;
+                min_owed_kobo?: number;
+                overdue_only?: boolean;
+                search?: string;
+                sort?: components["schemas"]["DebtorSort"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_get_overview: {
+        parameters: {
+            query?: {
+                /** @description Default: the current term */
+                term_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewOut"];
                 };
             };
             /** @description Bad Request */

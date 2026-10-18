@@ -57,6 +57,12 @@ No messages are sent at night. Messages travel through Meta (WhatsApp), Termii
 parent's and child's names, amounts and the child's payment account number,
 and nothing else.
 
+## Reports
+The debtors list shows each main parent's name and phone number so the school
+can call about fees. Only the proprietor and bursar can see it. Every Excel or
+PDF download of it is recorded in the school's activity log with who took it,
+so a school can account for copies of parents' details that leave the system.
+
 ## Shared with payment gateways
 To issue a student's account number, the gateway (Paystack) receives the
 student's first and last name, the primary guardian's phone number, and the

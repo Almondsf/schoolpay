@@ -10,6 +10,7 @@ import { ForgotPassword, SetPassword } from './auth/PasswordPages';
 import { Billing } from './billing/Billing';
 import { InvoiceDetail } from './billing/InvoiceDetail';
 import { Messages } from './messages/Messages';
+import { Reports } from './reports/Reports';
 import { Dashboard } from './Dashboard';
 import { FeeSetup } from './fees/FeeSetup';
 import { Payments } from './payments/Payments';
@@ -27,6 +28,7 @@ interface NavItem {
   to: string;
   label: string;
   capability: Capability;
+  setup?: boolean; // grouped under the Setup menu
 }
 
 const SCHOOL_NAV: NavItem[] = [
@@ -34,14 +36,15 @@ const SCHOOL_NAV: NavItem[] = [
   { to: '/console/students', label: 'Students', capability: 'students.view' },
   { to: '/console/billing', label: 'Billing', capability: 'fees.view' },
   { to: '/console/payments', label: 'Payments', capability: 'payments.view' },
+  { to: '/console/reports', label: 'Reports', capability: 'reports.view' },
   { to: '/console/messages', label: 'Messages', capability: 'messaging.manage' },
-  { to: '/console/fees', label: 'Fees', capability: 'fees.view' },
-  { to: '/console/classes', label: 'Classes', capability: 'school.view' },
-  { to: '/console/calendar', label: 'Calendar', capability: 'school.view' },
-  { to: '/console/staff', label: 'Staff', capability: 'staff.view' },
-  { to: '/console/audit', label: 'Activity log', capability: 'audit.view' },
-  { to: '/console/school', label: 'School profile', capability: 'school.view' },
-  { to: '/console/payment-settings', label: 'Payment settings', capability: 'payments.view' },
+  { to: '/console/fees', label: 'Fees', capability: 'fees.view', setup: true },
+  { to: '/console/classes', label: 'Classes', capability: 'school.view', setup: true },
+  { to: '/console/calendar', label: 'Calendar', capability: 'school.view', setup: true },
+  { to: '/console/staff', label: 'Staff', capability: 'staff.view', setup: true },
+  { to: '/console/school', label: 'School profile', capability: 'school.view', setup: true },
+  { to: '/console/payment-settings', label: 'Payment settings', capability: 'payments.view', setup: true },
+  { to: '/console/audit', label: 'Activity log', capability: 'audit.view', setup: true },
 ];
 
 const PLATFORM_NAV: NavItem[] = [
@@ -65,6 +68,7 @@ export function ConsoleApp() {
           <Route path="billing" element={<Guard capability="fees.view"><Billing /></Guard>} />
           <Route path="invoices/:invoiceId" element={<Guard capability="fees.view"><InvoiceDetail /></Guard>} />
           <Route path="payments" element={<Guard capability="payments.view"><Payments /></Guard>} />
+          <Route path="reports" element={<Guard capability="reports.view"><Reports /></Guard>} />
           <Route path="messages" element={<Guard capability="messaging.manage"><Messages /></Guard>} />
           <Route path="payment-settings" element={<Guard capability="payments.view"><PaymentSettings /></Guard>} />
           <Route path="fees" element={<Guard capability="fees.view"><FeeSetup /></Guard>} />
@@ -106,8 +110,11 @@ function Home() {
 
 function Layout() {
   const { user, can, logout } = useAuth();
+  const location = useLocation();
   if (!user) return null;
   const nav = [...SCHOOL_NAV, ...PLATFORM_NAV].filter((item) => can(item.capability));
+  const setup = nav.filter((item) => item.setup);
+  const inSetup = setup.some((item) => location.pathname.startsWith(item.to));
   return (
     <div className="console">
       <header className="topbar">
@@ -116,12 +123,29 @@ function Layout() {
           {user.school && <span className="school-name">{user.school.name}</span>}
         </div>
         <nav aria-label="Main">
-          {!user.mfa_enrolment_required &&
-            nav.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.to === '/console'}>
-                {item.label}
-              </NavLink>
-            ))}
+          {!user.mfa_enrolment_required && (
+            <>
+              {nav
+                .filter((item) => !item.setup)
+                .map((item) => (
+                  <NavLink key={item.to} to={item.to} end={item.to === '/console'}>
+                    {item.label}
+                  </NavLink>
+                ))}
+              {setup.length > 0 && (
+                <details className="nav-menu" key={location.pathname /* closes after navigating */}>
+                  <summary className={inSetup ? 'active' : ''}>Setup</summary>
+                  <div className="nav-menu-list">
+                    {setup.map((item) => (
+                      <NavLink key={item.to} to={item.to}>
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
+          )}
         </nav>
         <div className="user-menu">
           <NavLink to="/console/account" title="Your account">

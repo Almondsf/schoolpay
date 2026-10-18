@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { signIn } from './helpers';
+import { signIn, navigate } from './helpers';
 
 const signInAsAdmin = (page: Parameters<typeof signIn>[0]) => signIn(page, 'admin@demo.schoolpay.ng');
 
@@ -34,9 +34,9 @@ test('school admin imports students from a spreadsheet', async ({ page }) => {
 
 test('classes and calendar are set up', async ({ page }) => {
   await signInAsAdmin(page);
-  await page.getByRole('link', { name: 'Classes' }).click();
+  await navigate(page, 'Classes');
   await expect(page.getByRole('cell', { name: 'SSS 3', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Calendar' }).click();
+  await navigate(page, 'Calendar');
   await expect(page.getByRole('heading', { name: '2026/2027' })).toBeVisible();
   await expect(page.getByRole('row', { name: /First term Current/ })).toBeVisible();
 });

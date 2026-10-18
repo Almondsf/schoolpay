@@ -256,6 +256,39 @@
         "title": "AddLineIn",
         "type": "object"
       },
+      "AgingBucket": {
+        "enum": [
+          "not_due",
+          "1_30",
+          "31_60",
+          "61_90",
+          "over_90"
+        ],
+        "title": "AgingBucket",
+        "type": "string"
+      },
+      "AgingRowOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "bucket": {
+            "$ref": "#/components/schemas/AgingBucket"
+          },
+          "invoices": {
+            "title": "Invoices",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bucket",
+          "amount_kobo",
+          "invoices"
+        ],
+        "title": "AgingRowOut",
+        "type": "object"
+      },
       "AppliedOut": {
         "properties": {
           "amount_kobo": {
@@ -848,6 +881,57 @@
         "title": "ClassPlacement",
         "type": "object"
       },
+      "ClassRowOut": {
+        "properties": {
+          "billed_kobo": {
+            "title": "Billed Kobo",
+            "type": "integer"
+          },
+          "class_level_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Level Id"
+          },
+          "class_name": {
+            "title": "Class Name",
+            "type": "string"
+          },
+          "collected_kobo": {
+            "title": "Collected Kobo",
+            "type": "integer"
+          },
+          "invoices": {
+            "title": "Invoices",
+            "type": "integer"
+          },
+          "outstanding_kobo": {
+            "title": "Outstanding Kobo",
+            "type": "integer"
+          },
+          "students_owing": {
+            "title": "Students Owing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "class_level_id",
+          "class_name",
+          "invoices",
+          "billed_kobo",
+          "collected_kobo",
+          "outstanding_kobo",
+          "students_owing"
+        ],
+        "title": "ClassRowOut",
+        "type": "object"
+      },
       "ClassTotalOut": {
         "properties": {
           "class_level_id": {
@@ -911,6 +995,62 @@
           "code"
         ],
         "title": "CodeVerifyIn",
+        "type": "object"
+      },
+      "CollectionsOut": {
+        "properties": {
+          "by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayTotalOut"
+            },
+            "title": "By Day",
+            "type": "array"
+          },
+          "by_method": {
+            "items": {
+              "$ref": "#/components/schemas/MethodTotalOut"
+            },
+            "title": "By Method",
+            "type": "array"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "net_kobo": {
+            "title": "Net Kobo",
+            "type": "integer"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "integer"
+          },
+          "received_kobo": {
+            "title": "Received Kobo",
+            "type": "integer"
+          },
+          "reversed_kobo": {
+            "title": "Reversed Kobo",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "received_kobo",
+          "reversed_kobo",
+          "net_kobo",
+          "payments",
+          "by_day",
+          "by_method"
+        ],
+        "title": "CollectionsOut",
         "type": "object"
       },
       "CopyResult": {
@@ -990,6 +1130,165 @@
           "session_name"
         ],
         "title": "CurrentTermOut",
+        "type": "object"
+      },
+      "DayTotalOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "amount_kobo",
+          "payments"
+        ],
+        "title": "DayTotalOut",
+        "type": "object"
+      },
+      "DebtorOut": {
+        "properties": {
+          "admission_number": {
+            "title": "Admission Number",
+            "type": "string"
+          },
+          "class_name": {
+            "title": "Class Name",
+            "type": "string"
+          },
+          "days_overdue": {
+            "title": "Days Overdue",
+            "type": "integer"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "guardian_name": {
+            "title": "Guardian Name",
+            "type": "string"
+          },
+          "guardian_phone": {
+            "title": "Guardian Phone",
+            "type": "string"
+          },
+          "last_paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Paid At"
+          },
+          "oldest_due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Due"
+          },
+          "owed_kobo": {
+            "title": "Owed Kobo",
+            "type": "integer"
+          },
+          "reminders_off": {
+            "title": "Reminders Off",
+            "type": "boolean"
+          },
+          "reminders_sent": {
+            "title": "Reminders Sent",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StudentStatus"
+          },
+          "student_id": {
+            "format": "uuid",
+            "title": "Student Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_id",
+          "admission_number",
+          "full_name",
+          "status",
+          "class_name",
+          "owed_kobo",
+          "oldest_due",
+          "days_overdue",
+          "guardian_name",
+          "guardian_phone",
+          "reminders_off",
+          "reminders_sent",
+          "last_paid_at"
+        ],
+        "title": "DebtorOut",
+        "type": "object"
+      },
+      "DebtorSort": {
+        "enum": [
+          "owed",
+          "oldest",
+          "name",
+          "class"
+        ],
+        "title": "DebtorSort",
+        "type": "string"
+      },
+      "DebtorsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DebtorOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_owed_kobo": {
+            "title": "Total Owed Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "total_owed_kobo"
+        ],
+        "title": "DebtorsOut",
         "type": "object"
       },
       "DiscountIn": {
@@ -2510,6 +2809,28 @@
         "title": "MessageStatus",
         "type": "string"
       },
+      "MethodTotalOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "method",
+          "amount_kobo",
+          "payments"
+        ],
+        "title": "MethodTotalOut",
+        "type": "object"
+      },
       "MfaCodeIn": {
         "properties": {
           "totp_code": {
@@ -2717,6 +3038,134 @@
           "amount_kobo"
         ],
         "title": "NewLineIn",
+        "type": "object"
+      },
+      "OverviewOut": {
+        "properties": {
+          "aging": {
+            "items": {
+              "$ref": "#/components/schemas/AgingRowOut"
+            },
+            "title": "Aging",
+            "type": "array"
+          },
+          "billed_kobo": {
+            "title": "Billed Kobo",
+            "type": "integer"
+          },
+          "by_class": {
+            "items": {
+              "$ref": "#/components/schemas/ClassRowOut"
+            },
+            "title": "By Class",
+            "type": "array"
+          },
+          "by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayTotalOut"
+            },
+            "title": "By Day",
+            "type": "array"
+          },
+          "by_method": {
+            "items": {
+              "$ref": "#/components/schemas/MethodTotalOut"
+            },
+            "title": "By Method",
+            "type": "array"
+          },
+          "collected_kobo": {
+            "title": "Collected Kobo",
+            "type": "integer"
+          },
+          "credit_kobo": {
+            "title": "Credit Kobo",
+            "type": "integer"
+          },
+          "invoices": {
+            "title": "Invoices",
+            "type": "integer"
+          },
+          "older_outstanding_kobo": {
+            "title": "Older Outstanding Kobo",
+            "type": "integer"
+          },
+          "outstanding_kobo": {
+            "title": "Outstanding Kobo",
+            "type": "integer"
+          },
+          "pending_approval": {
+            "title": "Pending Approval",
+            "type": "integer"
+          },
+          "pending_approval_kobo": {
+            "title": "Pending Approval Kobo",
+            "type": "integer"
+          },
+          "received_7_days_kobo": {
+            "title": "Received 7 Days Kobo",
+            "type": "integer"
+          },
+          "received_this_term_kobo": {
+            "title": "Received This Term Kobo",
+            "type": "integer"
+          },
+          "received_today_kobo": {
+            "title": "Received Today Kobo",
+            "type": "integer"
+          },
+          "students_owing": {
+            "title": "Students Owing",
+            "type": "integer"
+          },
+          "term_end": {
+            "format": "date",
+            "title": "Term End",
+            "type": "string"
+          },
+          "term_id": {
+            "format": "uuid",
+            "title": "Term Id",
+            "type": "string"
+          },
+          "term_label": {
+            "title": "Term Label",
+            "type": "string"
+          },
+          "term_start": {
+            "format": "date",
+            "title": "Term Start",
+            "type": "string"
+          },
+          "total_outstanding_kobo": {
+            "title": "Total Outstanding Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "term_id",
+          "term_label",
+          "term_start",
+          "term_end",
+          "invoices",
+          "billed_kobo",
+          "collected_kobo",
+          "outstanding_kobo",
+          "total_outstanding_kobo",
+          "older_outstanding_kobo",
+          "students_owing",
+          "credit_kobo",
+          "received_today_kobo",
+          "received_7_days_kobo",
+          "received_this_term_kobo",
+          "pending_approval",
+          "pending_approval_kobo",
+          "by_class",
+          "by_day",
+          "by_method",
+          "aging"
+        ],
+        "title": "OverviewOut",
         "type": "object"
       },
       "Page_AuditEntryOut_": {
@@ -5253,7 +5702,7 @@
     },
     "securitySchemes": {
       "HTTPBearer": {
-        "description": "Parent access token from /parent/auth",
+        "description": "Access token from /auth/login",
         "scheme": "bearer",
         "type": "http"
       }
@@ -13544,6 +13993,754 @@
         "summary": "Change when fee reminders go out",
         "tags": [
           "messaging"
+        ]
+      }
+    },
+    "/api/v1/reports/collections": {
+      "get": {
+        "operationId": "reports_get_collections",
+        "parameters": [
+          {
+            "description": "Lagos date; default: 30 days ago",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Lagos date; default: 30 days ago",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Lagos date, inclusive; default: today",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Lagos date, inclusive; default: today",
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Money received over a period",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/collections/export": {
+      "get": {
+        "operationId": "reports_export_collections",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "xlsx",
+              "enum": [
+                "xlsx",
+                "pdf"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Lagos date; default: 30 days ago",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Lagos date; default: 30 days ago",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Lagos date, inclusive; default: today",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Lagos date, inclusive; default: today",
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {},
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download money received over a period (Excel or PDF)",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/debtors": {
+      "get": {
+        "operationId": "reports_get_debtors",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "class_level_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Class Level Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_owed_kobo",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000000000000,
+              "minimum": 1,
+              "title": "Min Owed Kobo",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "overdue_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Overdue Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Search",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DebtorSort",
+              "default": "owed"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtorsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Students who owe, most first",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/debtors/export": {
+      "get": {
+        "operationId": "reports_export_debtors",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "xlsx",
+              "enum": [
+                "xlsx",
+                "pdf"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "class_level_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Class Level Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_owed_kobo",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000000000000,
+              "minimum": 1,
+              "title": "Min Owed Kobo",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "overdue_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Overdue Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Search",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DebtorSort",
+              "default": "owed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {},
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download the debtors list (Excel or PDF)",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/overview": {
+      "get": {
+        "operationId": "reports_get_overview",
+        "parameters": [
+          {
+            "description": "Default: the current term",
+            "in": "query",
+            "name": "term_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: the current term",
+              "title": "Term Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Billed, collected and outstanding for a term",
+        "tags": [
+          "reports"
         ]
       }
     },

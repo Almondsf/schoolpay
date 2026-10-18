@@ -21,13 +21,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 11. [Receipts](#11-receipts)
 12. [Parent portal](#12-parent-portal)
 13. [Messages to parents](#13-messages-to-parents)
-14. [Backend layout and conventions](#14-backend-layout-and-conventions)
-15. [Background jobs and the outbox](#15-background-jobs-and-the-outbox)
-16. [API](#16-api)
-17. [Configuration](#17-configuration)
-18. [Frontend](#18-frontend)
-19. [Testing](#19-testing)
-20. [Known gaps](#20-known-gaps)
+14. [Reports and the dashboard](#14-reports-and-the-dashboard)
+15. [Backend layout and conventions](#15-backend-layout-and-conventions)
+16. [Background jobs and the outbox](#16-background-jobs-and-the-outbox)
+17. [API](#17-api)
+18. [Configuration](#18-configuration)
+19. [Frontend](#19-frontend)
+20. [Testing](#20-testing)
+21. [Known gaps](#21-known-gaps)
 
 ---
 
@@ -509,7 +510,46 @@ out.
 Console backends log only a masked number or the recipient's domain, never the
 text.
 
-## 14. Backend layout and conventions
+## 14. Reports and the dashboard
+
+Module: `app/modules/reports`. Console: the **Overview** page (the dashboard)
+and **Reports** (debtors, money received). Capability `reports.view`
+(proprietor and bursar).
+
+**Where the numbers come from.** Every figure is built from the ledger: the
+invoice lines (`fees.invoicing.totals_subquery`) and payment allocations
+(`fees.ledger.paid_subquery`). So reports always agree with invoices, student
+accounts and receipts. A payment that is reversed counts on the day it was
+reversed. Dates are Lagos dates.
+
+| Report | Endpoint | What it shows |
+|---|---|---|
+| Overview | `GET /reports/overview?term_id=` (default: current term) | This term's billed, collected and outstanding amounts, overall and per class (in promotion order); older debts (earlier terms, brought forward, one-off charges); credit held; how many students owe; money received today, in the last 7 days and per day this term; payment methods; cash and teller entries waiting for approval; and debts by how late they are (not yet due, 1–30, 31–60, 61–90, over 90 days) |
+| Debtors | `GET /reports/debtors` (filters: class, minimum owed, overdue only, search; sort: most owed, longest overdue, class, name) | Each student who owes: amount, oldest unpaid due date, days overdue, class, main parent and phone, reminders sent or turned off, last payment (a reversed payment doesn't count). Paginated, with the total owed across the filter |
+| Money received | `GET /reports/collections?start=&end=` (at most a year) | Received, reversed and net, per day and per method |
+
+**Downloads.** `GET /reports/debtors/export` and
+`/reports/collections/export` take `format=xlsx|pdf` and the same filters.
+Excel (`exports.py`, openpyxl) has the school's name, the scope and when it
+was produced. Money is exact decimal naira with a number format, and the
+money-received workbook has By day, By method and Payments sheets. PDFs
+(reportlab, landscape A4) repeat the header row on every page and show
+"NGN", because the standard fonts have no naira sign. Text that Excel would
+treat as a formula (`= + - @`) gets an apostrophe in front. Downloads are
+capped at 5,000 rows, rate limited per school (60 an hour), sent
+`Cache-Control: no-store`, and recorded in the activity log
+(`reports.exported`: which report, format, row count, scope; never the
+contents).
+
+**Performance.** Each report is a fixed number of queries, whatever the size
+of the school (tested). The per-invoice and per-student aggregates are
+**materialized CTEs** (`_once()` in `service.py`). Right after a bulk insert,
+such as generating a term's bills, Postgres's statistics are stale until
+autovacuum runs. With plain subqueries the planner then chose nested loops
+that redid an aggregate for every row: 18 seconds instead of under one for 60
+students. Materializing makes each aggregate run once, whatever the plan.
+
+## 15. Backend layout and conventions
 
 ```
 backend/app/
@@ -553,7 +593,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 15. Background jobs and the outbox
+## 16. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -599,7 +639,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 16. API
+## 17. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -629,6 +669,7 @@ production.
 | Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |
 | Parent portal | `GET /parent/home`; `GET /parent/children/{id}`; `GET /parent/invoices/{id}`; `POST /parent/children/{id}/pay`; `GET /parent/receipts/{id}/pdf` |
 | Messages | `GET /messages`; `GET /message-templates`, `PUT /message-templates/{kind}`, `POST /message-templates/preview`; `GET/PUT /reminder-settings`; `PUT /guardians/{id}/reminders`; `POST /students/{id}/remind`; parents: `GET/PUT /parent/preferences` |
+| Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export` (`format=xlsx|pdf`) |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |
@@ -636,14 +677,14 @@ production.
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 17. Configuration
+## 18. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 18. Frontend
+## 19. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -674,6 +715,14 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   school's bank account, issue students' account numbers), and on each
   student a **Paying in** panel (their account number, a card payment link,
   recent payments). Receipt numbers on payments download the PDF.
+  **Overview** (the dashboard: term figures, a progress bar per class, money
+  received per day as a plain SVG chart, payment methods, how late the debts
+  are; a term picker) and **Reports** (debtors with filters, phone links and
+  paging; money received over a date range; Excel and PDF downloads through
+  `src/lib/download.ts`). Money queries are re-read every time the page is
+  shown (`staleTime: 0`), so the figures are never 30 seconds stale.
+  Set-up pages (fees, classes, calendar, staff, school profile, payment
+  settings, activity log) sit under a **Setup** menu in the top bar.
   **Messages** (log of every message with its channel or why it was skipped,
   the wording editor with placeholders and preview, the reminder schedule);
   "Send reminder" and a per-parent "Stop/Restart reminders" on the student
@@ -694,7 +743,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 19. Testing
+## 20. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -733,7 +782,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 20. Known gaps
+## 21. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

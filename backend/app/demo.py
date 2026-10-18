@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -411,18 +411,22 @@ def _fake_payments_setup(session: Session, school: School) -> None:
         .where(Student.school_id == school.id)
         .order_by(Student.admission_number)
     ).all()
-    prefix = uuid.uuid4().int % 90 + 10  # keeps numbers unique across re-seeds
+    # Carry on after the highest fake number so far, so re-seeding never reuses one
+    highest = session.scalar(
+        select(func.max(VirtualAccount.account_number)).where(VirtualAccount.gateway == GatewayCode.FAKE)
+    )
+    first = int(highest) + 1 if highest and highest.isdigit() else 9_000_000_001
     session.add_all(
         VirtualAccount(
             school_id=school.id,
             student_id=sid,
             gateway=GatewayCode.FAKE,
-            account_number=f"9{prefix}{n:07d}",
-            account_name=f"DMC/{last.upper()} {first.upper()}",
+            account_number=str(first + n),
+            account_name=f"DMC/{last.upper()} {given.upper()}",
             bank_name="Fake Bank",
-            provider_reference=f"FAKE_CUS_{n}",
+            provider_reference=f"FAKE_CUS_{first + n}",
         )
-        for n, (sid, first, last) in enumerate(students, start=1)
+        for n, (sid, given, last) in enumerate(students)
     )
 
 

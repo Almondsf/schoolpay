@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { MFA_SECRET as E2E_MFA_SECRET, PASSWORD, totp } from './helpers';
+import { MFA_SECRET as E2E_MFA_SECRET, PASSWORD, totp, navigate } from './helpers';
 
 async function signIn(page: Page, email: string) {
   await page.goto('/console/login');
@@ -12,7 +12,7 @@ async function signIn(page: Page, email: string) {
 test('school admin signs in, sees staff, and the session survives a reload', async ({ page }) => {
   await signIn(page, 'admin@demo.schoolpay.ng');
   await expect(page.getByRole('heading', { name: /Welcome, Ada/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Staff' }).click();
+  await navigate(page, 'Staff');
   await expect(page.getByText('musa bello', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Invite staff' })).toHaveCount(0);
   await page.reload(); // access token is in memory only; the refresh cookie restores the session
@@ -27,7 +27,7 @@ test('proprietor passes two-factor sign-in and invites a bursar', async ({ page 
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: /Welcome, Grace/ })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Staff' }).click();
+  await navigate(page, 'Staff');
   await page.getByRole('button', { name: 'Invite staff' }).click();
   const email = `bursar-${Date.now()}@demo.schoolpay.ng`;
   await page.getByLabel('Full name').fill('Tunde Bakare');
@@ -35,7 +35,7 @@ test('proprietor passes two-factor sign-in and invites a bursar', async ({ page 
   await page.getByRole('button', { name: 'Send invite' }).click();
   await expect(page.getByText(email)).toBeVisible();
 
-  await page.getByRole('link', { name: 'Activity log' }).click();
+  await navigate(page, 'Activity log');
   await expect(page.getByText('Staff invited').first()).toBeVisible();
 });
 
