@@ -10,6 +10,7 @@ explicit tenant scope (see app.workers.tasks).
 """
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -37,5 +38,8 @@ celery_app.conf.update(
         # Gateway webhooks that couldn't be processed yet (gateway down) are tried again
         "requeue-webhooks": {"task": "payments.requeue_webhooks", "schedule": 300.0},
         "prune-parent-records": {"task": "parents.prune", "schedule": 6 * 3600.0},
+        # On the hour: each school's reminders go out at its chosen hour (Lagos time)
+        "schedule-reminders": {"task": "notifications.schedule_reminders", "schedule": crontab(minute=0)},
+        "retry-unsent-messages": {"task": "notifications.retry_unsent", "schedule": crontab(minute=30)},
     },
 )

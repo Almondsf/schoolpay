@@ -231,6 +231,7 @@ class GenerationReport:
     no_fees_set: list[str] = field(default_factory=list)  # class names with students but no schedule
     by_class: list[ClassTotal] = field(default_factory=list)
     sample: list[DraftInvoice] = field(default_factory=list)
+    notices_queued: int = 0
 
 
 def _discount_amount(discount: Discount, lines: list[DraftLine]) -> int:
@@ -388,6 +389,7 @@ def generate_term_invoices(
     due_date: date | None,
     class_level_ids: set[uuid.UUID] | None,
     dry_run: bool,
+    notify_parents: bool = False,
 ) -> GenerationReport:
     term = get_or_404(session, Term, term_id, label="Term")
     if class_level_ids:
@@ -433,6 +435,10 @@ def generate_term_invoices(
     session.flush()
     session.add_all(lines)
     _apply_credit(session, [invoice.student_id for invoice in invoices])
+    if notify_parents:
+        from app.modules.notifications.service import queue_fee_notices  # notifications builds on fees
+
+        report.notices_queued = queue_fee_notices(session, ctx.school_id, invoices)
     record(
         session,
         AuditAction.INVOICES_GENERATED,
@@ -446,6 +452,7 @@ def generate_term_invoices(
             "first_number": numbers.start,
             "last_number": numbers.stop - 1,
             "classes": sorted(str(c) for c in class_level_ids) if class_level_ids else "all",
+            "fee_notices": report.notices_queued,
         },
     )
     session.commit()

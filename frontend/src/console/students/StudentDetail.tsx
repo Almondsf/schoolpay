@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate, humanize } from '../../lib/format';
-import { ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
+import { ErrorAlert, Field, Loading, Modal, Notice, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
 import { StudentAccount } from '../billing/StudentAccount';
 import { StudentPayIn } from '../payments/StudentPayIn';
 import { armOptions, useClassLevels } from '../hooks';
@@ -41,6 +41,15 @@ export function StudentDetail() {
     },
     onSuccess: refresh,
   });
+  const setReminders = useMutation({
+    mutationFn: async ({ guardianId, reminders }: { guardianId: string; reminders: boolean }) =>
+      unwrap(await api.PUT('/api/v1/guardians/{guardian_id}/reminders', { params: { path: { guardian_id: guardianId } }, body: { reminders } })),
+    onSuccess: refresh,
+  });
+  const remind = useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/students/{student_id}/remind', path)),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['messages'] }),
+  });
 
   if (student.isPending) return <Loading />;
   if (student.isError) return <ErrorAlert error={student.error} />;
@@ -61,12 +70,19 @@ export function StudentDetail() {
           </>
         }
         actions={
-          manage && (
+          (manage || can('messaging.manage')) && (
             <>
-              <button className="secondary" onClick={() => setDialog('edit')}>
-                Edit details
-              </button>
-              {s.status === 'active' ? (
+              {can('messaging.manage') && s.status === 'active' && (
+                <button className="secondary" onClick={() => remind.mutate()} disabled={remind.isPending || remind.isSuccess}>
+                  {remind.isSuccess ? 'Reminder sent' : 'Send reminder'}
+                </button>
+              )}
+              {manage && (
+                <button className="secondary" onClick={() => setDialog('edit')}>
+                  Edit details
+                </button>
+              )}
+              {!manage ? null : s.status === 'active' ? (
                 <>
                   <button className="secondary" onClick={() => setDialog('class')}>
                     Change class
@@ -84,7 +100,8 @@ export function StudentDetail() {
           )
         }
       />
-      <ErrorAlert error={reinstate.error ?? guardianAction.error} />
+      {remind.isSuccess && <Notice>A reminder is on its way to {s.first_name}'s main parent. You can follow it under Messages.</Notice>}
+      <ErrorAlert error={reinstate.error ?? guardianAction.error ?? setReminders.error ?? remind.error} />
       <div className="grid-2">
         <div className="card">
           <h2>Details</h2>
@@ -128,7 +145,8 @@ export function StudentDetail() {
             <div className="guardian" key={g.id}>
               <div>
                 <strong>{g.full_name}</strong> <span className="muted">({humanize(g.relationship)})</span>{' '}
-                {g.is_primary && <span className="badge ok">Gets fee notices</span>}
+                {g.is_primary && <span className="badge ok">Gets fee notices</span>}{' '}
+                {!g.reminders && <span className="badge warn">Reminders off</span>}
                 <div className="small">
                   {g.phone}
                   {g.email && ` · ${g.email}`}
@@ -138,6 +156,9 @@ export function StudentDetail() {
                 <div className="row wrap">
                   <button className="link small" onClick={() => setEditingGuardian(g)}>
                     Edit
+                  </button>
+                  <button className="link small" onClick={() => setReminders.mutate({ guardianId: g.id, reminders: !g.reminders })}>
+                    {g.reminders ? 'Stop reminders' : 'Restart reminders'}
                   </button>
                   {!g.is_primary && (
                     <button className="link small" onClick={() => guardianAction.mutate({ kind: 'primary', guardianId: g.id })}>

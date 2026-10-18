@@ -148,6 +148,21 @@ It is updated with every change that affects security.
   `pip-audit`; the frontend runs `npm audit`.
 - Images run as a non-root user (UID 10001) with a read-only filesystem in Compose.
 
+## Messages to parents
+- Message sending is idempotent: each message has a per-school dedupe key, so a
+  retried task or a repeated trigger can't message a parent twice.
+- Spam limits are enforced on the server: quiet hours, a school-set cap per
+  bill (at most 10) with a minimum gap, one manual reminder per student per
+  day, and a per-school rate limit on manual reminders.
+- Opt-outs and "is it still owed?" are re-checked at sending time, not just
+  when the message is queued.
+- School wording can only use a fixed list of placeholders (checked on save),
+  so a template can't reach other data. WhatsApp only sends Meta-approved
+  templates.
+- Console backends log masked numbers or email domains, never message text.
+  The message log is visible only to staff with `messaging.manage` in that
+  school.
+
 ## Background tasks
 - Tasks go through a transactional outbox: a rolled-back request never sends
   its email, and a broker outage delays tasks instead of losing them.

@@ -60,6 +60,7 @@ class GuardianOut(BaseModel):
     relationship: Relationship
     is_primary: bool
     consent_at: str | None
+    reminders: bool = Field(description="Gets fee notices and reminders (receipts always go)")
 
 
 class EnrollmentOut(BaseModel):
@@ -232,6 +233,7 @@ def _detail_out(detail: service.StudentDetail) -> StudentDetailOut:
                 relationship=link.relationship_to_student,
                 is_primary=link.is_primary,
                 consent_at=g.consent_at.isoformat() if g.consent_at else None,
+                reminders=g.reminders_opt_out_at is None,
             )
             for g, link in detail.guardians
         ],

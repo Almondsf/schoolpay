@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { formatDate, formatDateTime, formatKobo, humanize, parseNairaToKobo } from '../../lib/format';
+import { INVOICE_KIND_LABELS, formatDate, formatDateTime, formatKobo, parseNairaToKobo } from '../../lib/format';
 import { ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge } from '../../lib/ui';
 
 type Invoice = Schemas['InvoiceOut'];
@@ -33,7 +33,7 @@ export function InvoiceDetail() {
         title={`Invoice #${i.number}`}
         subtitle={
           <>
-            <Link to={`/console/students/${i.student.id}`}>{i.student.full_name}</Link> ({i.student.admission_number}) · {humanize(i.kind)} · issued{' '}
+            <Link to={`/console/students/${i.student.id}`}>{i.student.full_name}</Link> ({i.student.admission_number}) · {INVOICE_KIND_LABELS[i.kind]} · issued{' '}
             {formatDate(i.issued_at)}
             {i.due_date && ` · due ${formatDate(i.due_date)}`} · <StatusBadge status={i.status} />
           </>

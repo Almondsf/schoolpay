@@ -1,9 +1,9 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
-import { formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
+import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
 import { ParentAuthProvider, useParentAuth } from './ParentAuth';
 import { ParentLogin } from './ParentLogin';
@@ -67,7 +67,29 @@ function Home() {
       {home.data.children.map((child) => (
         <ChildCard key={child.id} child={child} />
       ))}
+      <MessagePreferences />
     </>
+  );
+}
+
+function MessagePreferences() {
+  const queryClient = useQueryClient();
+  const prefs = useQuery({ queryKey: ['parent-preferences'], queryFn: async () => unwrap(await api.GET('/api/v1/parent/preferences')) });
+  const change = useMutation({
+    mutationFn: async (reminders: boolean) => unwrap(await api.PUT('/api/v1/parent/preferences', { body: { reminders } })),
+    onSuccess: (data) => queryClient.setQueryData(['parent-preferences'], data),
+  });
+  if (!prefs.data) return null;
+  return (
+    <section className="card section" aria-label="Messages from the school">
+      <h2>Messages from the school</h2>
+      <label className="checkbox">
+        <input type="checkbox" checked={prefs.data.reminders} disabled={change.isPending} onChange={(e) => change.mutate(e.target.checked)} />
+        Send me new bills and payment reminders
+      </label>
+      <p className="muted small">You'll always get a receipt when a payment is received.</p>
+      <ErrorAlert error={change.error} />
+    </section>
   );
 }
 
@@ -183,7 +205,7 @@ function ChildPage() {
           <div key={inv.id} className="list-item">
             <button className="link row between full" onClick={() => setOpenInvoice(openInvoice === inv.id ? null : inv.id)}>
               <span>
-                {humanize(inv.kind === 'term' ? 'term fees' : inv.kind)} · #{inv.number}
+                {INVOICE_KIND_LABELS[inv.kind]} · #{inv.number}
                 <span className="muted small"> {formatDate(inv.issued_at)}</span>
               </span>
               <StatusBadge status={inv.status} />

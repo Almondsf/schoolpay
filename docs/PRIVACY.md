@@ -47,6 +47,16 @@ hash of each sign-in code for at most a day, and their portal sessions for 30
 days after they end. A parent sees only their own children. Sign-in codes are
 sent by SMS through Termii (a processor).
 
+## Messages to parents
+Receipts, bill notices and reminders go to the child's main parent only. Each
+message's text is kept in the school's message log so staff can see what was
+sent. Parents can turn off bill notices and reminders in the portal (or ask the
+school to). Receipts still go, because they record the parent's own payment.
+No messages are sent at night. Messages travel through Meta (WhatsApp), Termii
+(SMS) or the school's email provider, each a processor. They carry the
+parent's and child's names, amounts and the child's payment account number,
+and nothing else.
+
 ## Shared with payment gateways
 To issue a student's account number, the gateway (Paystack) receives the
 student's first and last name, the primary guardian's phone number, and the

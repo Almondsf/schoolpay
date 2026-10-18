@@ -41,6 +41,40 @@ Set `EMAIL_BACKEND=smtp` with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
 `SMTP_PASSWORD` and `EMAIL_FROM`; invites and password resets go out through it.
 With `console` they're only logged (subject and recipient domain).
 
+## Messages to parents
+
+Messages go by **WhatsApp first**, then SMS, then email, whichever works.
+
+**SMS (Termii).** `SMS_BACKEND=termii`, `TERMII_API_KEY`, and a sender ID
+registered with Termii (`TERMII_SENDER_ID`). Parent sign-in codes also need
+SMS, so the parent portal doesn't work without it.
+
+**WhatsApp (Meta Cloud API).**
+1. In Meta Business Manager, create a WhatsApp Business account and a phone
+   number, and a permanent (system-user) access token with
+   `whatsapp_business_messaging`.
+2. Set `WHATSAPP_BACKEND=cloud`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`
+   (and `WHATSAPP_LANGUAGE`, default `en`).
+3. In WhatsApp Manager, create three **Utility** templates with body
+   parameters in exactly this order (names can differ; set them in
+   `WHATSAPP_TEMPLATES=receipt=…,fee_notice=…,reminder=…`):
+
+| Template (default name) | Parameters `{{1}}`, `{{2}}`, … |
+|---|---|
+| `payment_receipt` | parent name, amount, child's name, school name, receipt number, balance, verify link |
+| `fee_notice` | parent name, child's name, term, school name, amount, how to pay, portal link |
+| `fee_reminder` | parent name, school name, balance, child's name, how to pay, portal link |
+
+   For example `payment_receipt`: "Dear {{1}}, we have received {{2}} for {{3}}
+   at {{4}}. Receipt no. {{5}}. Outstanding balance: {{6}}. Check this receipt
+   at {{7}}". Messages fail over to SMS until the templates are approved.
+4. With `WHATSAPP_BACKEND=off`, messages go by SMS and email only.
+
+Messages queued longer than `MESSAGE_MAX_AGE_HOURS` (24) are skipped rather
+than sent late. Bill notices and reminders are never sent between
+`QUIET_HOURS_START` and `QUIET_HOURS_END` (20:00–07:00 Lagos); they wait for
+the morning. Beat must be running for automatic reminders.
+
 ## Background workers
 
 Run exactly one `beat` and as many `worker`s as needed. Beat hands stuck outbox

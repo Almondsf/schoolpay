@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { formatKobo, humanize, parseNairaToKobo } from '../../lib/format';
+import { INVOICE_KIND_LABELS, formatKobo, parseNairaToKobo } from '../../lib/format';
 import { ErrorAlert, Field, Loading, Modal, StatusBadge } from '../../lib/ui';
 import { describeDiscount } from '../fees/FeeSetup';
 
@@ -79,7 +79,7 @@ export function StudentAccount({ studentId }: { studentId: string }) {
             {a.invoices.map((i) => (
               <tr key={i.id}>
                 <td>
-                  <Link to={`/console/invoices/${i.id}`}>#{i.number}</Link> <span className="muted small">{humanize(i.kind)}</span>
+                  <Link to={`/console/invoices/${i.id}`}>#{i.number}</Link> <span className="muted small">{INVOICE_KIND_LABELS[i.kind]}</span>
                 </td>
                 <td className="num">{formatKobo(i.total_kobo)}</td>
                 <td className="num">{formatKobo(i.balance_kobo)} left</td>

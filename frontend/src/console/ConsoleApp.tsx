@@ -9,6 +9,7 @@ import { Login } from './auth/Login';
 import { ForgotPassword, SetPassword } from './auth/PasswordPages';
 import { Billing } from './billing/Billing';
 import { InvoiceDetail } from './billing/InvoiceDetail';
+import { Messages } from './messages/Messages';
 import { Dashboard } from './Dashboard';
 import { FeeSetup } from './fees/FeeSetup';
 import { Payments } from './payments/Payments';
@@ -33,6 +34,7 @@ const SCHOOL_NAV: NavItem[] = [
   { to: '/console/students', label: 'Students', capability: 'students.view' },
   { to: '/console/billing', label: 'Billing', capability: 'fees.view' },
   { to: '/console/payments', label: 'Payments', capability: 'payments.view' },
+  { to: '/console/messages', label: 'Messages', capability: 'messaging.manage' },
   { to: '/console/fees', label: 'Fees', capability: 'fees.view' },
   { to: '/console/classes', label: 'Classes', capability: 'school.view' },
   { to: '/console/calendar', label: 'Calendar', capability: 'school.view' },
@@ -63,6 +65,7 @@ export function ConsoleApp() {
           <Route path="billing" element={<Guard capability="fees.view"><Billing /></Guard>} />
           <Route path="invoices/:invoiceId" element={<Guard capability="fees.view"><InvoiceDetail /></Guard>} />
           <Route path="payments" element={<Guard capability="payments.view"><Payments /></Guard>} />
+          <Route path="messages" element={<Guard capability="messaging.manage"><Messages /></Guard>} />
           <Route path="payment-settings" element={<Guard capability="payments.view"><PaymentSettings /></Guard>} />
           <Route path="fees" element={<Guard capability="fees.view"><FeeSetup /></Guard>} />
           <Route path="classes" element={<Guard capability="school.view"><Classes /></Guard>} />

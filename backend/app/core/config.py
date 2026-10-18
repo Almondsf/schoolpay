@@ -108,6 +108,23 @@ class Settings(BaseSettings):
     termii_api_key: str = ""
     # Registered Termii sender ID (up to 11 characters), e.g. "SchoolPay"
     termii_sender_id: str = "SchoolPay"
+    # WhatsApp (Meta Cloud API): off | console (log only) | memory (tests) | cloud
+    whatsapp_backend: Literal["off", "console", "memory", "cloud"] = "off"
+    whatsapp_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_api_version: str = "v21.0"
+    whatsapp_language: str = "en"
+    # Approved template names, as kind=name pairs (see docs/DEPLOYMENT.md for their parameters)
+    whatsapp_templates: Annotated[dict[str, str], NoDecode] = {
+        "receipt": "payment_receipt",
+        "fee_notice": "fee_notice",
+        "reminder": "fee_reminder",
+    }
+    # Queued messages older than this are dropped rather than sent late (e.g. after a long outage)
+    message_max_age_hours: int = Field(default=24, ge=1, le=168)
+    # Parents are never sent fee notices or reminders between these hours (Lagos time)
+    quiet_hours_start: int = Field(default=20, ge=0, le=23)
+    quiet_hours_end: int = Field(default=7, ge=0, le=23)
     # Parent sign-in codes
     otp_minutes: int = Field(default=5, ge=2, le=15)
     otp_max_attempts: int = Field(default=5, ge=3, le=10)
@@ -115,6 +132,18 @@ class Settings(BaseSettings):
     otp_rate_per_ip: str = "20/hour"
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+
+    @field_validator("whatsapp_templates", mode="before")
+    @classmethod
+    def _templates(cls, value: object) -> object:
+        if isinstance(value, str):  # "receipt=payment_receipt,reminder=fee_reminder"
+            pairs = [item.split("=", 1) for item in value.split(",") if item.strip()]
+            if any(len(pair) != 2 for pair in pairs):
+                raise ValueError("Use kind=template_name pairs, separated by commas")
+            value = {k.strip(): v.strip() for k, v in pairs}
+        if isinstance(value, dict) and not set(value) <= {"receipt", "fee_notice", "reminder"}:
+            raise ValueError("WHATSAPP_TEMPLATES kinds are receipt, fee_notice and reminder")
+        return value
 
     @field_validator("payment_gateways", mode="before")
     @classmethod
@@ -150,6 +179,10 @@ class Settings(BaseSettings):
                 self.flutterwave_secret_key and self.flutterwave_webhook_hash
             ):
                 raise ValueError("FLUTTERWAVE_SECRET_KEY and FLUTTERWAVE_WEBHOOK_HASH are required for flutterwave")
+            if self.whatsapp_backend == "memory":
+                raise ValueError("WHATSAPP_BACKEND=memory is for tests only")
+            if self.whatsapp_backend == "cloud" and not (self.whatsapp_token and self.whatsapp_phone_number_id):
+                raise ValueError("WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID are required for WhatsApp")
             if self.sms_backend == "memory":
                 raise ValueError("SMS_BACKEND=memory is for tests only")
             if self.sms_backend == "termii" and not self.termii_api_key:

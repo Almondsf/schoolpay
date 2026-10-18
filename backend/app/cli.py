@@ -2,7 +2,7 @@
 Operator commands.
 
     python -m app.cli create-platform-admin --email ops@example.com --name "Ops Person"
-    python -m app.cli seed-demo [--reset]     (development and browser tests only)
+    python -m app.cli seed-demo [--reset] [--bare]   (development and browser tests only)
 
 Prints a one-time set-password link for the new admin (there's no one to
 email an invite from yet). Treat the link like a password.
@@ -60,9 +60,10 @@ def main(argv: list[str] | None = None) -> None:
     seed = commands.add_parser("seed-demo", help="Create a demo school (development and browser tests only)")
     seed.add_argument("--mfa-secret", default="JBSWY3DPEHPK3PXP", help="Base32 TOTP secret for MFA users")
     seed.add_argument("--reset", action="store_true", help="Replace an existing demo school")
+    seed.add_argument("--bare", action="store_true", help="Only the school and students, no bills or payments yet")
     args = parser.parse_args(argv)
     if args.command == "seed-demo":
-        demo.seed_demo(args.mfa_secret, args.reset)
+        demo.seed_demo(args.mfa_secret, args.reset, bare=args.bare)
         sys.stdout.write(f"Demo school ready. Password for every account: {demo.DEMO_PASSWORD}\n")
     elif args.command == "create-platform-admin":
         link = create_platform_admin(args.email, args.name)

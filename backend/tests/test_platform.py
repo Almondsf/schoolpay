@@ -99,6 +99,7 @@ def _settings(**overrides):
         "debug": False,
         "email_backend": "console",
         "sms_backend": "console",
+        "whatsapp_backend": "off",
         "payment_gateways": "paystack",
         "paystack_secret_key": "sk_live_example",
         "celery_task_always_eager": False,
@@ -127,8 +128,17 @@ def test_production_settings_are_safe_by_default():
         {"paystack_secret_key": ""},
         {"sms_backend": "memory"},
         {"sms_backend": "termii"},
+        {"whatsapp_backend": "memory"},
+        {"whatsapp_backend": "cloud", "whatsapp_token": ""},
+        {"whatsapp_templates": "reciept=payment_receipt"},
+        {"whatsapp_templates": "receipt"},
     ],
 )
 def test_production_refuses_unsafe_settings(overrides):
     with pytest.raises(ValidationError):
         _settings(**overrides)
+
+
+def test_whatsapp_templates_from_env_string():
+    settings = _settings(whatsapp_templates="receipt=paid_v2, reminder=nudge")
+    assert settings.whatsapp_templates == {"receipt": "paid_v2", "reminder": "nudge"}

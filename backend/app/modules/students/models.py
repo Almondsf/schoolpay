@@ -125,6 +125,9 @@ class Guardian(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     email: Mapped[str | None] = mapped_column(EncryptedString)
     consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consent_method: Mapped[ConsentMethod | None] = mapped_column(enum_type(ConsentMethod, "consent_method"))
+    # Set when the parent asked not to get fee notices and reminders (receipts still go out: they're
+    # the record of their own payment)
+    reminders_opt_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     student_links: Mapped[list["GuardianStudent"]] = relationship(back_populates="guardian", lazy="raise")
 

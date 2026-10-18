@@ -20,13 +20,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 10. [Payments](#10-payments)
 11. [Receipts](#11-receipts)
 12. [Parent portal](#12-parent-portal)
-13. [Backend layout and conventions](#13-backend-layout-and-conventions)
-14. [Background jobs and the outbox](#14-background-jobs-and-the-outbox)
-15. [API](#15-api)
-16. [Configuration](#16-configuration)
-17. [Frontend](#17-frontend)
-18. [Testing](#18-testing)
-19. [Known gaps](#19-known-gaps)
+13. [Messages to parents](#13-messages-to-parents)
+14. [Backend layout and conventions](#14-backend-layout-and-conventions)
+15. [Background jobs and the outbox](#15-background-jobs-and-the-outbox)
+16. [API](#16-api)
+17. [Configuration](#17-configuration)
+18. [Frontend](#18-frontend)
+19. [Testing](#19-testing)
+20. [Known gaps](#20-known-gaps)
 
 ---
 
@@ -306,8 +307,10 @@ enrolled that term. Each gets their class's compulsory fees, the optional items
 they're opted in to, and their discounts (capped so an invoice never goes
 negative). Students already invoiced are skipped, so it's safe to re-run after
 adding students. `dry_run` returns a preview with totals per class and any
-classes with no fees set. It runs **a fixed number of queries** whatever the
-number of students (tested), and 60 invoices take about 0.4 s.
+classes with no fees set. With `notify_parents`, each main parent is also sent
+a fee notice (section 13), and the response says how many were queued. It runs
+**a fixed number of queries** whatever the number of students (tested), and 60
+invoices take about 0.4 s.
 
 ## 10. Payments
 
@@ -431,11 +434,82 @@ and returns to `/pay/complete`.
 
 **Text messages** (`app/modules/notifications/sms.py`): `SMS_BACKEND=console`
 logs only a masked number and the message length; `termii` sends through
-Termii on the DND route (needed for sign-in codes); `memory` is for tests. The
-full messaging layer (WhatsApp first, templates, opt-outs, log) arrives with
-notifications.
+Termii on the DND route (needed for sign-in codes); `memory` is for tests.
+Parents can turn off bill notices and reminders from the portal home page (see
+section 13).
 
-## 13. Backend layout and conventions
+## 13. Messages to parents
+
+Module: `app/modules/notifications`. Console page: **Messages** (bursar and
+proprietor, capability `messaging.manage`).
+
+**What gets sent.** Three kinds of message (`MessageKind`), always to the
+child's **main parent** (the primary guardian):
+
+| Kind | When | Opt-out applies? |
+|---|---|---|
+| `receipt` | Every payment recorded (`payments/service.record_payment` queues it) | No: a receipt is a record of the parent's own money |
+| `fee_notice` | Bills generated with "send each parent a message" ticked (`notify_parents`) | Yes |
+| `reminder` | On the school's schedule, or "Send reminder" on a student's page | Yes |
+
+**The pipeline** (`service.py`):
+
+1. `queue()` inserts `message_log` rows plus one outbox task per new row, in the
+   caller's transaction (one `INSERT … ON CONFLICT DO NOTHING` for any number of
+   messages). Every row has a `dedupe_key` (`receipt:<payment>`,
+   `notice:<invoice>`, `reminder:<invoice>:<date>`,
+   `reminder-manual:<student>:<date>`) that is unique per school, so a retry or
+   a repeated trigger can never message a parent twice. A fee notice or reminder
+   queued during quiet hours gets an outbox `not_before` of the next morning.
+2. `deliver()` (task `notifications.deliver`) **re-checks everything when it
+   sends**: the row is still queued, it's younger than `MESSAGE_MAX_AGE_HOURS`
+   (otherwise skipped as `too_old`, e.g. after an outage), the parent hasn't
+   opted out (`opted_out`), the bill is still owed (`paid`), and it isn't quiet
+   hours (otherwise re-queued for the morning). It then fills the school's
+   wording with **today's** figures and tries **WhatsApp → SMS → email**,
+   recording the channel used, or the errors. After 3 failed attempts the row
+   is `failed`; `notifications.retry_unsent` (hourly) retries the ones in
+   between.
+3. `schedule_reminders()` (hourly, task `notifications.schedule_reminders`)
+   picks the schools whose sending hour it is and finds every bill that is
+   N days before or after its due date, per the school's `ReminderSettings`. It
+   leaves out bills that are paid, voided or opening balances, students who
+   have left, opted-out parents, bills that have reached `max_per_invoice`, and
+   bills reminded within `min_gap_days`. All schools are handled in a fixed
+   number of queries, and the inserts go in one statement.
+
+**Wording** (`templates.py`): each school can replace the standard wording of
+each kind (`message_templates`) using a fixed set of `{placeholders}`. Unknown
+placeholders or broken brackets are refused when the wording is saved. The
+limit is 640 characters (four SMS segments). `POST /message-templates/preview`
+fills a draft with sample details. **WhatsApp** only allows business-started
+messages from templates Meta has approved, so WhatsApp always uses the
+platform's templates (`WHATSAPP_TEMPLATES`), passing the same values as
+parameters in the order given by `WHATSAPP_PARAMETERS`. See
+docs/DEPLOYMENT.md.
+
+**Opt-out.** `guardians.reminders_opt_out_at` is set by the parent (portal:
+"Send me new bills and payment reminders") or by staff
+(`PUT /guardians/{id}/reminders`). Both are audited. Receipts still go.
+
+**Limits.** Quiet hours are `QUIET_HOURS_START`–`QUIET_HOURS_END` (20:00–07:00
+Lagos). A school's send hour must be between 7 and 19, and it can send at most
+10 reminders per bill, at least a day apart. A manual reminder is limited to
+one per student per day, and refused if nothing is owed or the parent opted
+out.
+
+**Endpoints:** `GET /messages` (log, filter by kind/status/student),
+`GET /message-templates`, `PUT /message-templates/{kind}` (`body: null` resets),
+`POST /message-templates/preview`, `GET|PUT /reminder-settings`,
+`PUT /guardians/{id}/reminders`, `POST /students/{id}/remind`, and for parents
+`GET|PUT /parent/preferences`.
+
+**Channels:** `whatsapp.py` (`WHATSAPP_BACKEND` off | console | memory | cloud),
+`sms.py` (`SMS_BACKEND` console | memory | termii), and `app/core/email.py`.
+Console backends log only a masked number or the recipient's domain, never the
+text.
+
+## 14. Backend layout and conventions
 
 ```
 backend/app/
@@ -479,7 +553,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 14. Background jobs and the outbox
+## 15. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -510,16 +584,22 @@ All tasks are declared in `app/workers/tasks.py`. Scheduled tasks (Celery beat):
 | `accounts.prune_sessions` | 6 h | Deletes sessions that ended more than 30 days ago |
 | `payments.requeue_webhooks` | 5 min | Retries gateway events that couldn't be processed yet |
 | `parents.prune` | 6 h | Deletes sign-in codes after a day and ended parent sessions after 30 days |
+| `notifications.schedule_reminders` | hourly (:00) | Queues fee reminders for schools whose sending hour it is |
+| `notifications.retry_unsent` | hourly (:30) | Retries messages that failed on every channel (up to 3 attempts) |
 
 On-demand tasks: `accounts.send_password_link`, `payments.process_webhook`,
-`payments.provision_virtual_accounts`.
+`payments.provision_virtual_accounts`, `notifications.deliver`.
+
+A task can be held back: `outbox.enqueue(..., not_before=when)` leaves the row
+pending until then, and the sweeper hands it over once it's due. Messages use
+this to wait out quiet hours.
 
 In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Redis.
 
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 15. API
+## 16. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -548,6 +628,7 @@ production.
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
 | Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |
 | Parent portal | `GET /parent/home`; `GET /parent/children/{id}`; `GET /parent/invoices/{id}`; `POST /parent/children/{id}/pay`; `GET /parent/receipts/{id}/pdf` |
+| Messages | `GET /messages`; `GET /message-templates`, `PUT /message-templates/{kind}`, `POST /message-templates/preview`; `GET/PUT /reminder-settings`; `PUT /guardians/{id}/reminders`; `POST /students/{id}/remind`; parents: `GET/PUT /parent/preferences` |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |
@@ -555,14 +636,14 @@ production.
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 16. Configuration
+## 17. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 17. Frontend
+## 18. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -593,10 +674,15 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   school's bank account, issue students' account numbers), and on each
   student a **Paying in** panel (their account number, a card payment link,
   recent payments). Receipt numbers on payments download the PDF.
+  **Messages** (log of every message with its channel or why it was skipped,
+  the wording editor with placeholders and preview, the reminder schedule);
+  "Send reminder" and a per-parent "Stop/Restart reminders" on the student
+  page; and "send each parent a message" when generating bills.
 - **Parent portal** (`src/parent/`): phone, then texted code, then (if needed)
   the school; a home page with a card per child (amount owed, their account
   number with a copy button, pay by card); and a child page (bills with lines,
-  payments, receipt downloads). It has its own auth provider. The API client's
+  payments, receipt downloads), with a switch on the home page to stop bill
+  notices and reminders. It has its own auth provider. The API client's
   "realm" (`setAuthRealm`) picks the staff or parent refresh endpoint, so the
   two never share a session.
 - **Public pages:** `/verify/:code` checks a receipt (genuine, reversed or not
@@ -608,7 +694,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 18. Testing
+## 19. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -618,17 +704,28 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   stubs the API by route).
 - **End-to-end:** Playwright (`frontend/e2e/`) starts its own API (port 8102) and
   Vite (5185) against a throwaway database seeded by `python -m app.cli seed-demo
-  --reset`. Run `npm run e2e`; on Windows `PW_CHANNEL=msedge` uses the installed Edge.
+  --reset --bare`. Run `npm run e2e`; on Windows `PW_CHANNEL=msedge` uses the installed Edge.
 - **Demo data:** `python -m app.cli seed-demo` (`app/demo.py`) creates "Demo
   Model College" with a proprietor, bursar, school admin and platform admin
   (password `demo-password-123`, MFA secret `JBSWY3DPEHPK3PXP`), the 2026/2027
-  calendar (first term current), classes Primary 1 to SSS 3, 60 students
-  with guardians (siblings share a parent), and first-term fees (tuition by
-  class, optional bus, levies, a sibling discount); invoices are left for you
-  to generate. With the fake gateway enabled it also connects the school's
-  bank account and gives every student an account number. Simulate a parent's
-  transfer with `POST /api/v1/dev/fake-gateway/transfers`. It refuses to run
-  in production.
+  calendar (first term current), classes Primary 1 to SSS 3, 240 students in
+  families (siblings share a parent, ages match their class), and first-term
+  fees (tuition by class, optional bus, levies, a sibling discount). On top
+  of that, `app/demo_activity.py` makes the school "lived in": last session
+  and its carried-over debts, bus sign-ups, staff-child and scholarship
+  discounts, the term's bills (due 30 September), about two months of
+  payments by every method with numbered receipts, part-payers, non-payers and
+  a little credit, a reversed teller, two entries awaiting approval, and the
+  messages parents were sent (bill, receipts, reminders; a few parents opted
+  out). Payments go through the real allocation code, so everything
+  reconciles, and the whole seed is about 70 SQL statements (tested). It also
+  adds three more schools (one suspended) for the platform console.
+  `--bare` gives the small version the browser tests use: 60 students and no
+  bills yet. With the fake gateway enabled, the school's bank account is
+  connected and every student has an account number. Simulate a parent's
+  transfer with `POST /api/v1/dev/fake-gateway/transfers`. The parent
+  `08035000000` has two children (one paid up, one owing). The seed refuses
+  to run in production.
 - **Query counts:** `tests/factories.py` has a `QueryCounter`. Bulk operations
   (import, roll-forward, outbox dispatch) have tests asserting their query
   count doesn't grow with the number of rows.
@@ -636,7 +733,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 19. Known gaps
+## 20. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

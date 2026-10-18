@@ -1,16 +1,25 @@
 """
 Demo data for local development and browser tests: `python -m app.cli seed-demo`.
 
-Builds "Demo Model College" with staff, the 2026/2027 calendar, classes from
-Primary 1 to SSS 3, 60 students with guardians (some siblings share a
-parent), and first-term fees (tuition by class, optional bus, levies, a
-sibling discount). Invoices aren't generated, so that step can be tried.
-Refuses to run in production. Everything is inserted in a few bulk
+Builds "Demo Model College" (Lagos) with staff, the 2026/2027 calendar,
+classes from Primary 1 to SSS 3, students in families (brothers and sisters
+share a parent, ages match their class), and first-term fees (tuition by
+class, optional bus, levies, a sibling discount).
+
+By default the school is also "lived in" (`app/demo_activity.py`): last
+session's debts carried over, scholarships, bus sign-ups, the term's bills
+generated, two months of payments (transfers, card, cash, tellers) with
+receipts, messages to parents, a reversal and entries awaiting approval. A few
+more schools are added so the platform console has something to show.
+
+`--bare` keeps the small version (60 students, no bills yet) that the browser
+tests rely on. Refuses to run in production. Everything is inserted in bulk
 statements.
 """
 
 import random
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from sqlalchemy import delete, or_, select, update
@@ -19,7 +28,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.crypto import blind_index
 from app.core.db import SessionLocal
-from app.core.tenancy import scope_platform_wide
+from app.core.tenancy import scope_platform_wide, scope_to_school
 from app.models import load_all_models
 from app.modules.accounts.models import Role, User
 from app.modules.accounts.security import hash_password
@@ -40,6 +49,7 @@ from app.modules.students.models import (
 DEMO_PASSWORD = "demo-password-123"  # noqa: S105  (demo data only; refuses to run in production)
 DEMO_SLUG = "demo-school"
 PLATFORM_EMAIL = "platform@demo.schoolpay.ng"
+FIRST_PARENT_PHONE = "+2348035000000"  # two children; used in the docs and the browser tests
 
 CLASSES = [
     *((f"Primary {n}", ["A"]) for n in range(1, 7)),
@@ -51,36 +61,57 @@ CLASSES = [
     ("SSS 3", ["Science", "Arts"]),
 ]
 SURNAMES = [
-    "Okafor",
-    "Adeyemi",
-    "Bello",
-    "Eze",
-    "Ibrahim",
-    "Okonkwo",
-    "Balogun",
-    "Nwosu",
-    "Abubakar",
-    "Ogunleye",
-    "Chukwu",
-    "Adebayo",
-    "Musa",
-    "Obi",
-    "Afolabi",
-    "Danjuma",
-    "Etim",
-    "Ojo",
-    "Uche",
-    "Lawal",
-]
-GIRLS = ["Chiamaka", "Aisha", "Funmilayo", "Ngozi", "Zainab", "Adaeze", "Temitope", "Amina", "Ifeoma", "Kemi"]
-BOYS = ["Emeka", "Tunde", "Ibrahim", "Chinedu", "Segun", "Musa", "Obinna", "Femi", "Yusuf", "Kelechi"]
+    "Okafor", "Adeyemi", "Bello", "Eze", "Ibrahim", "Okonkwo", "Balogun", "Nwosu", "Abubakar", "Ogunleye",
+    "Chukwu", "Adebayo", "Musa", "Obi", "Afolabi", "Danjuma", "Etim", "Ojo", "Uche", "Lawal", "Akinola",
+    "Nnamdi", "Oyelaran", "Bassey", "Yakubu", "Olawale", "Ekwueme", "Garba", "Onyeka", "Adewale", "Umeh",
+    "Sanni", "Okeke", "Fashola", "Ikpe", "Aminu", "Odukoya", "Nwachukwu", "Ajayi", "Effiong",
+]  # fmt: skip
+GIRLS = [
+    "Chiamaka", "Aisha", "Funmilayo", "Ngozi", "Zainab", "Adaeze", "Temitope", "Amina", "Ifeoma", "Kemi",
+    "Oluwaseun", "Hauwa", "Chidinma", "Yetunde", "Blessing", "Fatima", "Nneka", "Bukola", "Ebere", "Halima",
+    "Simisola", "Ijeoma", "Damilola", "Rukayat", "Ozioma",
+]  # fmt: skip
+BOYS = [
+    "Emeka", "Tunde", "Ibrahim", "Chinedu", "Segun", "Musa", "Obinna", "Femi", "Yusuf", "Kelechi",
+    "Ayodele", "Uchenna", "Abdullahi", "Tobi", "Ikenna", "Sadiq", "Olumide", "Chukwuemeka", "Babatunde",
+    "Nnamdi", "Kayode", "Aliyu", "Ebuka", "Gbenga", "Somto",
+]  # fmt: skip
+MOTHER_TITLES = ["Mrs", "Mrs", "Mrs", "Dr (Mrs)", "Alhaja", "Barr. (Mrs)"]
+FATHER_TITLES = ["Mr", "Mr", "Mr", "Dr", "Chief", "Alhaji", "Engr.", "Pastor"]
+PHONE_PREFIXES = ["803", "806", "813", "816", "703", "706", "802", "808", "812", "902", "905", "810"]
+
+# More schools for the platform console: (name, slug, address, proprietor name, email, status)
+OTHER_SCHOOLS = [
+    ("Kings and Queens Academy", "demo-kings-queens", "Plot 4 Gwarinpa Estate, Abuja", "Dr Ifeoma Nwachukwu",
+     "proprietor@kingsqueens.demo.schoolpay.ng", SchoolStatus.ACTIVE),
+    ("Bright Futures Nursery and Primary School", "demo-bright-futures", "17 Ring Road, Ibadan", "Mrs Bukola Ajayi",
+     "proprietor@brightfutures.demo.schoolpay.ng", SchoolStatus.ACTIVE),
+    ("Sunrise International School", "demo-sunrise", "9 Aba Road, Port Harcourt", "Engr. Ikenna Okeke",
+     "proprietor@sunrise.demo.schoolpay.ng", SchoolStatus.SUSPENDED),
+]  # fmt: skip
 
 
-def seed_demo(mfa_secret: str, reset: bool) -> None:
+@dataclass(frozen=True)
+class DemoSchool:
+    """What the activity seeder needs to know about the school just built."""
+
+    school: School
+    term: Term
+    bursar: User
+    admin: User
+    level_ids: list[uuid.UUID]  # in rank order
+    placements: dict[uuid.UUID, str]  # student id -> "JSS 1 A"
+    primary_guardian: dict[uuid.UUID, Guardian]  # student id -> primary guardian
+    students: list[Student]
+    fee_items: dict[str, FeeItem]
+
+
+def seed_demo(mfa_secret: str, reset: bool, *, bare: bool = False) -> None:
     if get_settings().is_production:
         raise SystemExit("seed-demo never runs in production.")
     load_all_models()
-    with SessionLocal() as session:
+    # Objects stay usable after each commit (no reload query per student)
+    with SessionLocal(expire_on_commit=False) as session:
         scope_platform_wide(session)
         if session.scalar(select(School.id).where(School.slug == DEMO_SLUG)) is not None:
             if not reset:
@@ -92,16 +123,40 @@ def seed_demo(mfa_secret: str, reset: bool) -> None:
             slug=DEMO_SLUG,
             address="12 Allen Avenue, Ikeja, Lagos",
             phone="+234 801 000 0000",
+            email="bursary@demomodelcollege.example.com",
         )
         session.add(school)
         session.flush()
-        _staff(session, school, mfa_secret)
+        bursar, admin = _staff(session, school, mfa_secret)
         term = _calendar(session, school)
         arms = _classes(session, school)
-        levels = _students(session, school, term, arms)
-        _fees(session, school, term, levels)
-        if GatewayCode.FAKE in enabled_gateways():
+        built = _students(session, school, term, arms, count=60 if bare else 240)
+        fee_items = _fees(session, school, term, built.level_ids)
+        fake_gateway = GatewayCode.FAKE in enabled_gateways()
+        if fake_gateway:
             _fake_payments_setup(session, school)
+        session.commit()
+    if bare:
+        return
+    from app import demo_activity  # builds on everything above
+
+    built_school = DemoSchool(
+        school=school,
+        term=term,
+        bursar=bursar,
+        admin=admin,
+        level_ids=built.level_ids,
+        placements=built.placements,
+        primary_guardian=built.primary_guardian,
+        students=built.students,
+        fee_items=fee_items,
+    )
+    with SessionLocal(expire_on_commit=False) as session:
+        scope_to_school(session, school.id)  # the real invoicing and allocation code runs in a school's scope
+        demo_activity.add_activity(session, built_school, transfers_by_account=fake_gateway)
+    with SessionLocal() as session:
+        scope_platform_wide(session)
+        _other_schools(session)
         session.commit()
 
 
@@ -127,7 +182,7 @@ def _retire_old_demo(session: Session) -> None:
     session.flush()
 
 
-def _staff(session: Session, school: School, mfa_secret: str) -> None:
+def _staff(session: Session, school: School, mfa_secret: str) -> tuple[User, User]:
     people = [
         ("proprietor@demo.schoolpay.ng", "Grace Adeyemi", Role.PROPRIETOR, school.id, True),
         ("bursar@demo.schoolpay.ng", "Musa Bello", Role.BURSAR, school.id, True),
@@ -135,7 +190,7 @@ def _staff(session: Session, school: School, mfa_secret: str) -> None:
         (PLATFORM_EMAIL, "Platform Ops", Role.PLATFORM_ADMIN, None, True),
     ]
     password_hash = hash_password(DEMO_PASSWORD)
-    session.add_all(
+    users = [
         User(
             id=uuid.uuid4(),
             school_id=school_id,
@@ -147,7 +202,9 @@ def _staff(session: Session, school: School, mfa_secret: str) -> None:
             mfa_enabled=mfa,
         )
         for email, name, role, school_id, mfa in people
-    )
+    ]
+    session.add_all(users)
+    return users[1], users[2]
 
 
 def _calendar(session: Session, school: School) -> Term:
@@ -192,80 +249,102 @@ def _classes(session: Session, school: School) -> list[Arm]:
     return arms
 
 
-def _students(session: Session, school: School, term: Term, arms: list[Arm], count: int = 60) -> list[uuid.UUID]:
+@dataclass(frozen=True)
+class _Built:
+    level_ids: list[uuid.UUID]
+    placements: dict[uuid.UUID, str]
+    primary_guardian: dict[uuid.UUID, Guardian]
+    students: list[Student]
+
+
+def _students(session: Session, school: School, term: Term, arms: list[Arm], count: int) -> _Built:
+    """
+    Families of one to three children with one parent each (the first family has two
+    children on FIRST_PARENT_PHONE). Children's ages match their class.
+    """
     rng = random.Random(2026)  # noqa: S311  (demo data, not security)
     now = datetime.now(UTC)
-    students, guardians, links, enrollments = [], [], [], []
-    for i in range(count):
-        surname = SURNAMES[i // 3 % len(SURNAMES)]
-        # Every three students share a surname and, for the first two, a parent
-        if i % 3 != 2:
-            parent_phone = f"+234803{5000000 + i // 3:07d}"
-            if i % 3 == 0:
-                guardians.append(
-                    Guardian(
-                        id=uuid.uuid4(),
-                        school_id=school.id,
-                        full_name=f"Mrs {rng.choice(GIRLS)} {surname}",
-                        phone=parent_phone,
-                        phone_index=blind_index(parent_phone),
-                        consent_at=now,
-                        consent_method=ConsentMethod.SCHOOL_ATTESTED,
-                    )
-                )
-        else:
-            other_phone = f"+234806{6000000 + i:07d}"
-            guardians.append(
-                Guardian(
-                    id=uuid.uuid4(),
-                    school_id=school.id,
-                    full_name=f"Mr {rng.choice(BOYS)} {surname}",
-                    phone=other_phone,
-                    phone_index=blind_index(other_phone),
-                    consent_at=now,
-                    consent_method=ConsentMethod.SCHOOL_ATTESTED,
-                )
-            )
-        girl = rng.random() < 0.5
-        student = Student(
+    level_ids = list(dict.fromkeys(a.class_level_id for a in arms))
+    level_names = {lid: name for lid, (name, _) in zip(level_ids, CLASSES, strict=True)}
+    arms_by_level: dict[uuid.UUID, list[Arm]] = {}
+    for arm in arms:
+        arms_by_level.setdefault(arm.class_level_id, []).append(arm)
+
+    students: list[Student] = []
+    guardians: list[Guardian] = []
+    links: list[GuardianStudent] = []
+    enrollments: list[Enrollment] = []
+    placements: dict[uuid.UUID, str] = {}
+    primary: dict[uuid.UUID, Guardian] = {}
+    family = 0
+    while len(students) < count:
+        size = 2 if family == 0 else rng.choices([1, 2, 3], weights=[55, 30, 15])[0]
+        size = min(size, count - len(students))
+        surname = SURNAMES[family % len(SURNAMES)] if family < len(SURNAMES) else rng.choice(SURNAMES)
+        mother = family == 0 or rng.random() < 0.7
+        phone = (
+            FIRST_PARENT_PHONE
+            if family == 0
+            else f"+234{PHONE_PREFIXES[family % len(PHONE_PREFIXES)]}{5000000 + family:07d}"
+        )
+        given = rng.choice(GIRLS if mother else BOYS)
+        guardian = Guardian(
             id=uuid.uuid4(),
             school_id=school.id,
-            admission_number=f"DMC/{2026 - i % 9}/{i + 1:03d}",
-            first_name=rng.choice(GIRLS if girl else BOYS),
-            last_name=surname,
-            gender=Gender.FEMALE if girl else Gender.MALE,
-            date_of_birth=date(2008 + i % 12, 1 + i % 12, 1 + i % 28),
+            full_name=f"{'Mrs' if family == 0 else rng.choice(MOTHER_TITLES if mother else FATHER_TITLES)} "
+            f"{given} {surname}",
+            phone=phone,
+            phone_index=blind_index(phone),
+            email=f"{given.lower()}.{surname.lower()}{family}@example.com" if rng.random() < 0.35 else None,
+            consent_at=now,
+            consent_method=ConsentMethod.SCHOOL_ATTESTED,
         )
-        arm = arms[i % len(arms)]
-        students.append(student)
-        enrollments.append(
-            Enrollment(
+        guardians.append(guardian)
+        ranks = sorted(rng.sample(range(len(level_ids)), size))
+        for rank in ranks:
+            level_id = level_ids[rank]
+            arm = rng.choice(arms_by_level[level_id])
+            girl = rng.random() < 0.5
+            entry_year = 2026 - rank if rank < 6 else 2026 - (rank - 6)  # primary, then secondary intake
+            student = Student(
                 id=uuid.uuid4(),
                 school_id=school.id,
-                student_id=student.id,
-                term_id=term.id,
-                arm_id=arm.id,
-                class_level_id=arm.class_level_id,
+                admission_number=f"DMC/{entry_year}/{len(students) + 1:04d}",
+                first_name=rng.choice(GIRLS if girl else BOYS),
+                last_name=surname,
+                gender=Gender.FEMALE if girl else Gender.MALE,
+                date_of_birth=date(2020 - rank, rng.randint(1, 12), rng.randint(1, 28)),
             )
-        )
-        links.append(
-            GuardianStudent(
-                school_id=school.id,
-                guardian_id=guardians[-1].id,
-                student_id=student.id,
-                relationship_to_student=Relationship.MOTHER
-                if guardians[-1].full_name.startswith("Mrs")
-                else Relationship.FATHER,
-                is_primary=True,
+            students.append(student)
+            placements[student.id] = f"{level_names[level_id]} {arm.name}"
+            primary[student.id] = guardian
+            enrollments.append(
+                Enrollment(
+                    id=uuid.uuid4(),
+                    school_id=school.id,
+                    student_id=student.id,
+                    term_id=term.id,
+                    arm_id=arm.id,
+                    class_level_id=level_id,
+                )
             )
-        )
+            links.append(
+                GuardianStudent(
+                    school_id=school.id,
+                    guardian_id=guardian.id,
+                    student_id=student.id,
+                    relationship_to_student=Relationship.MOTHER if mother else Relationship.FATHER,
+                    is_primary=True,
+                )
+            )
+        family += 1
     session.add_all([*students, *guardians])
     session.flush()
     session.add_all([*enrollments, *links])
-    return list(dict.fromkeys(a.class_level_id for a in arms))
+    return _Built(level_ids, placements, primary, students)
 
 
-def _fees(session: Session, school: School, term: Term, level_ids: list[uuid.UUID]) -> None:
+def _fees(session: Session, school: School, term: Term, level_ids: list[uuid.UUID]) -> dict[str, FeeItem]:
     """Tuition rising by class, an optional bus fee, PTA and development levies, and a sibling discount."""
     items = {
         name: FeeItem(id=uuid.uuid4(), school_id=school.id, name=name, category=category)
@@ -309,6 +388,7 @@ def _fees(session: Session, school: School, term: Term, level_ids: list[uuid.UUI
                 )
             )
     session.add_all(schedules)
+    return items
 
 
 def _fake_payments_setup(session: Session, school: School) -> None:
@@ -344,3 +424,30 @@ def _fake_payments_setup(session: Session, school: School) -> None:
         )
         for n, (sid, first, last) in enumerate(students, start=1)
     )
+
+
+def _other_schools(session: Session) -> None:
+    """A few more schools (each with a proprietor) for the platform console. Kept across re-seeds."""
+    existing = set(session.scalars(select(School.slug).where(School.slug.in_([s[1] for s in OTHER_SCHOOLS]))))
+    taken = set(session.scalars(select(User.email).where(User.email.in_([s[4] for s in OTHER_SCHOOLS]))))
+    password_hash = hash_password(DEMO_PASSWORD)
+    schools, users = [], []
+    for name, slug, address, owner, email, status in OTHER_SCHOOLS:
+        if slug in existing:
+            continue
+        school = School(id=uuid.uuid4(), name=name, slug=slug, address=address, status=status)
+        schools.append(school)
+        if email not in taken:
+            users.append(
+                User(
+                    id=uuid.uuid4(),
+                    school_id=school.id,
+                    email=email,
+                    full_name=owner,
+                    role=Role.PROPRIETOR,
+                    password_hash=password_hash,
+                )
+            )
+    session.add_all(schools)
+    session.flush()
+    session.add_all(users)

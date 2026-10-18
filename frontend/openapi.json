@@ -484,6 +484,15 @@
         "title": "ChangedCount",
         "type": "object"
       },
+      "Channel": {
+        "enum": [
+          "whatsapp",
+          "sms",
+          "email"
+        ],
+        "title": "Channel",
+        "type": "string"
+      },
       "CheckoutOut": {
         "properties": {
           "amount_kobo": {
@@ -1437,6 +1446,12 @@
               }
             ],
             "title": "Due Date"
+          },
+          "notify_parents": {
+            "default": false,
+            "description": "Send each primary parent a fee notice",
+            "title": "Notify Parents",
+            "type": "boolean"
           }
         },
         "title": "GenerateIn",
@@ -1475,6 +1490,11 @@
             "title": "No Fees Set",
             "type": "array"
           },
+          "notices_queued": {
+            "description": "Fee notices queued for parents (when notify_parents)",
+            "title": "Notices Queued",
+            "type": "integer"
+          },
           "sample": {
             "items": {
               "$ref": "#/components/schemas/DraftInvoiceOut"
@@ -1495,7 +1515,8 @@
           "already_invoiced",
           "no_fees_set",
           "by_class",
-          "sample"
+          "sample",
+          "notices_queued"
         ],
         "title": "GenerationOut",
         "type": "object"
@@ -1632,6 +1653,11 @@
           },
           "relationship": {
             "$ref": "#/components/schemas/Relationship"
+          },
+          "reminders": {
+            "description": "Gets fee notices and reminders (receipts always go)",
+            "title": "Reminders",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1641,7 +1667,8 @@
           "email",
           "relationship",
           "is_primary",
-          "consent_at"
+          "consent_at",
+          "reminders"
         ],
         "title": "GuardianOut",
         "type": "object"
@@ -2367,6 +2394,122 @@
         "title": "Me",
         "type": "object"
       },
+      "MessageKind": {
+        "enum": [
+          "receipt",
+          "fee_notice",
+          "reminder"
+        ],
+        "title": "MessageKind",
+        "type": "string"
+      },
+      "MessageOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Channel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "guardian_name": {
+            "title": "Guardian Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MessageKind"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "skip_reason": {
+            "title": "Skip Reason",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MessageStatus"
+          },
+          "student_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Id"
+          },
+          "student_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Name"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "channel",
+          "student_id",
+          "student_name",
+          "guardian_name",
+          "body",
+          "skip_reason",
+          "error",
+          "created_at",
+          "sent_at"
+        ],
+        "title": "MessageOut",
+        "type": "object"
+      },
+      "MessageStatus": {
+        "enum": [
+          "queued",
+          "sent",
+          "failed",
+          "skipped"
+        ],
+        "title": "MessageStatus",
+        "type": "string"
+      },
       "MfaCodeIn": {
         "properties": {
           "totp_code": {
@@ -2698,6 +2841,37 @@
           "offset"
         ],
         "title": "Page[ManualOut]",
+        "type": "object"
+      },
+      "Page_MessageOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[MessageOut]",
         "type": "object"
       },
       "Page_PaymentOut_": {
@@ -3475,6 +3649,59 @@
         "title": "PaymentSettingsOut",
         "type": "object"
       },
+      "PreferenceIn": {
+        "properties": {
+          "reminders": {
+            "title": "Reminders",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reminders"
+        ],
+        "title": "PreferenceIn",
+        "type": "object"
+      },
+      "PreferenceOut": {
+        "properties": {
+          "reminders": {
+            "title": "Reminders",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reminders"
+        ],
+        "title": "PreferenceOut",
+        "type": "object"
+      },
+      "PreviewIn": {
+        "properties": {
+          "body": {
+            "maxLength": 690,
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "PreviewIn",
+        "type": "object"
+      },
+      "PreviewOut": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PreviewOut",
+        "type": "object"
+      },
       "ProvisionIn": {
         "properties": {
           "student_ids": {
@@ -3551,6 +3778,19 @@
           "student_initials"
         ],
         "title": "PublicReceiptOut",
+        "type": "object"
+      },
+      "QueuedOut": {
+        "properties": {
+          "queued": {
+            "title": "Queued",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "queued"
+        ],
+        "title": "QueuedOut",
         "type": "object"
       },
       "Readiness": {
@@ -3658,6 +3898,58 @@
         ],
         "title": "Relationship",
         "type": "string"
+      },
+      "ReminderSettingsIO": {
+        "properties": {
+          "days_after_due": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 6,
+            "title": "Days After Due",
+            "type": "array"
+          },
+          "days_before_due": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 5,
+            "title": "Days Before Due",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_per_invoice": {
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Max Per Invoice",
+            "type": "integer"
+          },
+          "min_gap_days": {
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Min Gap Days",
+            "type": "integer"
+          },
+          "send_hour": {
+            "maximum": 19.0,
+            "minimum": 7.0,
+            "title": "Send Hour",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "days_before_due",
+          "days_after_due",
+          "send_hour",
+          "max_per_invoice",
+          "min_gap_days"
+        ],
+        "title": "ReminderSettingsIO",
+        "type": "object"
       },
       "ReverseIn": {
         "properties": {
@@ -4653,6 +4945,76 @@
           }
         },
         "title": "StudentUpdateIn",
+        "type": "object"
+      },
+      "TemplateIn": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 690,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null goes back to the default wording",
+            "title": "Body"
+          }
+        },
+        "title": "TemplateIn",
+        "type": "object"
+      },
+      "TemplateOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "default_body": {
+            "title": "Default Body",
+            "type": "string"
+          },
+          "is_custom": {
+            "title": "Is Custom",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MessageKind"
+          }
+        },
+        "required": [
+          "kind",
+          "body",
+          "is_custom",
+          "default_body"
+        ],
+        "title": "TemplateOut",
+        "type": "object"
+      },
+      "TemplatesOut": {
+        "properties": {
+          "placeholders": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Placeholders",
+            "type": "object"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateOut"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "templates",
+          "placeholders"
+        ],
+        "title": "TemplatesOut",
         "type": "object"
       },
       "TermDatesIn": {
@@ -8190,6 +8552,124 @@
         ]
       }
     },
+    "/api/v1/guardians/{guardian_id}/reminders": {
+      "put": {
+        "operationId": "messaging_guardian_preference",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guardian_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Guardian Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Turn a parent's fee notices and reminders on or off (receipts always go)",
+        "tags": [
+          "messaging"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health_liveness",
@@ -9370,6 +9850,494 @@
         ]
       }
     },
+    "/api/v1/message-templates": {
+      "get": {
+        "operationId": "messaging_get_templates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplatesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Wording of SMS and email messages",
+        "tags": [
+          "messaging"
+        ]
+      }
+    },
+    "/api/v1/message-templates/preview": {
+      "post": {
+        "operationId": "messaging_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "See wording with sample details",
+        "tags": [
+          "messaging"
+        ]
+      }
+    },
+    "/api/v1/message-templates/{kind}": {
+      "put": {
+        "operationId": "messaging_put_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/MessageKind"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change (or reset) the wording",
+        "tags": [
+          "messaging"
+        ]
+      }
+    },
+    "/api/v1/messages": {
+      "get": {
+        "operationId": "messaging_list_messages",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/MessageKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/MessageStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "student_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MessageOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Messages to parents, newest first",
+        "tags": [
+          "messaging"
+        ]
+      }
+    },
     "/api/v1/parent/auth/choose-school": {
       "post": {
         "operationId": "parent-auth_choose_school",
@@ -10297,6 +11265,206 @@
           }
         ],
         "summary": "One invoice with its lines",
+        "tags": [
+          "parent"
+        ]
+      }
+    },
+    "/api/v1/parent/preferences": {
+      "get": {
+        "operationId": "parent_get_parent_preferences",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The parent's message preferences",
+        "tags": [
+          "parent"
+        ]
+      },
+      "put": {
+        "operationId": "parent_put_parent_preferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop or restart fee notices and reminders (receipts always come)",
         "tags": [
           "parent"
         ]
@@ -12176,6 +13344,206 @@
         "summary": "Download a receipt as PDF",
         "tags": [
           "receipts"
+        ]
+      }
+    },
+    "/api/v1/reminder-settings": {
+      "get": {
+        "operationId": "messaging_get_reminder_settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderSettingsIO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "When fee reminders go out",
+        "tags": [
+          "messaging"
+        ]
+      },
+      "put": {
+        "operationId": "messaging_put_reminder_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderSettingsIO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderSettingsIO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change when fee reminders go out",
+        "tags": [
+          "messaging"
         ]
       }
     },
@@ -15130,6 +16498,114 @@
         "summary": "Bring a student back",
         "tags": [
           "students"
+        ]
+      }
+    },
+    "/api/v1/students/{student_id}/remind": {
+      "post": {
+        "operationId": "messaging_remind",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send the primary parent a reminder now (at most once a day)",
+        "tags": [
+          "messaging"
         ]
       }
     },

@@ -66,7 +66,7 @@ describe('fees and billing', () => {
 
   it('previews then generates the term invoices', async () => {
     const report = (dry: boolean) => ({
-      dry_run: dry, invoices: 2, total_kobo: 30_000_000, discounts_kobo: 1_500_000, already_invoiced: 0, no_fees_set: ['Nursery 1'],
+      dry_run: dry, invoices: 2, total_kobo: 30_000_000, discounts_kobo: 1_500_000, already_invoiced: 0, notices_queued: dry ? 0 : 2, no_fees_set: ['Nursery 1'],
       by_class: [{ class_level_id: 'l1', class_name: 'JSS 1', invoices: 2, total_kobo: 30_000_000 }], sample: [],
     });
     const bodies: unknown[] = [];
@@ -88,6 +88,10 @@ describe('fees and billing', () => {
     expect(screen.getByText(/No fees set for: Nursery 1/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Generate 2 invoices' }));
     expect(await screen.findByText(/Done: 2 invoices/)).toBeInTheDocument();
-    expect(bodies).toEqual([{ dry_run: true, due_date: null }, { dry_run: false, due_date: null }]);
+    expect(screen.getByText('2 parents will get a message about their bill.')).toBeInTheDocument();
+    expect(bodies).toEqual([
+      { dry_run: true, due_date: null, notify_parents: true },
+      { dry_run: false, due_date: null, notify_parents: true },
+    ]);
   });
 });

@@ -130,6 +130,7 @@ class GenerateIn(BaseModel):
     due_date: date | None = None
     class_level_ids: list[uuid.UUID] | None = Field(default=None, description="Only these classes (default: all)")
     dry_run: bool = True
+    notify_parents: bool = Field(default=False, description="Send each primary parent a fee notice")
 
 
 class DraftLineOut(BaseModel):
@@ -163,6 +164,7 @@ class GenerationOut(BaseModel):
     no_fees_set: list[str] = Field(description="Classes with students but no fees set for the term")
     by_class: list[ClassTotalOut]
     sample: list[DraftInvoiceOut]
+    notices_queued: int = Field(description="Fee notices queued for parents (when notify_parents)")
 
 
 class StudentBrief(BaseModel):
@@ -446,6 +448,7 @@ def generate(
         due_date=body.due_date,
         class_level_ids=set(body.class_level_ids) if body.class_level_ids else None,
         dry_run=body.dry_run,
+        notify_parents=body.notify_parents,
     )
     return GenerationOut(
         dry_run=report.dry_run,
@@ -453,6 +456,7 @@ def generate(
         total_kobo=report.total_kobo,
         discounts_kobo=report.discounts_kobo,
         already_invoiced=report.already_invoiced,
+        notices_queued=report.notices_queued,
         no_fees_set=report.no_fees_set,
         by_class=[ClassTotalOut(**c.__dict__) for c in report.by_class],
         sample=[

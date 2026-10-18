@@ -160,12 +160,13 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
 function Generate({ termId, onClose }: { termId: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [dueDate, setDueDate] = useState('');
+  const [notify, setNotify] = useState(true);
   const run = useMutation({
     mutationFn: async (dryRun: boolean) =>
       unwrap(
         await api.POST('/api/v1/terms/{term_id}/invoices/generate', {
           params: { path: { term_id: termId } },
-          body: { dry_run: dryRun, due_date: dueDate || null },
+          body: { dry_run: dryRun, due_date: dueDate || null, notify_parents: notify },
         }),
       ),
     onSuccess: (report) => {
@@ -187,6 +188,10 @@ function Generate({ termId, onClose }: { termId: string; onClose: () => void }) 
       <Field label="Payment due by (optional)">
         <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={!!finished} />
       </Field>
+      <label className="checkbox">
+        <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} disabled={!!finished} />
+        Send each child's main parent a message with the bill (WhatsApp or text, during the day)
+      </label>
       <ErrorAlert error={run.error} />
       {report && (
         <div className="card inset">
@@ -194,6 +199,7 @@ function Generate({ termId, onClose }: { termId: string; onClose: () => void }) 
             {finished ? 'Done: ' : 'Preview: '}
             {report.invoices} invoices totalling {formatKobo(report.total_kobo)}
           </strong>
+          {finished && report.notices_queued > 0 && <div>{report.notices_queued} parents will get a message about their bill.</div>}
           {report.discounts_kobo > 0 && <div>Including {formatKobo(report.discounts_kobo)} of discounts.</div>}
           {report.already_invoiced > 0 && <div className="muted">{report.already_invoiced} students already have an invoice.</div>}
           {report.no_fees_set.length > 0 && <div className="error-text">No fees set for: {report.no_fees_set.join(', ')}. Those students are skipped.</div>}

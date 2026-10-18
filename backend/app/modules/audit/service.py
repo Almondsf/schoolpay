@@ -9,7 +9,7 @@ before storage, so secrets can't end up in the trail by accident.
 import uuid
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
@@ -28,6 +28,19 @@ class Actor:
     @classmethod
     def system(cls, what: str) -> "Actor":
         return cls(user_id=None, label=f"system:{what}")
+
+
+class Acting(Protocol):
+    """Whoever is acting in a school: staff (StaffContext) or a parent (ParentContext)."""
+
+    @property
+    def school_id(self) -> uuid.UUID: ...
+
+    @property
+    def actor(self) -> Actor: ...
+
+    @property
+    def meta(self) -> RequestMeta: ...
 
 
 def _jsonable(value: Any) -> Any:

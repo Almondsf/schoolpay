@@ -26,7 +26,11 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Reverse a payment recorded in error (e.g. a bounced teller) without deleting anything.
 - ✅ Every payment gets a numbered receipt (no gaps) that I can download as a PDF.
 - Keep a debtors list that's always current.
-- Send polite reminders without phoning every parent.
+- ✅ Send polite reminders without phoning every parent: reminders go automatically before and after the due date on a schedule I set, stop as soon as the bill is paid, and never exceed a cap per bill.
+- ✅ Tell every parent about their new bill when I generate the term's invoices.
+- ✅ Send one parent a reminder right now from the student's page.
+- ✅ Write the messages in our own words, with a preview, or keep the standard wording.
+- ✅ See every message sent to parents: when, how (WhatsApp, text or email), or why it wasn't sent.
 
 ## School admin
 - ✅ Keep the school's profile (name, address, phone, email) up to date.
@@ -35,6 +39,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Load the student list from the school's existing spreadsheet (Excel or CSV), see every problem by row number before saving, and re-import safely.
 - ✅ Add a student by hand with their parent, change their class, withdraw or reinstate them.
 - ✅ Link parents to children; brothers and sisters share one parent record.
+- ✅ Stop reminders for a parent who asks.
 - ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
@@ -45,7 +50,9 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ See each bill's details and every payment, and download receipts any time.
 - ✅ Choose the school when I have children at more than one.
 - ✅ Use it comfortably on a phone.
-- Get a receipt on WhatsApp.
+- ✅ Get a receipt by WhatsApp (or text, or email) as soon as a payment is received.
+- ✅ Get a message when a new bill is ready, and a reminder if it's still owed, never at night.
+- ✅ Turn off bill messages and reminders (receipts still come); the school can also do this for me.
 
 ## Anyone with a receipt
 - ✅ Check that a receipt is genuine on a public page (scan its QR code), without seeing the child's details. A reversed payment shows as reversed; a fake receipt doesn't match anything.

@@ -11,6 +11,7 @@ from app.core import outbox
 from app.core.db import SessionLocal
 from app.core.tenancy import scope_to_school
 from app.modules.accounts import tasks as accounts_tasks
+from app.modules.notifications import service as notifications
 from app.modules.notifications.sms import SmsError
 from app.modules.parents import tasks as parents_tasks
 from app.modules.payments import accounts as payment_accounts
@@ -75,3 +76,18 @@ def send_parent_code(to: str, code: str) -> None:
 @celery_app.task(name="parents.prune")
 def prune_parent_records() -> int:
     return parents_tasks.prune()
+
+
+@celery_app.task(name="notifications.deliver")
+def deliver_message(school_id: str, message_id: str) -> str:
+    return notifications.deliver(uuid.UUID(school_id), uuid.UUID(message_id)).value
+
+
+@celery_app.task(name="notifications.schedule_reminders")
+def schedule_reminders() -> int:
+    return notifications.schedule_reminders()
+
+
+@celery_app.task(name="notifications.retry_unsent")
+def retry_unsent_messages() -> int:
+    return notifications.retry_unsent()

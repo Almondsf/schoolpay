@@ -22,6 +22,13 @@ export function formatKobo(kobo: number): string {
   return naira.format(kobo / 100);
 }
 
+/** How each kind of invoice is named on screen. */
+export const INVOICE_KIND_LABELS: Record<string, string> = {
+  term: 'Term fees',
+  opening_balance: 'Brought forward',
+  adhoc: 'One-off charge',
+};
+
 export const ROLE_LABELS: Record<string, string> = {
   proprietor: 'Proprietor',
   bursar: 'Bursar',

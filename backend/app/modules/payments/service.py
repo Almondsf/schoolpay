@@ -22,6 +22,7 @@ from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import Actor, record
 from app.modules.fees.models import Invoice
+from app.modules.notifications.service import queue_receipt
 from app.modules.receipts.models import Receipt
 from app.modules.receipts.service import issue_receipt
 from app.modules.students.models import Student
@@ -89,6 +90,7 @@ def record_payment(
         raise RuntimeError("Recorded payment not visible in this session's school scope.")
     allocations = allocate(session, [student_id])
     receipt = issue_receipt(session, school_id=school_id, payment=payment, allocations=allocations)
+    queue_receipt(session, school_id, payment)  # the parent gets it on WhatsApp/SMS once this commits
     record(
         session,
         AuditAction.PAYMENT_RECORDED,

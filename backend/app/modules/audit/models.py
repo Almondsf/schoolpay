@@ -73,6 +73,9 @@ class AuditAction(enum.StrEnum):
     MANUAL_PAYMENT_APPROVED = "payments.manual_approved"
     MANUAL_PAYMENT_REJECTED = "payments.manual_rejected"
     PARENT_SIGNED_IN = "parents.signed_in"
+    MESSAGING_CHANGED = "messaging.changed"
+    REMINDERS_PREFERENCE_CHANGED = "messaging.reminders_preference"
+    REMINDER_SENT_MANUALLY = "messaging.reminder_sent"
 
 
 class _AuditColumns(UUIDPrimaryKey):

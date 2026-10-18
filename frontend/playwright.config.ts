@@ -3,7 +3,7 @@
  *
  * Starts its own API and Vite servers on separate ports against a throwaway
  * database (E2E_DATABASE_URL, default schoolpay_e2e on localhost) seeded by
- * `python -m app.cli seed-demo --reset`, so it never touches development data.
+ * `python -m app.cli seed-demo --reset --bare`, so it never touches development data.
  *
  * Environment:
  *   PYTHON            Python with the backend installed (default: the backend venv)
@@ -61,7 +61,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `${python} -m app.core.migrate && ${python} -m app.cli seed-demo --reset --mfa-secret ${E2E_MFA_SECRET} && ${python} -m uvicorn app.main:app --port ${API_PORT}`,
+      command: `${python} -m app.core.migrate && ${python} -m app.cli seed-demo --reset --bare --mfa-secret ${E2E_MFA_SECRET} && ${python} -m uvicorn app.main:app --port ${API_PORT}`,
       cwd: BACKEND,
       env: backendEnv,
       url: `http://127.0.0.1:${API_PORT}/api/v1/health`,

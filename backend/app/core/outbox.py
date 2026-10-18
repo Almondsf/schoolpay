@@ -60,11 +60,19 @@ class OutboxTask(UUIDPrimaryKey, Base):
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
-def enqueue(session: Session, task_name: str, payload: dict[str, Any]) -> OutboxTask:
-    """Add a task to the current transaction. It's dispatched only if the transaction commits."""
+def enqueue(
+    session: Session, task_name: str, payload: dict[str, Any], *, not_before: datetime | None = None
+) -> OutboxTask:
+    """
+    Add a task to the current transaction. It's dispatched only if the transaction
+    commits, and not before `not_before` (the sweeper hands it over when it's due).
+    """
     row = OutboxTask(id=uuid.uuid4(), task_name=task_name, payload=payload)
+    if not_before is not None:
+        row.next_attempt_at = not_before
     session.add(row)
-    session.info.setdefault(_PENDING_KEY, []).append(row.id)
+    if not_before is None or not_before <= datetime.now(UTC):
+        session.info.setdefault(_PENDING_KEY, []).append(row.id)
     return row
 
 
@@ -122,7 +130,7 @@ def dispatch(row_ids: list[uuid.UUID]) -> None:
     from app.core.db import SessionLocal
 
     with SessionLocal() as session:
-        _hand_off(_claim(session, OutboxTask.id.in_(row_ids)))
+        _hand_off(_claim(session, OutboxTask.id.in_(row_ids), OutboxTask.next_attempt_at <= func.now()))
         session.commit()
 
 
