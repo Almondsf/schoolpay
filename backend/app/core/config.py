@@ -126,7 +126,7 @@ class Settings(BaseSettings):
     # The text of messages to parents is cleared after this many days (who, when and how is kept)
     message_body_retention_days: int = Field(default=365, ge=30, le=3650)
 
-    # Text messages (parent sign-in codes; reminders come later): console (log only), memory (tests) or termii
+    # Text messages: console (log only), memory (tests) or termii
     sms_backend: Literal["console", "memory", "termii"] = "console"
     termii_api_key: str = ""
     # Registered Termii sender ID (up to 11 characters), e.g. "ParentPay"
@@ -148,6 +148,15 @@ class Settings(BaseSettings):
     # Parents are never sent fee notices or reminders between these hours (Lagos time)
     quiet_hours_start: int = Field(default=20, ge=0, le=23)
     quiet_hours_end: int = Field(default=7, ge=0, le=23)
+    # Phone calls to parents who prefer them: console (log only), memory (tests) or africastalking
+    voice_backend: Literal["console", "memory", "africastalking"] = "console"
+    africastalking_username: str = ""
+    africastalking_api_key: str = ""
+    # The Africa's Talking voice number calls come from, e.g. +2347000000000
+    africastalking_voice_number: str = ""
+    # Calls only between these hours (Lagos time)
+    call_hours_start: int = Field(default=9, ge=7, le=12)
+    call_hours_end: int = Field(default=19, ge=13, le=21)
     # Parent sign-in codes
     otp_minutes: int = Field(default=5, ge=2, le=15)
     otp_max_attempts: int = Field(default=5, ge=3, le=10)

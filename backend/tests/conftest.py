@@ -49,6 +49,7 @@ os.environ.update(
         "PAYMENT_GATEWAYS": "fake",
         "SMS_BACKEND": "memory",
         "WHATSAPP_BACKEND": "memory",
+        "VOICE_BACKEND": "memory",
         "FRONTEND_URL": "https://app.test",
     }
 )
@@ -63,7 +64,7 @@ from app.core import email  # noqa: E402
 from app.core.migrate import upgrade  # noqa: E402
 from app.core.ratelimit import get_limiter  # noqa: E402
 from app.main import create_app  # noqa: E402
-from app.modules.notifications import sms, whatsapp  # noqa: E402
+from app.modules.notifications import sms, voice, whatsapp  # noqa: E402
 from app.modules.payments.gateways import FakeGateway  # noqa: E402
 
 _admin_url = _parsed.render_as_string(hide_password=False)
@@ -112,6 +113,7 @@ def _reset_shared_state() -> None:
     FakeGateway.reset()
     sms.sent_sms.clear()
     whatsapp.sent_whatsapp.clear()
+    voice.placed_calls.clear()
 
 
 @pytest.fixture(scope="session")

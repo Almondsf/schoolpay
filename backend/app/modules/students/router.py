@@ -18,7 +18,7 @@ from app.modules.schools.academics_service import list_class_levels, require_cur
 from app.modules.schools.models import Term
 
 from . import importer, promotion, service, summary
-from .models import Gender, Relationship, Student, StudentStatus
+from .models import Gender, Language, Relationship, Student, StudentStatus
 
 router = APIRouter(tags=["students"], responses=ERROR_RESPONSES)
 VIEW = Depends(require(Capability.STUDENTS_VIEW))
@@ -61,6 +61,8 @@ class GuardianOut(BaseModel):
     is_primary: bool
     consent_at: str | None
     reminders: bool = Field(description="Gets fee notices and reminders (receipts always go)")
+    prefers_calls: bool = Field(description="Also phoned (overdue reminders, payment confirmations)")
+    language: Language
     erased: bool
 
 
@@ -237,6 +239,8 @@ def _detail_out(detail: service.StudentDetail) -> StudentDetailOut:
                 is_primary=link.is_primary,
                 consent_at=g.consent_at.isoformat() if g.consent_at else None,
                 reminders=g.reminders_opt_out_at is None,
+                prefers_calls=g.prefers_calls,
+                language=g.language,
                 erased=g.erased_at is not None,
             )
             for g, link in detail.guardians

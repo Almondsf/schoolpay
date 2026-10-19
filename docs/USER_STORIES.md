@@ -16,6 +16,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Download the debtors list and money received as Excel or PDF to share with the board.
 
 ## Bursar
+- ✅ Switch on phone calls for parents who prefer them, with a cap per bill, and mark those parents (and their language) on each pupil's page.
 - ✅ Copy a parent's family payment link to send by hand, or replace it if it went to the wrong person.
 - ✅ Sign in safely with a password and a code from my phone.
 - ✅ Set what each class pays per term in one grid, copy last term's fees, and mark fees like the bus as optional.
@@ -55,6 +56,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
+- ✅ If I find messages hard to read, get a phone call in English or Pidgin that tells me what's owed and reads my child's account number slowly, twice, and another when my payment arrives.
 - ✅ Open one link from my bill or reminder, no sign-in, and see all my children's balances and account numbers.
 - ✅ Pay for several children in one card payment, choosing how much goes to each (part now, the rest later), with a receipt per child.
 - ✅ Pay by card from a link the school sends, and see straight away whether it went through.

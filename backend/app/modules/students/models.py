@@ -115,6 +115,13 @@ class Enrollment(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     class_level: Mapped[ClassLevel] = relationship(lazy="raise")
 
 
+class Language(enum.StrEnum):
+    """The language a parent is spoken to in on phone calls."""
+
+    ENGLISH = "en"
+    PIDGIN = "pcm"
+
+
 class Guardian(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     """A parent or other adult responsible for one or more students at the school."""
 
@@ -130,6 +137,11 @@ class Guardian(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     # Set when the parent asked not to get fee notices and reminders (receipts still go out: they're
     # the record of their own payment)
     reminders_opt_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Also phoned (overdue reminders, payment confirmations): for parents who don't read messages easily
+    prefers_calls: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    language: Mapped[Language] = mapped_column(
+        enum_type(Language, "parent_language"), default=Language.ENGLISH, server_default=Language.ENGLISH.value
+    )
     # Contact details removed (erasure request or retention); the record stays so payment history still adds up
     erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

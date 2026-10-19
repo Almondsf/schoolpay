@@ -27,6 +27,7 @@ from app.modules.health.router import router as health_router
 from app.modules.notifications.dev_router import router as dev_sms_router
 from app.modules.notifications.router import parent_router as parent_messaging_router
 from app.modules.notifications.router import router as messaging_router
+from app.modules.notifications.router import voice_router
 from app.modules.parents.router import auth_router as parent_auth_router
 from app.modules.parents.router import router as parent_router
 from app.modules.payments.family_router import public_router as public_family_router
@@ -77,6 +78,7 @@ def build_api_router() -> APIRouter:
         family_router,
         public_family_router,
         webhook_router,
+        voice_router,
     ):
         api.include_router(router)
     # Development and browser-test helpers (simulated transfers, reading texted codes) don't exist in

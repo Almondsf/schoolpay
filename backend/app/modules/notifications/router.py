@@ -2,25 +2,27 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Form, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.errors import ERROR_RESPONSES
+from app.core.errors import ERROR_RESPONSES, NotFound
+from app.core.http import RequestMeta, request_meta
 from app.core.pagination import Page, PageParams, page_params, paginate_rows
 from app.core.ratelimit import get_limiter
 from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
 from app.modules.parents.deps import ParentContext, get_parent
-from app.modules.students.models import Guardian, Student
+from app.modules.students.models import Guardian, Language, Student
 
-from . import admin, templates
+from . import admin, service, templates
 from .models import Channel, MessageKind, MessageLog, MessageStatus
 
 router = APIRouter(tags=["messaging"], responses=ERROR_RESPONSES)
 parent_router = APIRouter(prefix="/parent", tags=["parent"], responses=ERROR_RESPONSES)
+voice_router = APIRouter(prefix="/voice", tags=["voice"], include_in_schema=False)
 MANAGE = Depends(require(Capability.MESSAGING_MANAGE))
 Body = Annotated[str, StringConstraints(max_length=templates.MAX_LENGTH + 50)]
 
@@ -73,14 +75,31 @@ class ReminderSettingsIO(BaseModel):
     send_hour: int = Field(ge=7, le=19)
     max_per_invoice: int = Field(ge=0, le=10)
     min_gap_days: int = Field(ge=1, le=30)
+    calls_enabled: bool = Field(default=False, description="Phone parents who prefer calls (costs per minute)")
+    max_calls_per_invoice: int = Field(default=2, ge=0, le=5)
 
 
 class PreferenceIn(BaseModel):
     reminders: bool
+    prefers_calls: bool | None = Field(default=None, description="Also get phone calls; null leaves it as it is")
+    language: Language | None = None
 
 
 class PreferenceOut(BaseModel):
     reminders: bool
+    prefers_calls: bool
+    language: Language
+    calls_available: bool = Field(description="Whether the school makes phone calls at all")
+
+
+class CallPreferenceIn(BaseModel):
+    prefers_calls: bool
+    language: Language = Language.ENGLISH
+
+
+class CallPreferenceOut(BaseModel):
+    prefers_calls: bool
+    language: Language
 
 
 class QueuedOut(BaseModel):
@@ -176,7 +195,22 @@ def guardian_preference(
     db: Session = Depends(get_db),
 ) -> PreferenceOut:
     guardian = admin.set_reminders_preference(db, ctx, guardian_id, body.reminders)
-    return PreferenceOut(reminders=guardian.reminders_opt_out_at is None)
+    return _preferences(db, guardian)
+
+
+@router.put(
+    "/guardians/{guardian_id}/calls",
+    response_model=CallPreferenceOut,
+    summary="Also phone a parent (overdue reminders, payment confirmations), in English or Pidgin",
+)
+def guardian_calls(
+    guardian_id: uuid.UUID,
+    body: CallPreferenceIn,
+    ctx: StaffContext = Depends(require(Capability.STUDENTS_MANAGE)),
+    db: Session = Depends(get_db),
+) -> CallPreferenceOut:
+    guardian = admin.set_call_preference(db, ctx, guardian_id, body.prefers_calls, body.language)
+    return CallPreferenceOut(prefers_calls=guardian.prefers_calls, language=guardian.language)
 
 
 @router.post(
@@ -193,7 +227,18 @@ def remind(student_id: uuid.UUID, ctx: StaffContext = MANAGE, db: Session = Depe
 @parent_router.get("/preferences", response_model=PreferenceOut, summary="The parent's message preferences")
 def get_parent_preferences(ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)) -> PreferenceOut:
     guardian = db.get(Guardian, ctx.guardian_id)
-    return PreferenceOut(reminders=guardian is not None and guardian.reminders_opt_out_at is None)
+    if guardian is None:
+        raise NotFound("Not found.")
+    return _preferences(db, guardian)
+
+
+def _preferences(db: Session, guardian: Guardian) -> PreferenceOut:
+    return PreferenceOut(
+        reminders=guardian.reminders_opt_out_at is None,
+        prefers_calls=guardian.prefers_calls,
+        language=guardian.language,
+        calls_available=admin.reminder_settings(db).calls_enabled,
+    )
 
 
 @parent_router.put(
@@ -205,4 +250,33 @@ def put_parent_preferences(
     body: PreferenceIn, ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)
 ) -> PreferenceOut:
     guardian = admin.set_reminders_preference(db, ctx, ctx.guardian_id, body.reminders)
-    return PreferenceOut(reminders=guardian.reminders_opt_out_at is None)
+    if body.prefers_calls is not None or body.language is not None:
+        guardian = admin.set_call_preference(
+            db,
+            ctx,
+            ctx.guardian_id,
+            guardian.prefers_calls if body.prefers_calls is None else body.prefers_calls,
+            body.language or guardian.language,
+        )
+    return _preferences(db, guardian)
+
+
+@voice_router.post("/africastalking", response_class=Response)
+def africastalking_call(
+    request: Request,
+    meta: RequestMeta = Depends(request_meta),
+    is_active: str = Form(default="0", alias="isActive"),
+    session_id: str = Form(default="", alias="sessionId", max_length=100),
+    destination: str = Form(default="", alias="destinationNumber", max_length=25),
+    status_: str = Form(default="", alias="status", max_length=40),
+    seconds: int = Form(default=0, alias="durationInSeconds", ge=0),
+) -> Response:
+    """Africa's Talking asks what to say when a parent answers, and reports how the call ended."""
+    get_limiter().hit("voice-callback:ip", "300/minute", meta.ip)
+    if is_active != "1":
+        service.call_ended(session_id, status_, seconds)
+        return Response(status_code=status.HTTP_200_OK)
+    xml = service.answer_call(session_id, destination)
+    if xml is None:  # not a call of ours: hang up
+        xml = '<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>'
+    return Response(xml, media_type="application/xml")

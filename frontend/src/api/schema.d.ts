@@ -450,6 +450,23 @@ export interface paths {
         patch: operations["students_update_guardian"];
         trace?: never;
     };
+    "/api/v1/guardians/{guardian_id}/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Also phone a parent (overdue reminders, payment confirmations), in English or Pidgin */
+        put: operations["messaging_guardian_calls"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/guardians/{guardian_id}/erase": {
         parameters: {
             query?: never;
@@ -2572,6 +2589,19 @@ export interface components {
             /** Term Id */
             term_id?: string | null;
         };
+        /** CallPreferenceIn */
+        CallPreferenceIn: {
+            /** @default en */
+            language?: components["schemas"]["Language"];
+            /** Prefers Calls */
+            prefers_calls: boolean;
+        };
+        /** CallPreferenceOut */
+        CallPreferenceOut: {
+            language: components["schemas"]["Language"];
+            /** Prefers Calls */
+            prefers_calls: boolean;
+        };
         /** CancelPlanIn */
         CancelPlanIn: {
             /** Reason */
@@ -2586,7 +2616,7 @@ export interface components {
          * Channel
          * @enum {string}
          */
-        Channel: "whatsapp" | "sms" | "email";
+        Channel: "whatsapp" | "sms" | "email" | "voice";
         /** ChargeStudentOut */
         ChargeStudentOut: {
             /** Admission Number */
@@ -3380,8 +3410,14 @@ export interface components {
             id: string;
             /** Is Primary */
             is_primary: boolean;
+            language: components["schemas"]["Language"];
             /** Phone */
             phone: string;
+            /**
+             * Prefers Calls
+             * @description Also phoned (overdue reminders, payment confirmations)
+             */
+            prefers_calls: boolean;
             relationship: components["schemas"]["Relationship"];
             /**
              * Reminders
@@ -3605,6 +3641,12 @@ export interface components {
             total_kobo: number;
         };
         /**
+         * Language
+         * @description The language a parent is spoken to in on phone calls.
+         * @enum {string}
+         */
+        Language: "en" | "pcm";
+        /**
          * LineKind
          * @enum {string}
          */
@@ -3719,7 +3761,7 @@ export interface components {
          * MessageKind
          * @enum {string}
          */
-        MessageKind: "receipt" | "fee_notice" | "reminder";
+        MessageKind: "receipt" | "fee_notice" | "reminder" | "call_reminder" | "call_receipt";
         /** MessageOut */
         MessageOut: {
             /** Body */
@@ -4426,11 +4468,25 @@ export interface components {
         };
         /** PreferenceIn */
         PreferenceIn: {
+            language?: components["schemas"]["Language"] | null;
+            /**
+             * Prefers Calls
+             * @description Also get phone calls; null leaves it as it is
+             */
+            prefers_calls?: boolean | null;
             /** Reminders */
             reminders: boolean;
         };
         /** PreferenceOut */
         PreferenceOut: {
+            /**
+             * Calls Available
+             * @description Whether the school makes phone calls at all
+             */
+            calls_available: boolean;
+            language: components["schemas"]["Language"];
+            /** Prefers Calls */
+            prefers_calls: boolean;
             /** Reminders */
             reminders: boolean;
         };
@@ -4589,12 +4645,23 @@ export interface components {
         Relationship: "mother" | "father" | "guardian" | "other";
         /** ReminderSettingsIO */
         ReminderSettingsIO: {
+            /**
+             * Calls Enabled
+             * @description Phone parents who prefer calls (costs per minute)
+             * @default false
+             */
+            calls_enabled?: boolean;
             /** Days After Due */
             days_after_due: number[];
             /** Days Before Due */
             days_before_due: number[];
             /** Enabled */
             enabled: boolean;
+            /**
+             * Max Calls Per Invoice
+             * @default 2
+             */
+            max_calls_per_invoice?: number;
             /** Max Per Invoice */
             max_per_invoice: number;
             /** Min Gap Days */
@@ -7979,6 +8046,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GuardianListItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    messaging_guardian_calls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guardian_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallPreferenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallPreferenceOut"];
                 };
             };
             /** @description Bad Request */

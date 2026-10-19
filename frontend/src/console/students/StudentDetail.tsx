@@ -10,6 +10,7 @@ import { StudentAccount } from '../billing/StudentAccount';
 import { StudentPayIn } from '../payments/StudentPayIn';
 import { armOptions, useClassLevels } from '../hooks';
 import { FamilyLinkDialog } from './FamilyLink';
+import { LANGUAGE_LABELS, ParentCallsDialog } from './ParentCalls';
 import { saveBlob } from '../../lib/download';
 
 type Detail = Schemas['StudentDetailOut'];
@@ -28,6 +29,7 @@ export function StudentDetail() {
   const [editingGuardian, setEditingGuardian] = useState<Guardian | null>(null);
   const [erasing, setErasing] = useState<EraseTarget | null>(null);
   const [payLink, setPayLink] = useState<Guardian | null>(null);
+  const [calls, setCalls] = useState<Guardian | null>(null);
   const exportData = useMutation({
     mutationFn: async (g: Guardian) => {
       const { data, response } = await api.GET('/api/v1/guardians/{guardian_id}/export', {
@@ -174,7 +176,8 @@ export function StudentDetail() {
               <div>
                 <strong>{g.full_name}</strong> <span className="muted">({humanize(g.relationship)})</span>{' '}
                 {g.is_primary && <span className="badge ok">Gets fee notices</span>}{' '}
-                {!g.reminders && !g.erased && <span className="badge warn">Reminders off</span>}
+                {!g.reminders && !g.erased && <span className="badge warn">Reminders off</span>}{' '}
+                {g.prefers_calls && !g.erased && <span className="badge">Phone calls ({LANGUAGE_LABELS[g.language]})</span>}
                 {g.erased && <span className="badge">Details erased</span>}
                 <div className="small">
                   {g.phone}
@@ -202,6 +205,9 @@ export function StudentDetail() {
                   <button className="link small" onClick={() => setReminders.mutate({ guardianId: g.id, reminders: !g.reminders })}>
                     {g.reminders ? 'Stop reminders' : 'Restart reminders'}
                   </button>
+                  <button className="link small" onClick={() => setCalls(g)}>
+                    Phone calls
+                  </button>
                   {!g.is_primary && (
                     <button className="link small" onClick={() => guardianAction.mutate({ kind: 'primary', guardianId: g.id })}>
                       Make main contact
@@ -227,6 +233,7 @@ export function StudentDetail() {
       {dialog === 'guardian' && <AddGuardian student={s} onClose={() => setDialog(null)} onDone={refresh} />}
       {editingGuardian && <EditGuardian guardian={editingGuardian} onClose={() => setEditingGuardian(null)} onDone={refresh} />}
       {erasing && <Erase target={erasing} onClose={() => setErasing(null)} onDone={refresh} />}
+      {calls && <ParentCallsDialog guardian={calls} onClose={() => setCalls(null)} onDone={refresh} />}
       {payLink && <FamilyLinkDialog guardianId={payLink.id} name={payLink.full_name} onClose={() => setPayLink(null)} />}
     </>
   );

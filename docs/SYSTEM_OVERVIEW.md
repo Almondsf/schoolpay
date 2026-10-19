@@ -539,6 +539,27 @@ child's **main parent** (the primary guardian):
 | `receipt` | Every payment recorded (`payments/service.record_payment` queues it) | No: a receipt is a record of the parent's own money |
 | `fee_notice` | Bills generated with "send each parent a message" ticked (`notify_parents`) | Yes |
 | `reminder` | On the school's schedule, or "Send reminder" on a student's page | Yes |
+| `call_reminder` | A phone call beside an **overdue** scheduled reminder, for parents who prefer calls | Yes |
+| `call_receipt` | A phone call beside each receipt, for parents who prefer calls | No |
+
+**Phone calls** (`voice.py`), for parents who don't read messages easily. They
+go only to parents marked "prefers calls" (staff on the pupil's page, or the
+parent in the portal; `Guardian.prefers_calls` and `language`: English or
+Pidgin), and only at schools that switched calls on (`ReminderSettings.calls_enabled`,
+with a cap per bill, `max_calls_per_invoice`). A call never replaces the text:
+the parent still gets the reminder or receipt, so a POS agent can read the
+account number. A reminder call says what's owed and reads the child's account
+number digit by digit, in groups, twice; a receipt call confirms the amount and
+what's left. Amounts are said in English words (how Nigerians usually say them,
+even in Pidgin). Calls are made only between `CALL_HOURS_START` and
+`CALL_HOURS_END` (9:00 to 19:00 Lagos) and re-check at calling time that the
+parent still wants calls, the school still has them on, and (for reminders)
+that the bill is still owed. The wording is fixed, not school-editable.
+Providers (`VOICE_BACKEND`): `console`, `memory` (tests), `africastalking`.
+With Africa's Talking we ask it to dial; when the parent answers it fetches the
+words from `POST /voice/africastalking` (found by the call's session id, and only
+if the number dialled is the parent's), and it reports there how the call ended
+(an unanswered call is noted on the message).
 
 **The pipeline** (`service.py`):
 
@@ -891,6 +912,7 @@ production.
 | Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
 | Payment setup | `GET/PUT /payment-settings`; `GET /payment-settings/banks`; `POST /virtual-accounts/provision`; `GET /students/{id}/virtual-account` |
 | Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
+| Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |

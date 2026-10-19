@@ -130,6 +130,27 @@ describe('parent portal', () => {
     expect(screen.getByText("You'll always get a receipt when a payment is received.")).toBeInTheDocument();
   });
 
+  it('lets the parent ask for phone calls in Pidgin when the school makes calls', async () => {
+    let prefs = { reminders: true, prefers_calls: false, language: 'en', calls_available: true };
+    const calls = mockApi({
+      'POST /api/v1/parent/auth/refresh': () => json(signedIn),
+      'GET /api/v1/parent/home': () => json(home),
+      'GET /api/v1/parent/preferences': () => json(prefs),
+      'PUT /api/v1/parent/preferences': async (request) => {
+        prefs = { ...prefs, ...(await request.json()) };
+        return json(prefs);
+      },
+    });
+    renderAt('/parent');
+    await userEvent.click(await screen.findByLabelText(/Also phone me/));
+    const language = await screen.findByLabelText('Language on the call');
+    await userEvent.selectOptions(language, 'pcm');
+    await vi.waitFor(() => expect(screen.getByLabelText('Language on the call')).toHaveValue('pcm'));
+    const puts = calls.filter((c) => c.method === 'PUT');
+    expect(await puts[0]!.json()).toEqual({ reminders: true, prefers_calls: true });
+    expect(await puts[1]!.json()).toEqual({ reminders: true, language: 'pcm' });
+  });
+
   it('restores a session from the parent refresh cookie', async () => {
     const calls = mockApi({
       'POST /api/v1/parent/auth/refresh': () => json(signedIn),

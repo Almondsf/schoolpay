@@ -43,7 +43,7 @@ from app.modules.receipts.service import verification_url
 from app.modules.schools.models import AcademicSession, School, SchoolStatus, Term
 from app.modules.students.models import Guardian, GuardianStudent, Student, StudentStatus
 
-from . import templates, whatsapp
+from . import templates, voice, whatsapp
 from .models import Channel, MessageKind, MessageLog, MessageStatus, MessageTemplate, ReminderSettings
 from .sms import Sms, SmsError, send_sms
 
@@ -51,8 +51,16 @@ logger = logging.getLogger(__name__)
 LAGOS = ZoneInfo("Africa/Lagos")
 DELIVER_TASK = "notifications.deliver"
 MAX_ATTEMPTS = 3
+CALL_KINDS = (MessageKind.CALL_REMINDER, MessageKind.CALL_RECEIPT)
 DEFAULT_SETTINGS = ReminderSettings(
-    enabled=True, days_before_due=[7, 1], days_after_due=[3, 14, 30], send_hour=9, max_per_invoice=4, min_gap_days=3
+    enabled=True,
+    days_before_due=[7, 1],
+    days_after_due=[3, 14, 30],
+    send_hour=9,
+    max_per_invoice=4,
+    min_gap_days=3,
+    calls_enabled=False,
+    max_calls_per_invoice=2,
 )
 
 
@@ -74,6 +82,22 @@ def _in_quiet_hours(moment: datetime) -> bool:
     hour = moment.astimezone(LAGOS).hour
     start, end = settings.quiet_hours_start, settings.quiet_hours_end
     return hour >= start or hour < end if start > end else start <= hour < end
+
+
+def _outside_call_hours(moment: datetime) -> bool:
+    settings = get_settings()
+    return not settings.call_hours_start <= moment.astimezone(LAGOS).hour < settings.call_hours_end
+
+
+def next_call_time(moment: datetime) -> datetime:
+    """`moment` itself if it's within calling hours in Lagos, else when they next start."""
+    if not _outside_call_hours(moment):
+        return moment
+    local = moment.astimezone(LAGOS)
+    start = datetime.combine(local.date(), time(get_settings().call_hours_start), tzinfo=LAGOS)
+    if local >= start:
+        start += timedelta(days=1)
+    return start.astimezone(UTC)
 
 
 def next_daytime(moment: datetime) -> datetime:
@@ -119,7 +143,9 @@ def _queue_many(session: Session, messages: list[tuple[uuid.UUID, NewMessage]]) 
     ).all()
     now = datetime.now(UTC)
     for message_id, school_id, kind in inserted:
-        not_before = None if kind == MessageKind.RECEIPT else next_daytime(now)
+        not_before = (
+            None if kind == MessageKind.RECEIPT else next_call_time(now) if kind in CALL_KINDS else next_daytime(now)
+        )
         outbox.enqueue(
             session,
             DELIVER_TASK,
@@ -141,18 +167,38 @@ def _primary_guardians(session: Session, student_ids: list[uuid.UUID]) -> dict[u
     )
 
 
-def queue_receipts(session: Session, school_id: uuid.UUID, payments: list[Payment]) -> int:
-    """A receipt message to each payment's primary parent. Two statements for any number of payments."""
-    guardians = _primary_guardians(session, list({p.student_id for p in payments}))
-    return queue(
-        session,
-        school_id,
-        [
-            NewMessage(guardians[p.student_id], p.student_id, MessageKind.RECEIPT, f"receipt:{p.id}", payment_id=p.id)
-            for p in payments
-            if p.student_id in guardians
-        ],
+def _callers(session: Session, school_id: uuid.UUID, guardian_ids: set[uuid.UUID]) -> set[uuid.UUID]:
+    """Those of these parents who get phone calls: they prefer them and the school has calls switched on."""
+    calls_on = session.scalar(select(ReminderSettings.calls_enabled).where(ReminderSettings.school_id == school_id))
+    if not calls_on or not guardian_ids:
+        return set()
+    return set(
+        session.scalars(
+            select(Guardian.id).where(
+                Guardian.id.in_(guardian_ids), Guardian.prefers_calls.is_(True), Guardian.erased_at.is_(None)
+            )
+        )
     )
+
+
+def queue_receipts(session: Session, school_id: uuid.UUID, payments: list[Payment]) -> int:
+    """
+    A receipt message to each payment's primary parent, and a confirmation call to those who
+    prefer calls. A fixed number of statements for any number of payments.
+    """
+    guardians = _primary_guardians(session, list({p.student_id for p in payments}))
+    callers = _callers(session, school_id, set(guardians.values()))
+    messages = []
+    for p in payments:
+        guardian = guardians.get(p.student_id)
+        if guardian is None:
+            continue
+        messages.append(NewMessage(guardian, p.student_id, MessageKind.RECEIPT, f"receipt:{p.id}", payment_id=p.id))
+        if guardian in callers:
+            messages.append(
+                NewMessage(guardian, p.student_id, MessageKind.CALL_RECEIPT, f"call-receipt:{p.id}", payment_id=p.id)
+            )
+    return queue(session, school_id, messages)
 
 
 def queue_fee_notices(session: Session, school_id: uuid.UUID, invoices: list[Invoice]) -> int:
@@ -206,6 +252,7 @@ def schedule_reminders(now: datetime | None = None) -> int:
             )
         ).all()
         due: list[tuple[uuid.UUID, uuid.UUID, uuid.UUID]] = []
+        overdue_ids: set[uuid.UUID] = set()
         for invoice_id, school_id, student_id, due_date in candidates:
             if due_date is None:  # filtered in SQL; keeps the type checker honest
                 continue
@@ -213,6 +260,8 @@ def schedule_reminders(now: datetime | None = None) -> int:
             offset = (today - due_date).days
             if (-offset in rules.days_before_due) or (offset in rules.days_after_due):
                 due.append((invoice_id, school_id, student_id))
+                if offset > 0:
+                    overdue_ids.add(invoice_id)
         if not due:
             return 0
         owed = {inv: amounts.balance_kobo for inv, amounts in amounts_for(session, [d[0] for d in due]).items()}
@@ -224,15 +273,23 @@ def schedule_reminders(now: datetime | None = None) -> int:
                 .group_by(MessageLog.invoice_id)
             ).all()
         }
-        guardians = dict(
-            session.execute(
-                select(GuardianStudent.student_id, GuardianStudent.guardian_id)
+        guardians = {
+            student_id: (guardian_id, prefers_calls)
+            for student_id, guardian_id, prefers_calls in session.execute(
+                select(GuardianStudent.student_id, GuardianStudent.guardian_id, Guardian.prefers_calls)
                 .join(Guardian, Guardian.id == GuardianStudent.guardian_id)
                 .where(
                     GuardianStudent.student_id.in_({d[2] for d in due}),
                     GuardianStudent.is_primary.is_(True),
                     Guardian.reminders_opt_out_at.is_(None),
                 )
+            )
+        }
+        calls_made = dict(
+            session.execute(
+                select(MessageLog.invoice_id, func.count())
+                .where(MessageLog.invoice_id.in_([d[0] for d in due]), MessageLog.kind == MessageKind.CALL_REMINDER)
+                .group_by(MessageLog.invoice_id)
             ).all()
         )
         reminders: list[tuple[uuid.UUID, NewMessage]] = []
@@ -243,18 +300,25 @@ def schedule_reminders(now: datetime | None = None) -> int:
                 continue
             if last is not None and now - last < timedelta(days=rules.min_gap_days):
                 continue
+            guardian_id, prefers_calls = guardians[student_id]
+            key = f"{invoice_id}:{today.isoformat()}"
             reminders.append(
                 (
                     school_id,
-                    NewMessage(
-                        guardians[student_id],
-                        student_id,
-                        MessageKind.REMINDER,
-                        f"reminder:{invoice_id}:{today.isoformat()}",
-                        invoice_id=invoice_id,
-                    ),
+                    NewMessage(guardian_id, student_id, MessageKind.REMINDER, f"reminder:{key}", invoice_id=invoice_id),
                 )
             )
+            # Overdue bills only, and only for parents who prefer calls at schools that have them on
+            calls_left = calls_made.get(invoice_id, 0) < rules.max_calls_per_invoice
+            if prefers_calls and invoice_id in overdue_ids and rules.calls_enabled and calls_left:
+                reminders.append(
+                    (
+                        school_id,
+                        NewMessage(
+                            guardian_id, student_id, MessageKind.CALL_REMINDER, f"call:{key}", invoice_id=invoice_id
+                        ),
+                    )
+                )
         queued = _queue_many(session, reminders)
         session.commit()
     return queued
@@ -350,6 +414,10 @@ def deliver(school_id: uuid.UUID, message_id: uuid.UUID) -> MessageStatus:
             status = _skip(message, "no_recipient")
             session.commit()
             return status
+        if message.kind in CALL_KINDS:
+            status = _deliver_call(session, message, guardian, student, now)
+            session.commit()
+            return status
         if message.kind != MessageKind.RECEIPT:
             if guardian.reminders_opt_out_at is not None:
                 status = _skip(message, "opted_out")
@@ -385,6 +453,111 @@ def deliver(school_id: uuid.UUID, message_id: uuid.UUID) -> MessageStatus:
                 logger.warning("Message %s failed on every channel: %s", message.id, message.error)
         session.commit()
         return message.status
+
+
+def _call_lines(session: Session, message: MessageLog, guardian: Guardian, student: Student) -> list[str]:
+    """What the call says, from the current figures."""
+    school = session.get(School, message.school_id)
+    owed = account_summaries(session, [student.id])[student.id].outstanding_kobo
+    if message.kind == MessageKind.CALL_RECEIPT:
+        payment = session.get(Payment, message.payment_id) if message.payment_id else None
+        return voice.receipt_lines(
+            guardian.language,
+            school=school.name if school else "your school",
+            child=student.first_name,
+            paid_kobo=payment.amount_kobo if payment else 0,
+            owed_kobo=owed,
+        )
+    account = session.scalar(
+        select(VirtualAccount).where(
+            VirtualAccount.student_id == student.id, VirtualAccount.status == VirtualAccountStatus.ACTIVE
+        )
+    )
+    return voice.reminder_lines(
+        guardian.language,
+        school=school.name if school else "your school",
+        child=student.first_name,
+        owed_kobo=owed,
+        account_number=account.account_number if account else None,
+        bank=account.bank_name if account else None,
+    )
+
+
+def _deliver_call(
+    session: Session, message: MessageLog, guardian: Guardian, student: Student, now: datetime
+) -> MessageStatus:
+    """Place one call, re-checking that the parent still wants calls, the school still has them on, and it's owed."""
+    calls_on = session.scalar(select(ReminderSettings.calls_enabled))
+    if not guardian.prefers_calls or not calls_on or not guardian.phone:
+        return _skip(message, "calls_off")
+    if message.kind == MessageKind.CALL_REMINDER:
+        if guardian.reminders_opt_out_at is not None:
+            return _skip(message, "opted_out")
+        if _nothing_owed(session, message, student.id):
+            return _skip(message, "paid")
+    if _outside_call_hours(now):
+        outbox.enqueue(
+            session,
+            DELIVER_TASK,
+            {"school_id": str(message.school_id), "message_id": str(message.id)},
+            not_before=next_call_time(now),
+        )
+        return MessageStatus.QUEUED
+    lines = _call_lines(session, message, guardian, student)
+    message.body, message.attempts = " ".join(lines), message.attempts + 1
+    try:
+        provider_id = voice.place_call(voice.Call(to=guardian.phone, lines=lines))
+    except voice.VoiceError as e:
+        message.error = f"voice: {e}"[:300]
+        if message.attempts >= MAX_ATTEMPTS:
+            message.status = MessageStatus.FAILED
+            logger.warning("Call %s failed: %s", message.id, message.error)
+        return message.status
+    message.status, message.channel, message.sent_at = MessageStatus.SENT, Channel.VOICE, now
+    message.provider_message_id, message.error = provider_id[:100], ""
+    return message.status
+
+
+def answer_call(session_id: str, destination: str) -> str | None:
+    """
+    The provider asks what to say on a call we placed (the parent answered). None for a
+    call we don't know, or one whose number isn't the parent's.
+    """
+    if not session_id:
+        return None
+    with SessionLocal() as lookup:
+        scope_platform_wide(lookup)
+        school_id = lookup.scalar(
+            select(MessageLog.school_id).where(
+                MessageLog.provider_message_id == session_id[:100], MessageLog.channel == Channel.VOICE
+            )
+        )
+    if school_id is None:
+        return None
+    with SessionLocal() as session:
+        scope_to_school(session, school_id)
+        message = session.scalar(select(MessageLog).where(MessageLog.provider_message_id == session_id[:100]))
+        guardian = session.get(Guardian, message.guardian_id) if message else None
+        student = session.get(Student, message.student_id) if message and message.student_id else None
+        if message is None or guardian is None or student is None or guardian.phone != destination:
+            return None
+        return voice.call_xml(_call_lines(session, message, guardian, student))
+
+
+def call_ended(session_id: str, status: str, seconds: int) -> None:
+    """The provider's last word on a call: note it if the parent didn't pick up (the text still went)."""
+    if not session_id or status.lower() in {"success", "completed"}:
+        return
+    with SessionLocal() as session:
+        scope_platform_wide(session)
+        message = session.scalar(
+            select(MessageLog).where(
+                MessageLog.provider_message_id == session_id[:100], MessageLog.channel == Channel.VOICE
+            )
+        )
+        if message is not None:
+            message.error = f"Call not completed ({status[:40]}, {seconds}s)"
+            session.commit()
 
 
 def _nothing_owed(session: Session, message: MessageLog, student_id: uuid.UUID) -> bool:

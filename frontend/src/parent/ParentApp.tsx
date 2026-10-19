@@ -78,7 +78,7 @@ function MessagePreferences() {
   const queryClient = useQueryClient();
   const prefs = useQuery({ queryKey: ['parent-preferences'], queryFn: async () => unwrap(await api.GET('/api/v1/parent/preferences')) });
   const change = useMutation({
-    mutationFn: async (reminders: boolean) => unwrap(await api.PUT('/api/v1/parent/preferences', { body: { reminders } })),
+    mutationFn: async (body: Schemas['PreferenceIn']) => unwrap(await api.PUT('/api/v1/parent/preferences', { body })),
     onSuccess: (data) => queryClient.setQueryData(['parent-preferences'], data),
   });
   const download = useMutation({
@@ -93,10 +93,35 @@ function MessagePreferences() {
     <section className="card section" aria-label="Messages and your data">
       <h2>Messages from the school</h2>
       <label className="checkbox">
-        <input type="checkbox" checked={prefs.data.reminders} disabled={change.isPending} onChange={(e) => change.mutate(e.target.checked)} />
+        <input type="checkbox" checked={prefs.data.reminders} disabled={change.isPending} onChange={(e) => change.mutate({ reminders: e.target.checked })} />
         Send me new bills and payment reminders
       </label>
       <p className="muted small">You'll always get a receipt when a payment is received.</p>
+      {prefs.data.calls_available && (
+        <>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={prefs.data.prefers_calls}
+              disabled={change.isPending}
+              onChange={(e) => change.mutate({ reminders: prefs.data.reminders, prefers_calls: e.target.checked })}
+            />
+            Also phone me: the school reads out what's owed and the account number, and confirms payments
+          </label>
+          {prefs.data.prefers_calls && (
+            <Field label="Language on the call">
+              <select
+                value={prefs.data.language}
+                disabled={change.isPending}
+                onChange={(e) => change.mutate({ reminders: prefs.data.reminders, language: e.target.value as Schemas['Language'] })}
+              >
+                <option value="en">English</option>
+                <option value="pcm">Pidgin</option>
+              </select>
+            </Field>
+          )}
+        </>
+      )}
       <ErrorAlert error={change.error} />
       <h2>Your data</h2>
       <p className="small">

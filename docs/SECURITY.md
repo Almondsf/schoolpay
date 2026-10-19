@@ -167,6 +167,11 @@ It is updated with every change that affects security.
 - School wording can only use a fixed list of placeholders (checked on save),
   so a template can't reach other data. WhatsApp only sends Meta-approved
   templates.
+- Phone calls: the provider's callback (`POST /voice/africastalking`) only answers
+  for a call we placed (looked up by the provider's session id) and only when the
+  number dialled is that parent's; anything else gets `<Reject/>` and no details.
+  It is rate limited per IP. Calls are capped per bill, made only 9:00 to 19:00,
+  and switched on per school.
 - Console backends log masked numbers or email domains, never message text.
   The message log is visible only to staff with `messaging.manage` in that
   school.

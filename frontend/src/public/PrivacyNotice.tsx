@@ -44,7 +44,7 @@ export function PrivacyNotice() {
         <h2>Who it&apos;s shared with</h2>
         <ul>
           <li>The payment gateway (Paystack or Flutterwave), to give each child a bank account number and take card payments.</li>
-          <li>Meta (WhatsApp), Termii (text messages) and an email provider, to deliver messages to you.</li>
+          <li>Meta (WhatsApp), Termii (text messages), Africa&apos;s Talking (phone calls, if you chose them) and an email provider, to deliver messages to you.</li>
         </ul>
         <p>Each is bound by its own data protection duties. Your child&apos;s school sees only its own pupils and parents.</p>
 

@@ -13,7 +13,9 @@ A "lived-in" demo school: what the first half of a term looks like.
   paid too much (credit), and about a quarter haven't paid yet. Transfers into
   children's account numbers, card payments, cash, tellers and POS.
 - Every payment has its numbered receipt and an audit entry; parents were sent
-  receipts, the fee notice and reminders (message log).
+  receipts, the fee notice and reminders (message log), each with their family
+  payment link. The school phones about a dozen parents who prefer calls
+  (some in Pidgin): payment confirmations and overdue reminders.
 - One teller was reversed (it bounced), and two cash/teller entries are
   waiting for the bursar's approval.
 
@@ -30,7 +32,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, update
+from sqlalchemy import insert, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -52,11 +54,13 @@ from app.modules.fees.models import (
     StudentDiscount,
     StudentFeeChoice,
 )
-from app.modules.notifications import templates
-from app.modules.notifications.models import Channel, MessageKind, MessageLog, MessageStatus
+from app.modules.notifications import templates, voice
+from app.modules.notifications.models import Channel, MessageKind, MessageLog, MessageStatus, ReminderSettings
 from app.modules.payments.allocation import allocate
+from app.modules.payments.family_links import link_url, new_link_row
 from app.modules.payments.gateways import GatewayCode
 from app.modules.payments.models import (
+    FamilyPayLink,
     ManualPayment,
     ManualPaymentStatus,
     Payment,
@@ -74,6 +78,7 @@ from app.modules.students.models import (
     Gender,
     Guardian,
     GuardianStudent,
+    Language,
     Relationship,
     Student,
     StudentStatus,
@@ -145,13 +150,17 @@ def add_activity(session: Session, demo: DemoSchool, *, transfers_by_account: bo
     )
     guardians = sorted({g.id: g for g in demo.primary_guardian.values()}.values(), key=lambda g: g.phone)
     opted_out = {g.id for g in rng.sample(guardians[1:], 6)}  # parents who asked for no reminders
+    callers = _callers(session, demo, guardians, opted_out)
+    links = _family_links(session, guardians)
     session.execute(
         update(Guardian)
         .where(Guardian.id.in_(opted_out))
         .values(reminders_opt_out_at=datetime(2026, 9, 10, 12, tzinfo=LAGOS))
     )
     session.add_all(
-        _messages(demo, rng, payments, receipts, billed, opening, term_invoices, accounts, opted_out, today)
+        _messages(
+            demo, rng, payments, receipts, billed, opening, term_invoices, accounts, opted_out, today, callers, links
+        )
     )
     session.add_all(_audit(demo, payments, receipts))
     session.commit()
@@ -597,6 +606,27 @@ def _pending(demo: DemoSchool, rng: random.Random, last_day: date) -> list[Manua
     ]
 
 
+def _callers(
+    session: Session, demo: DemoSchool, guardians: list[Guardian], opted_out: set[uuid.UUID]
+) -> dict[uuid.UUID, Language]:
+    """The school phones parents who prefer calls; about a dozen do, a third of them in Pidgin."""
+    rng = random.Random(77)  # noqa: S311  (demo data, not security); its own, so the rest stays the same
+    picked = rng.sample([g for g in guardians[1:] if g.id not in opted_out], 12)
+    languages = {g.id: Language.PIDGIN if n % 3 == 0 else Language.ENGLISH for n, g in enumerate(picked)}
+    for language in Language:
+        ids = [gid for gid, lang in languages.items() if lang == language]
+        session.execute(update(Guardian).where(Guardian.id.in_(ids)).values(prefers_calls=True, language=language))
+    session.add(ReminderSettings(school_id=demo.school.id, calls_enabled=True, max_calls_per_invoice=2))
+    return languages
+
+
+def _family_links(session: Session, guardians: list[Guardian]) -> dict[uuid.UUID, str]:
+    """Every parent's family payment link (as messages make them), in one insert."""
+    rows = [new_link_row(g, None) for g in guardians]
+    session.execute(insert(FamilyPayLink), rows)
+    return {row["guardian_id"]: link_url(row["token"]) for row in rows}
+
+
 def _messages(
     demo: DemoSchool,
     rng: random.Random,
@@ -608,6 +638,8 @@ def _messages(
     accounts: dict[uuid.UUID, str],
     opted_out: set[uuid.UUID],
     today: date,
+    callers: dict[uuid.UUID, Language],
+    links: dict[uuid.UUID, str],
 ) -> list[MessageLog]:
     """What parents were sent: the bill on 7 September, receipts, and reminders while money was owed."""
     settings = get_settings()
@@ -629,6 +661,7 @@ def _messages(
             "term": "2026/2027 first term",
             "due_date": "30 Sep 2026",
             "portal_url": f"{settings.frontend_url}/parent",
+            "pay_link": links[demo.primary_guardian[student_id].id],
             "pay_to": f"Pay by transfer to {account} (Fake Bank), {student.first_name}'s own account number."
             if account
             else "",
@@ -661,6 +694,7 @@ def _messages(
         )
 
     logs: list[MessageLog] = []
+    calls: dict[MessageKind, list[MessageLog]] = defaultdict(list)
     notice_at = BILLED_ON + timedelta(hours=1)
     for student_id, invoice_id in term_invoices.items():
         values = base(student_id, billed[student_id])
@@ -669,6 +703,27 @@ def _messages(
         body = templates.render(templates.DEFAULTS[MessageKind.FEE_NOTICE], values)
         logs.append(message(student_id, MessageKind.FEE_NOTICE, f"notice:{invoice_id}", notice_at, body,
                             invoice_id=invoice_id))  # fmt: skip
+
+    def call(
+        student_id: uuid.UUID, kind: MessageKind, key: str, at: datetime, lines: list[str], **ids: uuid.UUID
+    ) -> None:
+        guardian = demo.primary_guardian[student_id]
+        calls[kind].append(  # kept apart so each kind's rows insert in one batch
+            MessageLog(
+                school_id=school.id,
+                guardian_id=guardian.id,
+                student_id=student_id,
+                kind=kind,
+                dedupe_key=key,
+                status=MessageStatus.SENT,
+                channel=Channel.VOICE,
+                body=" ".join(lines),
+                attempts=1,
+                created_at=at,
+                sent_at=at + timedelta(minutes=1),
+                **ids,
+            )
+        )
 
     for payment in payments:
         receipt = receipt_of[payment.id]
@@ -681,6 +736,17 @@ def _messages(
         body = templates.render(templates.DEFAULTS[MessageKind.RECEIPT], values)
         logs.append(message(payment.student_id, MessageKind.RECEIPT, f"receipt:{payment.id}",
                             payment.created_at + timedelta(seconds=5), body, payment_id=payment.id))  # fmt: skip
+        language = callers.get(demo.primary_guardian[payment.student_id].id)
+        if language is not None and 9 <= payment.received_at.astimezone(LAGOS).hour < 19:
+            lines = voice.receipt_lines(
+                language,
+                school=school.name,
+                child=students[payment.student_id].first_name,
+                paid_kobo=payment.amount_kobo,
+                owed_kobo=max(receipt.snapshot["balance_after_kobo"], 0),
+            )
+            call(payment.student_id, MessageKind.CALL_RECEIPT, f"call-receipt:{payment.id}",
+                 payment.created_at + timedelta(minutes=2), lines, payment_id=payment.id)  # fmt: skip
 
     for day in (d for d in REMINDER_DAYS if d < today):
         at = datetime.combine(day, time(9, 0), tzinfo=LAGOS)
@@ -694,7 +760,20 @@ def _messages(
             body = templates.render(templates.DEFAULTS[MessageKind.REMINDER], values)
             logs.append(message(student_id, MessageKind.REMINDER, f"reminder:{invoice_id}:{day.isoformat()}", at,
                                 body, invoice_id=invoice_id))  # fmt: skip
-    return logs
+            guardian = demo.primary_guardian[student_id]
+            if day > DUE and guardian.id in callers and guardian.id not in opted_out:
+                account = accounts.get(student_id)
+                lines = voice.reminder_lines(
+                    callers[guardian.id],
+                    school=school.name,
+                    child=students[student_id].first_name,
+                    owed_kobo=owed,
+                    account_number=account,
+                    bank="Fake Bank" if account else None,
+                )
+                call(student_id, MessageKind.CALL_REMINDER, f"call:{invoice_id}:{day.isoformat()}",
+                     at + timedelta(minutes=5), lines, invoice_id=invoice_id)  # fmt: skip
+    return [*logs, *(row for rows in calls.values() for row in rows)]
 
 
 def _audit(demo: DemoSchool, payments: list[Payment], receipts: list[Receipt]) -> list[AuditLog]:

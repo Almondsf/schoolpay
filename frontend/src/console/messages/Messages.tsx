@@ -16,6 +16,8 @@ const KIND_LABELS: Record<Kind, string> = {
   receipt: 'Payment receipt',
   fee_notice: 'New bill',
   reminder: 'Reminder',
+  call_reminder: 'Reminder call',
+  call_receipt: 'Payment call',
 };
 const STATUS_TONE: Record<Status, string> = {
   sent: 'ok',
@@ -28,6 +30,7 @@ const SKIP_REASONS: Record<string, string> = {
   paid: 'Already paid',
   too_old: 'Too late to send',
   no_contact: 'No phone or email',
+  calls_off: 'Calls turned off',
   no_recipient: 'No parent on record',
 };
 
@@ -135,7 +138,7 @@ function MessageLog() {
                   <td>{KIND_LABELS[m.kind]}</td>
                   <td>
                     <span className={`badge ${STATUS_TONE[m.status]}`}>{humanize(m.status)}</span>
-                    {m.channel && <div className="muted small">{m.channel === 'sms' ? 'Text message' : humanize(m.channel)}</div>}
+                    {m.channel && <div className="muted small">{m.channel === 'sms' ? 'Text message' : m.channel === 'voice' ? 'Phone call' : humanize(m.channel)}</div>}
                     {m.skip_reason && <div className="muted small">{SKIP_REASONS[m.skip_reason] ?? humanize(m.skip_reason)}</div>}
                     {m.error && m.status !== 'sent' && <div className="error-text small">{m.error}</div>}
                   </td>
@@ -354,6 +357,28 @@ function Schedule() {
           disabled={!form.enabled}
         />
       </Field>
+      <fieldset>
+        <legend>Phone calls</legend>
+        <label className="checkbox">
+          <input type="checkbox" checked={form.calls_enabled} onChange={(e) => set('calls_enabled', e.target.checked)} />
+          Phone parents who prefer calls
+        </label>
+        <p className="hint">
+          For parents who don't read messages easily. Mark them on each pupil's page (English or Pidgin). They're called about overdue
+          bills, reading out the amount and the child's account number slowly, twice, and when a payment arrives. Calls happen between
+          9am and 7pm and cost the school per minute.
+        </p>
+        <Field label="Most calls per bill">
+          <input
+            type="number"
+            min={0}
+            max={5}
+            value={form.max_calls_per_invoice}
+            onChange={(e) => set('max_calls_per_invoice', Number(e.target.value))}
+            disabled={!form.calls_enabled}
+          />
+        </Field>
+      </fieldset>
       <ErrorAlert
         error={save.error && !fieldError(save.error, 'days_before_due') && !fieldError(save.error, 'days_after_due') ? save.error : null}
       />

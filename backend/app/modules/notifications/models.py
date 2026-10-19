@@ -32,12 +32,15 @@ class MessageKind(enum.StrEnum):
     RECEIPT = "receipt"  # "we received your payment" (transactional: sent even to opted-out parents)
     FEE_NOTICE = "fee_notice"  # a new bill
     REMINDER = "reminder"  # before or after the due date
+    CALL_REMINDER = "call_reminder"  # a phone call about an overdue bill, beside the text reminder
+    CALL_RECEIPT = "call_receipt"  # a phone call confirming a payment, beside the text receipt
 
 
 class Channel(enum.StrEnum):
     WHATSAPP = "whatsapp"
     SMS = "sms"
     EMAIL = "email"
+    VOICE = "voice"
 
 
 class MessageStatus(enum.StrEnum):
@@ -99,6 +102,7 @@ class ReminderSettings(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
         CheckConstraint("send_hour BETWEEN 7 AND 19", name="daytime_only"),
         CheckConstraint("max_per_invoice BETWEEN 0 AND 10", name="max_range"),
         CheckConstraint("min_gap_days BETWEEN 1 AND 30", name="gap_range"),
+        CheckConstraint("max_calls_per_invoice BETWEEN 0 AND 5", name="max_calls_range"),
     )
 
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -108,3 +112,6 @@ class ReminderSettings(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     send_hour: Mapped[int] = mapped_column(SmallInteger, default=9)
     max_per_invoice: Mapped[int] = mapped_column(SmallInteger, default=4)
     min_gap_days: Mapped[int] = mapped_column(SmallInteger, default=3)
+    # Phone calls to parents who prefer them (they cost the school per minute, so off until switched on)
+    calls_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    max_calls_per_invoice: Mapped[int] = mapped_column(SmallInteger, default=2, server_default="2")

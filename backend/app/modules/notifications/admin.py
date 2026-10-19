@@ -13,7 +13,7 @@ from app.core.repo import get_or_404
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import Acting, record
 from app.modules.fees.invoicing import account_summaries
-from app.modules.students.models import Guardian, Student
+from app.modules.students.models import Guardian, Language, Student
 
 from . import templates
 from .models import MessageKind, MessageTemplate, ReminderSettings
@@ -48,12 +48,14 @@ def list_templates(session: Session) -> list[TemplateView]:
     custom = {t.kind: t.body for t in session.scalars(select(MessageTemplate))}
     return [
         TemplateView(kind, custom.get(kind, templates.DEFAULTS[kind]), kind in custom, templates.DEFAULTS[kind])
-        for kind in MessageKind
+        for kind in templates.DEFAULTS  # calls have fixed wording
     ]
 
 
 def save_template(session: Session, actor: Acting, kind: MessageKind, body: str | None) -> TemplateView:
     """Set the school's wording for a kind of message; None goes back to the default."""
+    if kind not in templates.DEFAULTS:
+        raise DomainError("Phone calls use fixed wording.", field="kind")
     existing = session.scalar(select(MessageTemplate).where(MessageTemplate.kind == kind))
     if body is None:
         session.execute(delete(MessageTemplate).where(MessageTemplate.kind == kind))
@@ -93,6 +95,8 @@ def save_reminder_settings(
     send_hour: int,
     max_per_invoice: int,
     min_gap_days: int,
+    calls_enabled: bool,
+    max_calls_per_invoice: int,
 ) -> ReminderSettings:
     if any(not 0 < d <= 90 for d in days_before_due + days_after_due):
         raise DomainError("Days must be between 1 and 90.", field="days_before_due")
@@ -101,6 +105,7 @@ def save_reminder_settings(
     settings.days_before_due = sorted(set(days_before_due), reverse=True)
     settings.days_after_due = sorted(set(days_after_due))
     settings.max_per_invoice, settings.min_gap_days = max_per_invoice, min_gap_days
+    settings.calls_enabled, settings.max_calls_per_invoice = calls_enabled, max_calls_per_invoice
     session.add(settings)
     record(
         session,
@@ -116,11 +121,34 @@ def save_reminder_settings(
                 "hour": send_hour,
                 "max": max_per_invoice,
                 "gap_days": min_gap_days,
+                "calls": calls_enabled,
+                "max_calls": max_calls_per_invoice,
             }
         },
     )
     session.commit()
     return settings
+
+
+def set_call_preference(
+    session: Session, actor: Acting, guardian_id: uuid.UUID, prefers_calls: bool, language: Language
+) -> Guardian:
+    """Also phone this parent (overdue reminders, payment confirmations), in their language."""
+    guardian = get_or_404(session, Guardian, guardian_id, label="Guardian", lock=True)
+    if guardian.erased_at is not None:
+        raise DomainError("This parent's details were erased.")
+    guardian.prefers_calls, guardian.language = prefers_calls, language
+    record(
+        session,
+        AuditAction.REMINDERS_PREFERENCE_CHANGED,
+        school_id=actor.school_id,
+        actor=actor.actor,
+        meta=actor.meta,
+        target=guardian,
+        changes={"calls": prefers_calls, "language": language},
+    )
+    session.commit()
+    return guardian
 
 
 def set_reminders_preference(session: Session, actor: Acting, guardian_id: uuid.UUID, wants: bool) -> Guardian:

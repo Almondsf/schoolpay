@@ -38,7 +38,7 @@ def link_url(token: str) -> str:
     return f"{get_settings().frontend_url}/pay/f/{token}"
 
 
-def _new_row(guardian: Guardian, created_by: uuid.UUID | None) -> dict[str, Any]:
+def new_link_row(guardian: Guardian, created_by: uuid.UUID | None) -> dict[str, Any]:
     token = secrets.token_urlsafe(24)  # 192 bits
     return {
         "id": uuid.uuid4(),
@@ -69,7 +69,7 @@ def live_link(session: Session, guardian: Guardian) -> FamilyPayLink:
     )
     session.execute(
         insert(FamilyPayLink)
-        .values(_new_row(guardian, None))
+        .values(new_link_row(guardian, None))
         .on_conflict_do_nothing(index_elements=["guardian_id"], index_where=text("revoked_at IS NULL"))
     )
     link = session.scalar(
@@ -102,7 +102,7 @@ def reissue(session: Session, ctx: StaffContext, guardian_id: uuid.UUID) -> Fami
         .values(revoked_at=now)
         .returning(FamilyPayLink.id)
     ).first()
-    link = FamilyPayLink(**_new_row(guardian, ctx.user.id))
+    link = FamilyPayLink(**new_link_row(guardian, ctx.user.id))
     session.add(link)
     record(
         session,

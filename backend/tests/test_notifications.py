@@ -226,9 +226,9 @@ async def test_opt_out_is_checked_when_sending_and_receipts_still_go(client, wor
     from tests.test_parents import bearer, sign_in
 
     parent = bearer(await sign_in(client))
-    assert (await client.get("/api/v1/parent/preferences", headers=parent)).json() == {"reminders": True}
+    assert (await client.get("/api/v1/parent/preferences", headers=parent)).json()["reminders"] is True
     off = await client.put("/api/v1/parent/preferences", headers=parent, json={"reminders": False})
-    assert off.json() == {"reminders": False}
+    assert off.json()["reminders"] is False
 
     [reminder] = [m for m in message_rows(db, world["school"]) if m.kind == MessageKind.REMINDER]
     assert service.deliver(world["school"].id, reminder.id) == MessageStatus.SKIPPED
@@ -303,10 +303,10 @@ async def test_manual_reminder_once_a_day_and_only_when_owed(client, world):
 
 async def test_staff_can_turn_a_parents_reminders_off(client, world, db):
     url = f"/api/v1/guardians/{world['guardian'].id}/reminders"
-    assert (await client.put(url, headers=world["admin"], json={"reminders": False})).json() == {"reminders": False}
+    assert (await client.put(url, headers=world["admin"], json={"reminders": False})).json()["reminders"] is False
     detail = (await client.get(f"/api/v1/students/{world['student'].id}", headers=world["admin"])).json()
     assert detail["guardians"][0]["reminders"] is False
-    assert (await client.put(url, headers=world["admin"], json={"reminders": True})).json() == {"reminders": True}
+    assert (await client.put(url, headers=world["admin"], json={"reminders": True})).json()["reminders"] is True
 
 
 # --- Scheduled reminders ---------------------------------------------------------------------------
@@ -465,4 +465,4 @@ def test_queue_ignores_repeats(db, world):
 
 def test_channel_enum_values_are_stable():
     # Stored in the database and shown in the console: renaming one needs a migration
-    assert [c.value for c in Channel] == ["whatsapp", "sms", "email"]
+    assert [c.value for c in Channel] == ["whatsapp", "sms", "email", "voice"]

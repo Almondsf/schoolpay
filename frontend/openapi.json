@@ -551,6 +551,40 @@
         "title": "Body_students_import_students",
         "type": "object"
       },
+      "CallPreferenceIn": {
+        "properties": {
+          "language": {
+            "$ref": "#/components/schemas/Language",
+            "default": "en"
+          },
+          "prefers_calls": {
+            "title": "Prefers Calls",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "prefers_calls"
+        ],
+        "title": "CallPreferenceIn",
+        "type": "object"
+      },
+      "CallPreferenceOut": {
+        "properties": {
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          },
+          "prefers_calls": {
+            "title": "Prefers Calls",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "prefers_calls",
+          "language"
+        ],
+        "title": "CallPreferenceOut",
+        "type": "object"
+      },
       "CancelPlanIn": {
         "properties": {
           "reason": {
@@ -583,7 +617,8 @@
         "enum": [
           "whatsapp",
           "sms",
-          "email"
+          "email",
+          "voice"
         ],
         "title": "Channel",
         "type": "string"
@@ -2534,9 +2569,17 @@
             "title": "Is Primary",
             "type": "boolean"
           },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          },
           "phone": {
             "title": "Phone",
             "type": "string"
+          },
+          "prefers_calls": {
+            "description": "Also phoned (overdue reminders, payment confirmations)",
+            "title": "Prefers Calls",
+            "type": "boolean"
           },
           "relationship": {
             "$ref": "#/components/schemas/Relationship"
@@ -2556,6 +2599,8 @@
           "is_primary",
           "consent_at",
           "reminders",
+          "prefers_calls",
+          "language",
           "erased"
         ],
         "title": "GuardianOut",
@@ -3120,6 +3165,15 @@
         "title": "InvoiceSummaryOut",
         "type": "object"
       },
+      "Language": {
+        "description": "The language a parent is spoken to in on phone calls.",
+        "enum": [
+          "en",
+          "pcm"
+        ],
+        "title": "Language",
+        "type": "string"
+      },
       "LineKind": {
         "enum": [
           "fee",
@@ -3361,7 +3415,9 @@
         "enum": [
           "receipt",
           "fee_notice",
-          "reminder"
+          "reminder",
+          "call_reminder",
+          "call_receipt"
         ],
         "title": "MessageKind",
         "type": "string"
@@ -5230,6 +5286,28 @@
       },
       "PreferenceIn": {
         "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Language"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prefers_calls": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Also get phone calls; null leaves it as it is",
+            "title": "Prefers Calls"
+          },
           "reminders": {
             "title": "Reminders",
             "type": "boolean"
@@ -5243,13 +5321,28 @@
       },
       "PreferenceOut": {
         "properties": {
+          "calls_available": {
+            "description": "Whether the school makes phone calls at all",
+            "title": "Calls Available",
+            "type": "boolean"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          },
+          "prefers_calls": {
+            "title": "Prefers Calls",
+            "type": "boolean"
+          },
           "reminders": {
             "title": "Reminders",
             "type": "boolean"
           }
         },
         "required": [
-          "reminders"
+          "reminders",
+          "prefers_calls",
+          "language",
+          "calls_available"
         ],
         "title": "PreferenceOut",
         "type": "object"
@@ -5584,6 +5677,12 @@
       },
       "ReminderSettingsIO": {
         "properties": {
+          "calls_enabled": {
+            "default": false,
+            "description": "Phone parents who prefer calls (costs per minute)",
+            "title": "Calls Enabled",
+            "type": "boolean"
+          },
           "days_after_due": {
             "items": {
               "type": "integer"
@@ -5603,6 +5702,13 @@
           "enabled": {
             "title": "Enabled",
             "type": "boolean"
+          },
+          "max_calls_per_invoice": {
+            "default": 2,
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Max Calls Per Invoice",
+            "type": "integer"
           },
           "max_per_invoice": {
             "maximum": 10.0,
@@ -10967,6 +11073,124 @@
         "summary": "Update a guardian's name or contact details",
         "tags": [
           "students"
+        ]
+      }
+    },
+    "/api/v1/guardians/{guardian_id}/calls": {
+      "put": {
+        "operationId": "messaging_guardian_calls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guardian_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Guardian Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallPreferenceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallPreferenceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Also phone a parent (overdue reminders, payment confirmations), in English or Pidgin",
+        "tags": [
+          "messaging"
         ]
       }
     },

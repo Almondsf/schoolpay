@@ -76,6 +76,14 @@ SMS, so the parent portal doesn't work without it.
    at {{7}}". Messages fail over to SMS until the templates are approved.
 4. With `WHATSAPP_BACKEND=off`, messages go by SMS and email only.
 
+**Phone calls (Africa's Talking Voice).** Buy a voice number, then set
+`VOICE_BACKEND=africastalking`, `AFRICASTALKING_USERNAME`,
+`AFRICASTALKING_API_KEY` and `AFRICASTALKING_VOICE_NUMBER`. In the Africa's
+Talking dashboard, set the number's callback URL to
+`https://<api-host>/api/v1/voice/africastalking`. Each school switches calls on
+under Messages; they cost per minute. `CALL_HOURS_START`/`CALL_HOURS_END`
+(9, 19) bound when calls are made.
+
 Messages queued longer than `MESSAGE_MAX_AGE_HOURS` (24) are skipped rather
 than sent late. Bill notices and reminders are never sent between
 `QUIET_HOURS_START` and `QUIET_HOURS_END` (20:00–07:00 Lagos); they wait for

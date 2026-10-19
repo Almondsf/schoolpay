@@ -333,6 +333,12 @@ fieldset {
   margin: 0;
 }
 
+legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
 .search {
   max-width: 360px;
   margin-bottom: 16px;
