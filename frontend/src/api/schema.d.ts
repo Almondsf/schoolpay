@@ -545,7 +545,7 @@ export interface paths {
         /** Invoices with what's been paid on each */
         get: operations["fees_list_invoices"];
         put?: never;
-        /** Record an opening balance (debt from before SchoolPay) or a one-off charge */
+        /** Record an opening balance (debt from before joining) or a one-off charge */
         post: operations["fees_create_invoice"];
         delete?: never;
         options?: never;

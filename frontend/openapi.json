@@ -7317,7 +7317,7 @@
     }
   },
   "info": {
-    "title": "SchoolPay API",
+    "title": "ParentPay API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
@@ -11311,7 +11311,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Record an opening balance (debt from before SchoolPay) or a one-off charge",
+        "summary": "Record an opening balance (debt from before joining) or a one-off charge",
         "tags": [
           "fees"
         ]
