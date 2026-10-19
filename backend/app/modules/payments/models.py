@@ -175,11 +175,23 @@ class FamilyPayLink(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
 
 class PaymentMethod(enum.StrEnum):
     VIRTUAL_ACCOUNT = "virtual_account"  # transfer into the student's dedicated account
-    CARD = "card"  # online checkout
+    CARD = "card"  # online checkout, paid by card
+    CHECKOUT_TRANSFER = "checkout_transfer"  # online checkout, paid by transfer to a temporary account
+    USSD = "ussd"  # online checkout, paid by USSD
     CASH = "cash"
     TELLER = "teller"  # bank deposit slip
     POS = "pos"  # card terminal at the school
     BANK_TRANSFER = "bank_transfer"  # to the school's main account, matched by staff
+
+
+def method_for_channel(channel: str) -> "PaymentMethod":
+    """How a parent paid on the gateway's checkout page (its own channel names)."""
+    channel = channel.lower()
+    if channel in {"bank_transfer", "banktransfer", "bank", "account", "pay_with_bank_transfer"}:
+        return PaymentMethod.CHECKOUT_TRANSFER
+    if channel == "ussd":
+        return PaymentMethod.USSD
+    return PaymentMethod.CARD
 
 
 MANUAL_METHODS = (PaymentMethod.CASH, PaymentMethod.TELLER, PaymentMethod.POS, PaymentMethod.BANK_TRANSFER)

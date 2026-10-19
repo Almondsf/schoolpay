@@ -58,7 +58,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 ## Parent
 - ✅ If I find messages hard to read, get a phone call in English or Pidgin that tells me what's owed and reads my child's account number slowly, twice, and another when my payment arrives.
 - ✅ Open one link from my bill or reminder, no sign-in, and see all my children's balances and account numbers.
-- ✅ Pay for several children in one card payment, choosing how much goes to each (part now, the rest later), with a receipt per child.
+- ✅ Pay for several children in one payment, by bank transfer, card or USSD, choosing how much goes to each (part now, the rest later), with a receipt per child: from my link, or "Pay for all your children" when signed in.
 - ✅ Pay by card from a link the school sends, and see straight away whether it went through.
 - ✅ Sign in with a phone number and a one-time code (no password to forget).
 - ✅ See all their children at the school in one place, with what's owed and any credit.

@@ -122,6 +122,7 @@ class FlutterwaveGateway:
                 "redirect_url": callback_url,
                 "customer": {"email": email},
                 "subaccounts": [{"id": subaccount_code}],
+                "payment_options": "card,banktransfer,ussd",
                 "customizations": {"title": get_settings().app_name, "description": description},
             },
         )

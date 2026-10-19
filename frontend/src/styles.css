@@ -834,10 +834,17 @@ button.link.light {
   margin-bottom: 14px;
 }
 
-button.block {
+button.block,
+.button.block {
   width: 100%;
   margin-top: 8px;
   padding: 12px;
+}
+
+a.button.block {
+  display: block;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 button.choice {
@@ -884,6 +891,8 @@ button.choice {
 
 .total-owed {
   margin-bottom: 14px;
+  display: grid;
+  gap: 10px;
 }
 
 .list-item {

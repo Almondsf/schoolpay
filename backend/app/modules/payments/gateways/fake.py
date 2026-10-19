@@ -173,10 +173,11 @@ class FakeGateway:
         )
 
     def complete_checkout(
-        self, reference: str, *, amount_kobo: int | None = None, succeed: bool = True
+        self, reference: str, *, amount_kobo: int | None = None, succeed: bool = True, channel: str = "card"
     ) -> tuple[dict[str, str], bytes]:
-        """The parent finishes (or fails) a card checkout. `amount_kobo` lets tests fake a mismatch."""
+        """The parent finishes (or fails) a checkout, paying by `channel`. `amount_kobo` lets tests fake a mismatch."""
         txn = self.state.transactions[reference]
+        txn.channel = channel
         txn.status = TransactionStatus.SUCCESS if succeed else TransactionStatus.FAILED
         txn.amount_kobo = amount_kobo if amount_kobo is not None else txn.amount_kobo
         txn.paid_at = datetime.now(UTC).isoformat()

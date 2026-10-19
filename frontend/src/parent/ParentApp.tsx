@@ -8,6 +8,7 @@ import { PlanSchedule } from '../lib/PlanSchedule';
 import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
 import { ParentAuthProvider, useParentAuth } from './ParentAuth';
+import { FamilyPayment } from '../public/FamilyPay';
 import { ParentLogin } from './ParentLogin';
 
 type Child = Schemas['ChildOut'];
@@ -21,6 +22,7 @@ export function ParentApp() {
         <Route element={<RequireParent />}>
           <Route index element={<Home />} />
           <Route path="children/:studentId" element={<ChildPage />} />
+          <Route path="pay" element={<PayAll />} />
           <Route path="*" element={<Navigate to="/parent" replace />} />
         </Route>
       </Routes>
@@ -56,14 +58,22 @@ function Home() {
   if (home.isPending) return <Loading />;
   if (home.isError) return <ErrorAlert error={home.error} />;
   const totalOwed = home.data.children.reduce((sum, c) => sum + c.owed_kobo, 0);
+  const owing = home.data.children.filter((c) => c.owed_kobo > 0).length;
   return (
     <>
       <p className="muted">{home.data.school_name}</p>
       <h1>Hello, {home.data.guardian_name}</h1>
-      {home.data.children.length > 1 && (
-        <div className="total-owed">
-          Total owed for {home.data.children.length} children: <strong>{formatKobo(totalOwed)}</strong>
-        </div>
+      {totalOwed > 0 && (
+        <section className="card total-owed" aria-label="Pay for all your children">
+          <div>
+            {owing > 1 ? `Total owed for ${owing} children` : 'Total owed'}:{' '}
+            <strong>{formatKobo(totalOwed)}</strong>
+          </div>
+          <Link to="/parent/pay" className="button block">
+            {owing > 1 ? 'Pay for all your children' : 'Pay now'}
+          </Link>
+          <p className="hint">One payment: bank transfer, card or USSD. You choose how much goes to each child.</p>
+        </section>
       )}
       {home.data.children.length === 0 && <Empty>No children are linked to your number yet. Please contact the school.</Empty>}
       {home.data.children.map((child) => (
@@ -164,7 +174,7 @@ function ChildCard({ child }: { child: Child }) {
       {child.pay_in && <TransferDetails account={child.pay_in} />}
       {child.owed_kobo > 0 && (
         <button className="block secondary" onClick={() => setPaying(true)}>
-          Pay by card instead
+          Pay online for {child.first_name} only
         </button>
       )}
       {paying && <PayByCard child={child} onClose={() => setPaying(false)} />}
@@ -211,7 +221,7 @@ function PayByCard({ child, onClose }: { child: Child; onClose: () => void }) {
       <Field label="Amount (₦)" hint={`Leave empty to pay everything owed (${formatKobo(child.owed_kobo)}).`} error={amount && kobo === null ? 'Not a valid amount' : undefined}>
         <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </Field>
-      <p className="hint">You'll pay on the payment provider's secure page. We never see your card details.</p>
+      <p className="hint">On the payment provider's secure page, pay by bank transfer, card or USSD. We never see your card details.</p>
       <div className="row end">
         <button className="secondary" onClick={onClose}>
           Cancel
@@ -221,6 +231,28 @@ function PayByCard({ child, onClose }: { child: Child; onClose: () => void }) {
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** Pay for all the parent's children at once: the same page as their family payment link. */
+function PayAll() {
+  const family = useQuery({
+    queryKey: ['parent-family'],
+    staleTime: 0,
+    queryFn: async () => unwrap(await api.GET('/api/v1/parent/family')),
+  });
+  if (family.isPending) return <Loading />;
+  if (family.isError) return <ErrorAlert error={family.error} />;
+  return (
+    <>
+      <p>
+        <Link to="/parent">← All children</Link>
+      </p>
+      <FamilyPayment
+        data={family.data}
+        checkout={async (items) => unwrap(await api.POST('/api/v1/parent/family/checkout', { body: { items } }))}
+      />
+    </>
   );
 }
 

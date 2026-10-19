@@ -23,6 +23,8 @@ LAGOS = ZoneInfo("Africa/Lagos")
 METHOD_LABELS = {
     "virtual_account": "Bank transfer",
     "card": "Card",
+    "checkout_transfer": "Bank transfer (online)",
+    "ussd": "USSD",
     "cash": "Cash",
     "teller": "Bank teller",
     "pos": "POS",

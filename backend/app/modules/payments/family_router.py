@@ -84,7 +84,10 @@ def _link(
 
 @public_router.get("/{token}", response_model=FamilyPageOut, summary="A parent's family payment page (no sign-in)")
 def family_page(found: family_links.Resolved = Depends(_link), db: Session = Depends(get_db)) -> FamilyPageOut:
-    page = family.family_page(db, found)
+    return page_out(family.family_page(db, found))
+
+
+def page_out(page: family.FamilyPage) -> FamilyPageOut:
     return FamilyPageOut(
         school_name=page.school_name,
         card_payments=page.card_payments,
@@ -109,7 +112,7 @@ def family_page(found: family_links.Resolved = Depends(_link), db: Session = Dep
     "/{token}/checkout",
     response_model=FamilyCheckoutOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Pay by card for several children, with the amount chosen per child",
+    summary="Pay for several children at once (card, transfer or USSD), with the amount chosen per child",
 )
 def family_checkout(
     body: FamilyCheckoutIn,

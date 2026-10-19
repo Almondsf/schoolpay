@@ -73,17 +73,19 @@ describe('family payment page', () => {
     expect(within(ada).getByText('9900000001')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Bayo' })).getByText(/₦50,000.00 is due next/)).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Chidi' })).getByText('All paid')).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Pay by card for Chidi/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Amount for Chidi/)).not.toBeInTheDocument();
 
     // Starts at Ada's 155k + Bayo's next instalment (50k)
-    expect(screen.getByRole('button', { name: 'Pay ₦205,000.00 by card' })).toBeEnabled();
-    const bayo = screen.getByLabelText(/Pay by card for Bayo/);
+    const top = within(screen.getByRole('region', { name: 'Pay for all your children' }));
+    expect(top.getByRole('button', { name: 'Pay ₦205,000.00 now' })).toBeEnabled();
+    expect(top.getByText(/bank transfer/)).toBeInTheDocument();
+    const bayo = screen.getByLabelText(/Amount for Bayo/);
     await userEvent.clear(bayo);
     await userEvent.type(bayo, '200000');
     expect(screen.getByText('Up to ₦185,000.00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /by card/ })).toBeDisabled();
+    expect(top.getByRole('button', { name: /now$/ })).toBeDisabled();
     await userEvent.clear(bayo); // Bayo another time
-    await userEvent.click(screen.getByRole('button', { name: 'Pay ₦155,000.00 by card' }));
+    await userEvent.click(top.getByRole('button', { name: 'Pay ₦155,000.00 now' }));
 
     const post = calls.find((c) => c.method === 'POST')!;
     expect(await post.json()).toEqual({ items: [{ student_id: 's1', amount_kobo: 15_500_000 }] });

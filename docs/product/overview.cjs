@@ -110,7 +110,7 @@ const AREAS = [
         'Pay the way that suits them; the payment finds the right child automatically'],
       ['Parents who don’t read messages easily can get a phone call, in English or Pidgin: what’s owed, the child’s account number read out slowly twice, and a call when the payment arrives',
         'Nobody is left out because they can’t read a text; they can hand the number to any POS agent'],
-      ['One payment link of their own, in every bill and reminder: all their children, no sign-in. One card payment covers several children, and they choose how much goes to each',
+      ['One payment link of their own, in every bill and reminder: all their children, no sign-in. One payment (bank transfer, card or USSD) covers several children, and they choose how much goes to each; the same “Pay for all your children” button is in the portal',
         'Paying for three children takes one minute, part now and the rest later if needed, with a receipt per child'],
       ['See every bill with its items, every payment, and download receipts any time',
         'No more asking the bursary for a receipt or a breakdown'],
@@ -179,6 +179,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['19 Oct 2026', 'Pay for all your children by bank transfer, card or USSD, from the link or the portal'],
   ['19 Oct 2026', 'Phone calls for parents who prefer them: overdue reminders and payment confirmations, in English or Pidgin'],
   ['19 Oct 2026', 'Family payment link: one link per parent to pay for all their children, choosing the amount per child'],
   ['19 Oct 2026', 'School at a glance for school admins: pupils, classes and records that need attention'],

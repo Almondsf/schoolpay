@@ -15,6 +15,8 @@ type Roll = Schemas['RollSummaryOut'];
 export const METHOD_LABELS: Record<Schemas['PaymentMethod'], string> = {
   virtual_account: 'Transfer to student account',
   card: 'Card',
+  checkout_transfer: 'Bank transfer (online)',
+  ussd: 'USSD',
   teller: 'Bank teller',
   cash: 'Cash',
   pos: 'POS',

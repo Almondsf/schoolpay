@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -75,7 +75,8 @@ describe('parent portal', () => {
     expect(await screen.findByText('Hello, Mrs Adeyemi')).toBeInTheDocument();
     expect(screen.getByText('9820000015')).toBeInTheDocument();
     expect(screen.getByText('All paid. Thank you!')).toBeInTheDocument();
-    expect(screen.getByText(/Total owed for 2 children/)).toBeInTheDocument();
+    expect(screen.getByText(/^Total owed:/)).toBeInTheDocument(); // only one of the two still owes
+    expect(screen.getByRole('link', { name: 'Pay now' })).toHaveAttribute('href', '/parent/pay');
     const verify = calls.find((c) => c.url.endsWith('/parent/auth/verify'))!;
     expect(await verify.json()).toEqual({
       phone: '0803 111 2222',
@@ -149,6 +150,34 @@ describe('parent portal', () => {
     const puts = calls.filter((c) => c.method === 'PUT');
     expect(await puts[0]!.json()).toEqual({ reminders: true, prefers_calls: true });
     expect(await puts[1]!.json()).toEqual({ reminders: true, language: 'pcm' });
+  });
+
+  it('pays for all the children at once from the portal', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const family = {
+      school_name: 'Alpha College',
+      card_payments: true,
+      min_part_kobo: 100_000,
+      children: [
+        { student_id: 'c1', first_name: 'Tolu', class_name: 'JSS 1 A', owed_kobo: 5_000_000, suggested_kobo: 5_000_000, on_plan: false, account_number: null, bank_name: null },
+      ],
+    };
+    const calls = mockApi({
+      'POST /api/v1/parent/auth/refresh': () => json(signedIn),
+      'GET /api/v1/parent/home': () => json(home),
+      'GET /api/v1/parent/preferences': () => json({ reminders: true }),
+      'GET /api/v1/parent/family': () => json(family),
+      'POST /api/v1/parent/family/checkout': () => json({ reference: 'SP1', amount_kobo: 5_000_000, authorization_url: 'https://pay.example/SP1' }, 201),
+    });
+    renderAt('/parent');
+    const box = await screen.findByRole('region', { name: 'Pay for all your children' });
+    await userEvent.click(within(box).getByRole('link'));
+    const pay = within(await screen.findByRole('region', { name: 'Pay for all your children' })).getByRole('button', { name: 'Pay ₦50,000.00 now' });
+    await userEvent.click(pay);
+    const post = calls.find((c) => c.url.endsWith('/parent/family/checkout'))!;
+    expect(await post.json()).toEqual({ items: [{ student_id: 'c1', amount_kobo: 5_000_000 }] });
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('https://pay.example/SP1'));
   });
 
   it('restores a session from the parent refresh cookie', async () => {

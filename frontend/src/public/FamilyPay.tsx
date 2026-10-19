@@ -8,12 +8,10 @@ import { formatKobo, koboToInput, parseNairaToKobo } from '../lib/format';
 import { ErrorAlert, Field, Loading } from '../lib/ui';
 
 type Child = Schemas['FamilyChildOut'];
+type Part = Schemas['FamilyPartIn'];
+type Checkout = (items: Part[]) => Promise<Schemas['FamilyCheckoutOut']>;
 
-/**
- * A parent's family payment page, opened from the link in their bills and reminders
- * (no sign-in). Each child's account number for transfers, and one card payment for
- * any of them with the amount chosen per child.
- */
+/** A parent's family payment page, opened from the link in their bills and reminders (no sign-in). */
 export function FamilyPay() {
   const { token = '' } = useParams();
   const page = useQuery({
@@ -22,6 +20,8 @@ export function FamilyPay() {
     retry: false,
     queryFn: async () => unwrap(await api.GET('/api/v1/public/pay/{token}', { params: { path: { token } } })),
   });
+  const checkout: Checkout = async (items) =>
+    unwrap(await api.POST('/api/v1/public/pay/{token}/checkout', { params: { path: { token } }, body: { items } }));
 
   return (
     <div className="parent-shell">
@@ -29,13 +29,18 @@ export function FamilyPay() {
         <strong>{page.data?.school_name ?? BRAND}</strong>
       </header>
       <main className="parent-page">
-        {page.isPending ? <Loading /> : page.isError ? <ErrorAlert error={page.error} /> : <Family token={token} data={page.data} />}
+        {page.isPending ? <Loading /> : page.isError ? <ErrorAlert error={page.error} /> : <FamilyPayment data={page.data} checkout={checkout} />}
       </main>
     </div>
   );
 }
 
-function Family({ token, data }: { token: string; data: Schemas['FamilyPageOut'] }) {
+/**
+ * Paying for all of a parent's children at once (the family link, and "Pay for all your
+ * children" in the portal). Each child's account number for transfers, and one online
+ * payment (transfer, card or USSD on the provider's page) with the amount chosen per child.
+ */
+export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut']; checkout: Checkout }) {
   const owing = data.children.filter((c) => c.owed_kobo > 0);
   // What the parent will pay per child, as typed (prefilled with what's due now)
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
@@ -56,59 +61,67 @@ function Family({ token, data }: { token: string; data: Schemas['FamilyPageOut']
   });
   const total = parsed.reduce((sum, p) => sum + p.kobo, 0);
   const valid = total > 0 && parsed.every((p) => !p.problem);
+  const paying = parsed.filter((p) => p.kobo > 0).length;
   const pay = useMutation({
-    mutationFn: async () =>
-      unwrap(
-        await api.POST('/api/v1/public/pay/{token}/checkout', {
-          params: { path: { token } },
-          body: { items: parsed.filter((p) => p.kobo > 0).map((p) => ({ student_id: p.child.student_id, amount_kobo: p.kobo })) },
-        }),
-      ),
-    onSuccess: (checkout) => window.location.assign(checkout.authorization_url),
+    mutationFn: () => checkout(parsed.filter((p) => p.kobo > 0).map((p) => ({ student_id: p.child.student_id, amount_kobo: p.kobo }))),
+    onSuccess: (started) => window.location.assign(started.authorization_url),
   });
 
   if (data.children.length === 0) {
     return (
       <section className="card">
-        <p>There are no current pupils on this link. If that's wrong, please contact the school.</p>
+        <p>There are no current pupils here. If that's wrong, please contact the school.</p>
       </section>
     );
   }
 
+  const payNow = data.card_payments && owing.length > 0 && (
+    <>
+      <ErrorAlert error={pay.error} />
+      <button className="block" onClick={() => pay.mutate()} disabled={!valid || pay.isPending}>
+        {pay.isPending ? 'Opening…' : `Pay ${formatKobo(total)} now`}
+      </button>
+      <p className="hint">
+        For {paying} {paying === 1 ? 'child' : 'children'}. On the next page, pay by <strong>bank transfer</strong>, card or USSD. Each
+        child gets their own receipt.
+      </p>
+    </>
+  );
+
   return (
     <>
       <h1>School fees</h1>
-      {owing.length === 0 && (
+      {owing.length === 0 ? (
         <section className="card">
           <p className="success-text">
             <strong>Everything is paid. Thank you!</strong>
           </p>
         </section>
+      ) : (
+        data.card_payments && (
+          <section className="card" aria-label="Pay for all your children">
+            <div className="row between">
+              <span>Due now for {owing.length === 1 ? 'your child' : `all ${owing.length} children`}</span>
+              <strong>{formatKobo(total)}</strong>
+            </div>
+            {payNow}
+          </section>
+        )
       )}
       {data.children.map((c) => (
         <ChildCard
           key={c.student_id}
           child={c}
-          payByCard={data.card_payments}
+          payOnline={data.card_payments}
           amount={amounts[c.student_id] ?? ''}
           problem={parsed.find((p) => p.child.student_id === c.student_id)?.problem}
           onAmount={(value) => setAmounts({ ...amounts, [c.student_id]: value })}
         />
       ))}
-      {data.card_payments && owing.length > 0 && (
-        <section className="card" aria-label="Pay by card">
-          <ErrorAlert error={pay.error} />
-          <div className="row between">
-            <span>Total by card</span>
-            <strong>{formatKobo(total)}</strong>
-          </div>
-          <button className="block" onClick={() => pay.mutate()} disabled={!valid || pay.isPending}>
-            {pay.isPending ? 'Opening…' : `Pay ${formatKobo(total)} by card`}
-          </button>
-          <p className="hint">
-            Change any amount above to pay part now, or clear it to leave that child for later. You'll pay on the payment provider's
-            secure page; each child gets their own receipt.
-          </p>
+      {payNow && owing.length > 1 && (
+        <section className="card" aria-label="Pay now">
+          <p className="hint">Change any amount above to pay part now, or clear it to leave that child for later.</p>
+          {payNow}
         </section>
       )}
     </>
@@ -117,13 +130,13 @@ function Family({ token, data }: { token: string; data: Schemas['FamilyPageOut']
 
 function ChildCard({
   child,
-  payByCard,
+  payOnline,
   amount,
   problem,
   onAmount,
 }: {
   child: Child;
-  payByCard: boolean;
+  payOnline: boolean;
   amount: string;
   problem?: string;
   onAmount: (value: string) => void;
@@ -148,9 +161,14 @@ function ChildCard({
           <span className="small">Paying in instalments: {formatKobo(child.suggested_kobo)} is due next</span>
         )}
       </div>
+      {payOnline && child.owed_kobo > 0 && (
+        <Field label={`Amount for ${child.first_name} now (₦)`} error={problem}>
+          <input inputMode="decimal" value={amount} onChange={(e) => onAmount(e.target.value)} placeholder="0" />
+        </Field>
+      )}
       {child.account_number && child.owed_kobo > 0 && (
         <div className="transfer">
-          <div className="muted small">Transfer to {child.bank_name}</div>
+          <div className="muted small">Or transfer any time to {child.first_name}'s own account</div>
           <div className="row between">
             <span className="account-number">{child.account_number}</span>
             <button
@@ -165,13 +183,10 @@ function ChildCard({
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
-          <div className="hint">This number is for {child.first_name} only. Transfers show up within minutes, with a receipt.</div>
+          <div className="hint">
+            {child.bank_name}. This number is for {child.first_name} only and never changes. Any amount, any time, with a receipt.
+          </div>
         </div>
-      )}
-      {payByCard && child.owed_kobo > 0 && (
-        <Field label={`Pay by card for ${child.first_name} (₦)`} error={problem}>
-          <input inputMode="decimal" value={amount} onChange={(e) => onAmount(e.target.value)} placeholder="0" />
-        </Field>
       )}
     </section>
   );

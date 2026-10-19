@@ -117,6 +117,14 @@ def reissue(session: Session, ctx: StaffContext, guardian_id: uuid.UUID) -> Fami
     return link
 
 
+def resolved_for(session: Session, guardian_id: uuid.UUID, school_id: uuid.UUID) -> "Resolved":
+    """A signed-in parent's own family payment page, through their link (made if needed)."""
+    guardian = get_or_404(session, Guardian, guardian_id, label="Parent")
+    link = live_link(session, guardian)
+    session.commit()
+    return Resolved(school_id=school_id, link_id=link.id, guardian_id=guardian.id)
+
+
 def revoke_for(session: Session, guardian_ids: list[uuid.UUID]) -> None:
     """End these parents' links (their details are being erased). The caller commits."""
     if guardian_ids:

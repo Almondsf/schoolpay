@@ -35,7 +35,7 @@ from app.modules.students.models import Guardian, Student
 from .accounts import require_payment_account
 from .gateways import TransactionStatus, get_gateway
 from .gateways.base import parse_paid_at
-from .models import IntentStatus, PaymentIntent, PaymentIntentItem, PaymentMethod
+from .models import IntentStatus, PaymentIntent, PaymentIntentItem, method_for_channel
 from .service import NewPayment, record_payments
 
 logger = logging.getLogger(__name__)
@@ -164,7 +164,7 @@ def confirm(reference: str) -> PaymentIntent | None:
                 NewPayment(
                     student_id=student_id,
                     amount_kobo=amount,
-                    method=PaymentMethod.CARD,
+                    method=method_for_channel(verification.channel),
                     received_at=received_at,
                     gateway=intent.gateway,
                     gateway_reference=gateway_reference,

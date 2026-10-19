@@ -16,8 +16,9 @@ from app.modules.fees.models import Invoice, InvoiceKind, LineKind
 from app.modules.fees.plans import PlanView, plan_views
 from app.modules.fees.router import PaymentPlanOut
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
-from app.modules.payments import checkout
+from app.modules.payments import checkout, family, family_links
 from app.modules.payments import service as payment_service
+from app.modules.payments.family_router import FamilyCheckoutIn, FamilyCheckoutOut, FamilyPageOut, page_out
 from app.modules.payments.models import PaymentKind, PaymentMethod
 from app.modules.receipts.pdf import render_receipt
 from app.modules.receipts.service import is_reversed, receipts_for_payments
@@ -330,7 +331,7 @@ def invoice_detail(
     "/children/{student_id}/pay",
     response_model=CheckoutOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Pay by card (returns the gateway's checkout page)",
+    summary="Pay online for one child: card, transfer or USSD (returns the gateway's checkout page)",
 )
 def pay(
     student_id: uuid.UUID, body: PayIn, ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)
@@ -347,6 +348,32 @@ def pay(
         created_by=None,
     )
     return CheckoutOut(
+        reference=intent.reference, amount_kobo=intent.amount_kobo, authorization_url=intent.authorization_url
+    )
+
+
+@router.get(
+    "/family",
+    response_model=FamilyPageOut,
+    summary="All the parent's children, to pay for them at once (the same as their family payment link)",
+)
+def family_page(ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)) -> FamilyPageOut:
+    return page_out(family.family_page(db, family_links.resolved_for(db, ctx.guardian_id, ctx.school_id)))
+
+
+@router.post(
+    "/family/checkout",
+    response_model=FamilyCheckoutOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Pay for several children at once (card, transfer or USSD), with the amount chosen per child",
+)
+def family_checkout(
+    body: FamilyCheckoutIn, ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)
+) -> FamilyCheckoutOut:
+    get_limiter().hit("parent-pay:guardian", "20/hour", str(ctx.guardian_id))
+    found = family_links.resolved_for(db, ctx.guardian_id, ctx.school_id)
+    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo) for p in body.items], ctx.meta)
+    return FamilyCheckoutOut(
         reference=intent.reference, amount_kobo=intent.amount_kobo, authorization_url=intent.authorization_url
     )
 

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate, formatDateTime, formatKobo, humanize, parseNairaToKobo } from '../../lib/format';
+import { METHOD_LABELS } from '../Dashboard';
 import { Empty, ErrorAlert, Field, Loading, Modal, Notice, PageHeader, Pager } from '../../lib/ui';
 import { ReceiptLink } from './ReceiptLink';
 import { StudentPicker, type PickedStudent } from './StudentPicker';
@@ -89,7 +90,7 @@ function Received() {
                     <div className="muted small">{p.student.admission_number}</div>
                   </td>
                   <td>
-                    {p.kind === 'reversal' ? 'Reversal' : humanize(p.method)}
+                    {p.kind === 'reversal' ? 'Reversal' : METHOD_LABELS[p.method]}
                     {(p.reference || p.gateway_reference) && <div className="muted small">{p.reference || p.gateway_reference}</div>}
                     {p.reversed && <span className="badge danger">Reversed</span>}
                     {p.receipt_id && p.receipt_number && (

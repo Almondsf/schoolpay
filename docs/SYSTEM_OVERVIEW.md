@@ -402,7 +402,7 @@ payments only. See PLAN §3.2.)
 |---|---|
 | Transfer into a student's account number | The gateway sends a webhook. We verify its signature, store it in the `webhook_events` inbox (a unique key ignores repeats), and enqueue processing via the outbox. The worker asks the gateway to verify the transaction, finds the `VirtualAccount` it was paid into, and records the payment. |
 | Card (payment link) | Staff create a link (`POST /students/{id}/payment-link`); a `PaymentIntent` holds our reference. The parent pays on the gateway's page and comes back to `/pay/complete`, which calls `POST /payments/verify`. The webhook arrives too. Both end in `checkout.confirm()`, which locks the intent, verifies with the gateway, and records the payment once. |
-| Card (family link) | Each parent has one link (`/pay/f/<token>`) for all their children, no sign-in: see below. The parent sets an amount per child; one card charge becomes one payment per child. |
+| Online checkout, several children (family link or portal) | Each parent has one link (`/pay/f/<token>`) for all their children, no sign-in, and the same page in the portal ("Pay for all your children"): see below. The parent sets an amount per child; one payment becomes one payment per child. |
 | Cash, teller, POS, direct transfer | Staff record a `ManualPayment`; **a different person** approves it (maker-checker, also a database constraint), and only then is it a payment. Rejections keep a reason. |
 
 **The ledger.** `Payment` rows are receipts (positive) or reversals (negative,
@@ -445,7 +445,9 @@ one is made on the next message). Staff can replace it
 (`POST /guardians/{id}/pay-link/replace`, audited), and erasing the parent ends
 it. Unknown, expired and replaced links get the same answer.
 
-Paying by card from the link (`POST /public/pay/{token}/checkout`): the parent
+Paying online from the link (`POST /public/pay/{token}/checkout`), or signed in
+(`GET /parent/family`, `POST /parent/family/checkout`, through the parent's own
+link so the rules are the same): the parent
 chooses the amount per child (zero skips a child). Each share must be at least
 ₦1,000 (or everything that child owes) and at most what that child owes: paying
 ahead is by transfer. The intent holds one `PaymentIntentItem` per child. When the
@@ -455,6 +457,14 @@ bill first with its own receipt. If the gateway's total isn't what was asked, th
 intent is parked as `needs_review`; nothing is split by guesswork. All recording
 goes through `service.record_payments()`, which handles any number of payments
 in a fixed number of statements (`record_payment()` is the one-payment wrapper).
+
+**How a checkout was paid.** The gateway's checkout page offers card, bank
+transfer (a temporary account number for the exact amount) and USSD (Paystack
+`channels`, Flutterwave `payment_options`). The payment is recorded with the
+method the parent actually used (`card`, `checkout_transfer`, `ussd`; from the
+verified transaction's channel, `models.method_for_channel`). A child's own
+account number (`virtual_account`) is still the way to transfer any amount any
+time without going online.
 
 **Failures.** If the gateway is down while processing, the event stays
 `received`. The `payments.requeue_webhooks` beat task retries every 5 minutes,

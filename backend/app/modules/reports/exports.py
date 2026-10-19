@@ -36,6 +36,8 @@ HEADER_FILL = PatternFill("solid", fgColor="0F5132")
 METHOD_LABELS = {
     "virtual_account": "Transfer (student account)",
     "card": "Card",
+    "checkout_transfer": "Bank transfer (online)",
+    "ussd": "USSD",
     "cash": "Cash",
     "teller": "Bank teller",
     "pos": "POS",

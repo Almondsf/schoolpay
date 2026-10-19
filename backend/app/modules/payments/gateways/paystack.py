@@ -133,6 +133,7 @@ class PaystackGateway:
                 "callback_url": callback_url,
                 "subaccount": subaccount_code,
                 "bearer": "subaccount",
+                "channels": ["card", "bank_transfer", "ussd"],
                 "metadata": {"description": description},
             },
         )

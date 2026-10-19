@@ -26,7 +26,7 @@ from tests.factories import (
     tenant_writer,
 )
 from tests.test_fees import add_fees, generate
-from tests.test_parents import link_guardian
+from tests.test_parents import bearer, link_guardian, sign_in
 from tests.test_payments import connect_gateway, pay_cash
 
 NAIRA = 100
@@ -260,3 +260,39 @@ async def test_erasing_a_parent_ends_their_link(client, world, db):
     )
     assert erase.status_code == 200, erase.text
     assert (await page(client, token)).status_code == 404
+
+
+async def test_signed_in_parent_pays_for_all_children_by_transfer(client, world, db):
+    await generate(client, world)
+    parent = bearer(await sign_in(client))
+    family = await client.get("/api/v1/parent/family", headers=parent)
+    assert family.status_code == 200, family.text
+    assert [c["first_name"] for c in family.json()["children"]] == ["Ada", "Bayo"]
+
+    items = [
+        {"student_id": str(world["ada"].id), "amount_kobo": 155_000 * NAIRA},
+        {"student_id": str(world["bayo"].id), "amount_kobo": 185_000 * NAIRA},
+    ]
+    started = await client.post("/api/v1/parent/family/checkout", headers=parent, json={"items": items})
+    assert started.status_code == 201, started.text
+    reference = started.json()["reference"]
+    FakeGateway.shared().complete_checkout(
+        reference, channel="bank_transfer"
+    )  # a temporary account on the checkout page
+    assert (await client.post("/api/v1/payments/verify", json={"reference": reference})).json()["status"] == "succeeded"
+
+    assert await owed(client, world, "ada") == await owed(client, world, "bayo") == 0
+    scope_to_school(db, world["school"].id)
+    assert {p.method.value for p in db.scalars(select(Payment))} == {"checkout_transfer"}
+    # The same link the parent gets in messages
+    now = (await client.get("/api/v1/parent/family", headers=parent)).json()
+    assert now == (await page(client, await staff_link(client, world))).json()
+
+
+async def test_portal_family_payment_is_only_for_my_children(client, world):
+    await generate(client, world)
+    parent = bearer(await sign_in(client))
+    items = [{"student_id": str(world["chidi"].id), "amount_kobo": 10_000 * NAIRA}]
+    refused = await client.post("/api/v1/parent/family/checkout", headers=parent, json={"items": items})
+    assert refused.status_code == 404
+    assert (await client.get("/api/v1/parent/family", headers=world["bursar"])).status_code == 401
