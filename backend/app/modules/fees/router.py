@@ -15,7 +15,7 @@ from app.modules.accounts.permissions import Capability
 from app.modules.schools.models import Term
 from app.modules.students.models import Student
 
-from . import invoicing, setup_service
+from . import invoicing, plans, setup_service
 from .models import DiscountKind, DiscountRule, FeeCategory, Invoice, InvoiceKind, LineKind
 
 router = APIRouter(tags=["fees"], responses=ERROR_RESPONSES)
@@ -199,9 +199,49 @@ class InvoiceLineOut(BaseModel):
     created_at: datetime
 
 
+class InstalmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    number: int
+    due_date: date
+    amount_kobo: int
+    paid_kobo: int
+    status: Literal["paid", "part_paid", "overdue", "due_today", "upcoming"]
+
+
+class PaymentPlanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    note: str
+    created_at: datetime
+    covered_kobo: int
+    paid_on_plan_kobo: int
+    behind_kobo: int
+    next_due: date | None
+    next_amount_kobo: int
+    next_number: int | None
+    instalments: list[InstalmentOut]
+
+
 class InvoiceOut(InvoiceSummaryOut):
     void_reason: str | None
     lines: list[InvoiceLineOut]
+    plan: PaymentPlanOut | None = Field(description="The live payment plan, if the bill is being paid in instalments")
+
+
+class InstalmentIn(BaseModel):
+    due_date: date
+    amount_kobo: Kobo
+
+
+class PaymentPlanIn(BaseModel):
+    instalments: list[InstalmentIn] = Field(min_length=2, max_length=12)
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class CancelPlanIn(BaseModel):
+    reason: Reason
 
 
 class AddLineIn(BaseModel):
@@ -273,10 +313,12 @@ def _summary(invoice: Invoice, student: Student, total: int, paid: int) -> Invoi
 def _invoice_out(db: Session, invoice_id: uuid.UUID) -> InvoiceOut:
     invoice, student, amounts = invoicing.invoice_with_lines(db, invoice_id)
     summary = _summary(invoice, student, amounts.total_kobo, amounts.paid_kobo)
+    plan = plans.plan_views(db, [invoice.id]).get(invoice.id)
     return InvoiceOut(
         **summary.model_dump(),
         void_reason=invoice.void_reason,
         lines=[InvoiceLineOut.model_validate(line) for line in invoice.lines],
+        plan=PaymentPlanOut.model_validate(plan) if plan else None,
     )
 
 
@@ -543,6 +585,27 @@ def add_line(
         reason=body.reason,
         fee_item_id=body.fee_item_id,
     )
+    return _invoice_out(db, invoice_id)
+
+
+@router.post(
+    "/invoices/{invoice_id}/plan",
+    response_model=InvoiceOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Agree to take what's left on a bill in instalments (2 to 12, adding up to what's owed)",
+)
+def create_payment_plan(
+    invoice_id: uuid.UUID, body: PaymentPlanIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
+) -> InvoiceOut:
+    plans.create_plan(db, ctx, invoice_id, [(i.due_date, i.amount_kobo) for i in body.instalments], body.note)
+    return _invoice_out(db, invoice_id)
+
+
+@router.post("/invoices/{invoice_id}/plan/cancel", response_model=InvoiceOut, summary="End a bill's payment plan")
+def cancel_payment_plan(
+    invoice_id: uuid.UUID, body: CancelPlanIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
+) -> InvoiceOut:
+    plans.cancel_plan(db, ctx, invoice_id, body.reason)
     return _invoice_out(db, invoice_id)
 
 

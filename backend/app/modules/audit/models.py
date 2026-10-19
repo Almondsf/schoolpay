@@ -74,6 +74,8 @@ class AuditAction(enum.StrEnum):
     INVOICE_CREATED = "invoices.created"
     INVOICE_ADJUSTED = "invoices.adjusted"
     INVOICE_VOIDED = "invoices.voided"
+    PAYMENT_PLAN_CREATED = "invoices.plan_created"
+    PAYMENT_PLAN_CANCELLED = "invoices.plan_cancelled"
     PAYMENT_ACCOUNT_SET_UP = "payments.account_set_up"
     VIRTUAL_ACCOUNTS_ISSUED = "payments.virtual_accounts_issued"
     PAYMENT_RECORDED = "payments.recorded"

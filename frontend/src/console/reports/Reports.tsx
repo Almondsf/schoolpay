@@ -176,6 +176,7 @@ function Debtors() {
                         <td>{d.class_name || <span className="muted">—</span>}</td>
                         <td className="num">{formatKobo(d.owed_kobo)}</td>
                         <td>
+                          {d.on_plan && <span className="badge">On a plan</span>}{' '}
                           {d.days_overdue > 0 ? (
                             <span className={`badge ${d.days_overdue > 30 ? 'danger' : 'warn'}`}>{d.days_overdue} days</span>
                           ) : (

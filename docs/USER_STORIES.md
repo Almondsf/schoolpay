@@ -31,6 +31,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Every payment gets a numbered receipt (no gaps) that I can download as a PDF.
 - ✅ Keep a debtors list that's always current: filter by class, amount or overdue, sort by most owed or longest overdue, call the parent from the list, and download it for Excel or to print.
 - ✅ Report money received for any period, by day and by method, with the full payment list in Excel.
+- ✅ Agree with a parent to pay a bill in instalments: reminders follow the instalment dates, and they aren't counted as a debtor while they keep to the plan.
 - ✅ Send polite reminders without phoning every parent: reminders go automatically before and after the due date on a schedule I set, stop as soon as the bill is paid, and never exceed a cap per bill.
 - ✅ Tell every parent about their new bill when I generate the term's invoices.
 - ✅ Send one parent a reminder right now from the student's page.
@@ -58,6 +59,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Use it comfortably on a phone.
 - ✅ Get a receipt by WhatsApp (or text, or email) as soon as a payment is received.
 - ✅ Get a message when a new bill is ready, and a reminder if it's still owed, never at night.
+- ✅ See my instalment plan, what's paid and what's next, and be reminded about the next instalment, not the whole bill.
 - ✅ Turn off bill messages and reminders (receipts still come); the school can also do this for me.
 - ✅ Download everything the school holds about me and my children, and read a plain privacy notice.
 - ✅ Have my details erased once my children have left.

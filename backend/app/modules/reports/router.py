@@ -93,6 +93,7 @@ class DebtorOut(BaseModel):
     reminders_off: bool
     reminders_sent: int
     last_paid_at: datetime | None
+    on_plan: bool
 
 
 class DebtorsOut(BaseModel):

@@ -23,6 +23,16 @@ test('bursar generates the term invoices in one click and corrects one', async (
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('cell', { name: /PTA levy waived/ })).toBeVisible();
 
+  // The parent will pay the rest in instalments
+  await page.getByRole('button', { name: 'Pay in instalments' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Instalments').selectOption('2');
+  await dialog.getByLabel('Note (optional)').fill('Agreed with the mother at the bursary');
+  await dialog.getByRole('button', { name: 'Agree plan' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText(/instalment\s+1 of 2/)).toBeVisible();
+  await expect(page.getByText('Agreed with the mother at the bursary')).toBeVisible();
+
   await page.getByRole('link', { name: student }).click();
   await expect(page.getByRole('heading', { name: 'Fees' })).toBeVisible();
   await expect(page.getByText('Owed')).toBeVisible();

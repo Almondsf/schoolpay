@@ -315,6 +315,30 @@ a fee notice (section 13), and the response says how many were queued. It runs
 **a fixed number of queries** whatever the number of students (tested), and 60
 invoices take about 0.4 s.
 
+**Payment plans** (`plans.py`, `POST /invoices/{id}/plan`,
+`/plan/cancel`; capability `invoices.issue`). The school can agree with a
+parent to pay what's left on a bill in 2 to 12 dated instalments that add up
+to exactly what's owed (`covered_kobo`). The first instalment can't be in the
+past, and dates must increase.
+
+Money is applied as always (oldest debt first). Progress comes from the ledger:
+what's been paid on the bill since the plan started (paid now minus
+`paid_at_start_kobo`) covers the instalments in order. A plan changes two
+things:
+
+- **When the bill counts as late.** Reports, the debtors list, aging and the
+  "overdue" filter use the next unpaid instalment's date
+  (`progress_cte()`, a materialized CTE).
+- **What reminders ask for.** Reminders fall around instalment dates and ask
+  for that instalment: `{balance}` becomes the instalment amount, and
+  `{due_phrase}` becomes " (instalment 2 of 3, due 15 Nov 2026)".
+
+A plan is never edited; it's cancelled (with a reason, audited) and a new
+one made. Instalments are append-only, there's one live plan per bill
+(partial unique index), and voiding the bill ends its plan. The bill's page
+shows the schedule; the parent portal shows it on the child's bills; the
+debtors list marks "On a plan".
+
 ## 10. Payments
 
 Module: `app/modules/payments`.
@@ -475,7 +499,8 @@ child's **main parent** (the primary guardian):
    between.
 3. `schedule_reminders()` (hourly, task `notifications.schedule_reminders`)
    picks the schools whose sending hour it is and finds every bill that is
-   N days before or after its due date, per the school's `ReminderSettings`. It
+   N days before or after its due date (for a bill on a payment plan, its
+   next unpaid instalment's date), per the school's `ReminderSettings`. It
    leaves out bills that are paid, voided or opening balances, students who
    have left, opted-out parents, bills that have reached `max_per_invoice`, and
    bills reminded within `min_gap_days`. All schools are handled in a fixed
@@ -522,7 +547,8 @@ and **Reports** (debtors, money received). Capability `reports.view`
 invoice lines (`fees.invoicing.totals_subquery`) and payment allocations
 (`fees.ledger.paid_subquery`). So reports always agree with invoices, student
 accounts and receipts. A payment that is reversed counts on the day it was
-reversed. Dates are Lagos dates.
+reversed. Dates are Lagos dates. A bill on a payment plan is "due" when its
+next unpaid instalment is, so a parent keeping to a plan isn't overdue.
 
 | Report | Endpoint | What it shows |
 |---|---|---|
@@ -816,7 +842,7 @@ production.
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |
-| Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `GET /students/{id}/account` |
+| Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `POST /invoices/{id}/plan`, `/plan/cancel`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 

@@ -1175,3 +1175,15 @@ table.lines {
   border-top: 1px solid var(--line);
   color: var(--muted);
 }
+
+/* A bill's payment plan in the parent portal */
+.plan-box {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--green-light);
+}
+
+.plan-box table {
+  width: 100%;
+}

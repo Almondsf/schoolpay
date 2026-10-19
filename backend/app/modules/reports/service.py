@@ -28,6 +28,7 @@ from app.core.repo import get_or_404
 from app.modules.fees.invoicing import totals_subquery
 from app.modules.fees.ledger import paid_subquery
 from app.modules.fees.models import Invoice, InvoiceKind
+from app.modules.fees.plans import progress_cte
 from app.modules.notifications.models import MessageKind, MessageLog, MessageStatus
 from app.modules.payments.models import (
     Allocation,
@@ -72,11 +73,15 @@ def _once(name: str, stmt: SelectBase) -> CTE:
     return stmt.cte(name).prefix_with("MATERIALIZED")
 
 
-def _balances() -> CTE:
-    """One row per live invoice: what it's for, when it's due, and its total, paid and balance."""
+def _balances(today: date) -> CTE:
+    """
+    One row per live invoice: what it's for, when it's due, and its total, paid and balance.
+    A bill on a payment plan is due when its next unpaid instalment is.
+    """
     # The ledger's own definitions (one place for "total" and "paid"), each computed once
     totals = _once("invoice_totals", totals_subquery().element)
     paid = _once("invoice_paid", paid_subquery().element)
+    plan = progress_cte(today)
     total = func.coalesce(totals.c.total_kobo, 0)
     paid_col = func.coalesce(paid.c.paid_kobo, 0)
     return (
@@ -87,13 +92,15 @@ def _balances() -> CTE:
             Invoice.class_level_id.label("class_level_id"),
             Invoice.kind.label("kind"),
             # Without a due date, a bill is due when it's issued
-            func.coalesce(Invoice.due_date, _lagos_date(Invoice.issued_at)).label("due_on"),
+            func.coalesce(plan.c.next_due, Invoice.due_date, _lagos_date(Invoice.issued_at)).label("due_on"),
+            plan.c.invoice_id.is_not(None).label("on_plan"),
             total.label("total"),
             paid_col.label("paid"),
             (total - paid_col).label("balance"),
         )
         .outerjoin(totals, totals.c.invoice_id == Invoice.id)
         .outerjoin(paid, paid.c.invoice_id == Invoice.id)
+        .outerjoin(plan, plan.c.invoice_id == Invoice.id)
         .where(Invoice.voided_at.is_(None))
         .cte("balances")
         .prefix_with("MATERIALIZED")
@@ -195,7 +202,7 @@ def overview(session: Session, term_id: uuid.UUID | None, today: date | None = N
         term_start=term.start_date,
         term_end=term.end_date,
     )
-    b = _balances()
+    b = _balances(today)
 
     # This term's bills, per class
     rows = session.execute(
@@ -329,6 +336,7 @@ class Debtor:
     reminders_off: bool
     reminders_sent: int
     last_paid_at: datetime | None
+    on_plan: bool  # paying in instalments; "overdue" counts from the next unpaid instalment
 
 
 @dataclass(frozen=True)
@@ -339,13 +347,14 @@ class DebtorsPage:
 
 
 def _debtors_query(filters: DebtorFilters, today: date) -> Select[Any]:
-    b = _balances()
+    b = _balances(today)
     owing = _once(
         "owing",
         select(
             b.c.student_id,
             func.sum(_owed(b.c.balance)).label("owed"),
             func.min(case((b.c.balance > 0, b.c.due_on))).label("oldest_due"),
+            func.bool_or(and_(b.c.on_plan, b.c.balance > 0)).label("on_plan"),
         )
         .group_by(b.c.student_id)
         .having(func.sum(_owed(b.c.balance)) >= max(filters.min_owed_kobo, 1)),
@@ -390,6 +399,7 @@ def _debtors_query(filters: DebtorFilters, today: date) -> Select[Any]:
             Guardian.reminders_opt_out_at,
             func.coalesce(reminded.c.sent, 0),
             last_paid.c.at,
+            owing.c.on_plan,
         )
         .join(owing, owing.c.student_id == Student.id)
         .outerjoin(placement, placement.c.student_id == Student.id)
@@ -424,7 +434,9 @@ def _debtors_query(filters: DebtorFilters, today: date) -> Select[Any]:
 
 
 def _debtor(row: Any, today: date) -> Debtor:
-    (sid, admission, first, last, status, level, arm, owed, oldest, g_name, g_phone, opt_out, sent, last_paid) = row
+    (sid, admission, first, last, status, level, arm, owed, oldest, g_name, g_phone, opt_out, sent, last_paid, plan) = (
+        row
+    )
     return Debtor(
         student_id=sid,
         admission_number=admission,
@@ -439,6 +451,7 @@ def _debtor(row: Any, today: date) -> Debtor:
         reminders_off=opt_out is not None,
         reminders_sent=int(sent),
         last_paid_at=last_paid,
+        on_plan=bool(plan),
     )
 
 

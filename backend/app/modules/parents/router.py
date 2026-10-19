@@ -13,6 +13,8 @@ from app.core.http import RequestMeta, request_meta
 from app.core.ratelimit import get_limiter
 from app.modules.fees import invoicing
 from app.modules.fees.models import Invoice, InvoiceKind, LineKind
+from app.modules.fees.plans import PlanView, plan_views
+from app.modules.fees.router import PaymentPlanOut
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.payments import checkout
 from app.modules.payments import service as payment_service
@@ -103,6 +105,7 @@ class ParentInvoiceOut(BaseModel):
     paid_kobo: int
     balance_kobo: int
     status: str
+    plan: PaymentPlanOut | None = None
 
 
 class ParentLineOut(BaseModel):
@@ -251,9 +254,10 @@ def _child_out(child: portal.ChildOverview) -> ChildOut:
     )
 
 
-def _invoice_out(invoice: Invoice, total: int, paid: int) -> ParentInvoiceOut:
+def _invoice_out(invoice: Invoice, total: int, paid: int, plan: PlanView | None = None) -> ParentInvoiceOut:
     amounts = invoicing.InvoiceAmounts(int(total), int(paid))
     return ParentInvoiceOut(
+        plan=PaymentPlanOut.model_validate(plan) if plan else None,
         id=invoice.id,
         number=invoice.number,
         kind=invoice.kind,
@@ -283,12 +287,13 @@ def child_account(
     student = portal.require_child(db, ctx, student_id)
     overview = next(c for c in portal.household(db, ctx).children if c.student.id == student.id)
     invoices = db.execute(invoicing.invoices_query(student_id=student.id).where(Invoice.voided_at.is_(None))).all()
+    plans = plan_views(db, [inv.id for inv, *_ in invoices])
     payments = [p for p, _ in db.execute(payment_service.payments_query(student_id=student.id).limit(100)).all()]
     ids = [p.id for p in payments]
     receipts, reversed_ = receipts_for_payments(db, ids), payment_service.reversed_ids(db, ids)
     return ChildAccountOut(
         child=_child_out(overview),
-        invoices=[_invoice_out(inv, total, paid) for inv, _student, total, paid in invoices],
+        invoices=[_invoice_out(inv, total, paid, plans.get(inv.id)) for inv, _student, total, paid in invoices],
         payments=[
             ParentPaymentOut(
                 id=p.id,
@@ -311,7 +316,7 @@ def invoice_detail(
 ) -> ParentInvoiceDetailOut:
     portal.require_child_invoice(db, ctx, invoice_id)
     invoice, _student, amounts = invoicing.invoice_with_lines(db, invoice_id)
-    base = _invoice_out(invoice, amounts.total_kobo, amounts.paid_kobo)
+    base = _invoice_out(invoice, amounts.total_kobo, amounts.paid_kobo, plan_views(db, [invoice.id]).get(invoice.id))
     return ParentInvoiceDetailOut(
         **base.model_dump(),
         lines=[

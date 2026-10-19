@@ -188,3 +188,48 @@ class InvoiceLine(TenantMixin, UUIDPrimaryKey, Base):
     reason: Mapped[str | None] = mapped_column(String(300))
 
     invoice: Mapped[Invoice] = relationship(back_populates="lines", lazy="raise")
+
+
+class PaymentPlan(TenantMixin, UUIDPrimaryKey, Base):
+    """
+    An agreement to pay what's left on a bill in instalments. It changes when the
+    bill counts as late (the next unpaid instalment, not the bill's due date) and
+    what reminders ask for; payments are applied exactly as without a plan.
+    A plan is never edited: it's cancelled and a new one made.
+    """
+
+    __tablename__ = "payment_plans"
+    __table_args__ = (
+        # One live plan per bill
+        Index("uq_payment_plans_one_live", "invoice_id", unique=True, postgresql_where=text("cancelled_at IS NULL")),
+        CheckConstraint("covered_kobo > 0 AND paid_at_start_kobo >= 0", name="amounts_valid"),
+        CheckConstraint("(cancelled_at IS NULL) = (cancel_reason IS NULL)", name="cancel_has_reason"),
+        Index("ix_payment_plans_student", "student_id"),
+    )
+
+    invoice_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("invoices.id", ondelete="RESTRICT"))
+    student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"))
+    # What had been paid on the bill when the plan started; the plan covers the rest
+    paid_at_start_kobo: Mapped[int] = mapped_column(BigInteger)
+    covered_kobo: Mapped[int] = mapped_column(BigInteger)  # the sum of the instalments
+    note: Mapped[str] = mapped_column(String(300), default="")
+    created_by: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_reason: Mapped[str | None] = mapped_column(String(300))
+
+
+class PlanInstalment(TenantMixin, UUIDPrimaryKey, Base):
+    """One dated amount in a payment plan. Append-only (database trigger)."""
+
+    __tablename__ = "plan_instalments"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "number"),
+        CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        CheckConstraint("number BETWEEN 1 AND 12", name="number_range"),
+    )
+
+    plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_plans.id", ondelete="RESTRICT"))
+    number: Mapped[int] = mapped_column(Integer)
+    due_date: Mapped[date] = mapped_column(Date)
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)

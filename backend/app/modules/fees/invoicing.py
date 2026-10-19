@@ -26,7 +26,7 @@ from app.modules.audit.service import record
 from app.modules.schools.models import ClassLevel, Term
 from app.modules.students.models import Enrollment, GuardianStudent, Student, StudentStatus
 
-from . import ledger
+from . import ledger, plans
 from .models import (
     Discount,
     DiscountKind,
@@ -548,6 +548,7 @@ def void_invoice(session: Session, ctx: StaffContext, invoice_id: uuid.UUID, rea
         raise Conflict("Payments have been applied to this invoice. Reverse them first, or adjust the invoice instead.")
     invoice.voided_at = func.now()
     invoice.void_reason = reason.strip()
+    plans.cancel_for_voided(session, invoice.id, reason.strip())
     record(
         session,
         AuditAction.INVOICE_VOIDED,

@@ -5,7 +5,8 @@ import { Link, useParams } from 'react-router-dom';
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { INVOICE_KIND_LABELS, formatDate, formatDateTime, formatKobo, parseNairaToKobo } from '../../lib/format';
-import { ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge } from '../../lib/ui';
+import { PlanSchedule, splitEvenly, stepDates } from '../../lib/PlanSchedule';
+import { ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
 
 type Invoice = Schemas['InvoiceOut'];
 
@@ -17,7 +18,7 @@ export function InvoiceDetail() {
     queryKey: ['invoice', invoiceId],
     queryFn: async () => unwrap(await api.GET('/api/v1/invoices/{invoice_id}', { params: { path: { invoice_id: invoiceId } } })),
   });
-  const [dialog, setDialog] = useState<'charge' | 'adjust' | 'void' | null>(null);
+  const [dialog, setDialog] = useState<'charge' | 'adjust' | 'void' | 'plan' | 'cancel-plan' | null>(null);
 
   if (invoice.isPending) return <Loading />;
   if (invoice.isError) return <ErrorAlert error={invoice.error} />;
@@ -97,7 +98,39 @@ export function InvoiceDetail() {
         </table>
       </div>
       <p className="hint">Invoice lines are never edited or deleted. Corrections are added as new lines, so the history is always visible.</p>
+      {(i.plan || (issue && live && i.balance_kobo > 0)) && (
+        <section className="card section" aria-label="Payment plan">
+          <div className="row between">
+            <h2>Payment plan</h2>
+            {issue && live && (i.plan ? (
+              <button className="secondary small" onClick={() => setDialog('cancel-plan')}>
+                Cancel plan
+              </button>
+            ) : (
+              <button className="secondary small" onClick={() => setDialog('plan')}>
+                Pay in instalments
+              </button>
+            ))}
+          </div>
+          {i.plan ? (
+            <>
+              {i.plan.note && <p className="muted small">{i.plan.note}</p>}
+              <PlanSchedule plan={i.plan} />
+              <p className="hint">
+                While the plan is kept to, this bill isn't counted as overdue, and reminders ask for the next instalment around its date.
+              </p>
+            </>
+          ) : (
+            <p className="muted small">
+              Agree with the parent to pay the {formatKobo(i.balance_kobo)} still owed in instalments. Reminders then follow the instalment
+              dates, and the bill only counts as overdue if an instalment is missed.
+            </p>
+          )}
+        </section>
+      )}
       {dialog === 'void' && <VoidInvoice invoice={i} onClose={() => setDialog(null)} />}
+      {dialog === 'plan' && <NewPlan invoice={i} onClose={() => setDialog(null)} />}
+      {dialog === 'cancel-plan' && <CancelPlan invoice={i} onClose={() => setDialog(null)} />}
       {(dialog === 'charge' || dialog === 'adjust') && <AddLine invoice={i} kind={dialog === 'charge' ? 'fee' : 'adjustment'} onClose={() => setDialog(null)} />}
     </>
   );
@@ -197,6 +230,183 @@ function VoidInvoice({ invoice, onClose }: { invoice: Invoice; onClose: () => vo
           </button>
           <button type="submit" className="danger" disabled={save.isPending}>
             Void invoice
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function isoToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+/** Split what's owed into instalments: start from an even split on regular dates, then adjust any row. */
+function NewPlan({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const refresh = useRefresh(invoice);
+  const [count, setCount] = useState(3);
+  const [first, setFirst] = useState(isoToday());
+  const [every, setEvery] = useState<'month' | 'fortnight' | 'week'>('month');
+  const [note, setNote] = useState('');
+  const [rows, setRows] = useState(() => build(3, isoToday(), 'month'));
+
+  function build(n: number, start: string, step: typeof every) {
+    const amounts = splitEvenly(invoice.balance_kobo, n);
+    return stepDates(start, n, step).map((date, k) => ({ date, amount: String(amounts[k]! / 100) }));
+  }
+  const regenerate = (n = count, start = first, step = every) => setRows(build(n, start, step));
+  const kobo = rows.map((r) => parseNairaToKobo(r.amount));
+  const total = kobo.reduce<number>((sum, k) => sum + (k ?? 0), 0);
+  const valid = kobo.every((k) => k !== null && k > 0) && total === invoice.balance_kobo;
+
+  const save = useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST('/api/v1/invoices/{invoice_id}/plan', {
+          params: { path: { invoice_id: invoice.id } },
+          body: { note, instalments: rows.map((r, k) => ({ due_date: r.date, amount_kobo: kobo[k] ?? 0 })) },
+        }),
+      ),
+    onSuccess: (data) => {
+      refresh(data);
+      onClose();
+    },
+  });
+
+  return (
+    <Modal title={`Pay ${formatKobo(invoice.balance_kobo)} in instalments`} onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          save.mutate();
+        }}
+      >
+        <div className="grid-2 tight">
+          <Field label="Instalments">
+            <select
+              value={count}
+              onChange={(e) => {
+                setCount(Number(e.target.value));
+                regenerate(Number(e.target.value));
+              }}
+            >
+              {Array.from({ length: 11 }, (_, k) => k + 2).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Every">
+            <select
+              value={every}
+              onChange={(e) => {
+                const step = e.target.value as typeof every;
+                setEvery(step);
+                regenerate(count, first, step);
+              }}
+            >
+              <option value="month">Month</option>
+              <option value="fortnight">Two weeks</option>
+              <option value="week">Week</option>
+            </select>
+          </Field>
+        </div>
+        <Field label="First instalment due">
+          <input
+            type="date"
+            value={first}
+            min={isoToday()}
+            onChange={(e) => {
+              setFirst(e.target.value);
+              if (e.target.value) regenerate(count, e.target.value);
+            }}
+          />
+        </Field>
+        <table className="compact">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Due</th>
+              <th className="num">Amount (₦)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, k) => (
+              <tr key={k}>
+                <td>{k + 1}</td>
+                <td>
+                  <input
+                    type="date"
+                    aria-label={`Instalment ${k + 1} due`}
+                    value={r.date}
+                    onChange={(e) => setRows(rows.map((x, j) => (j === k ? { ...x, date: e.target.value } : x)))}
+                  />
+                </td>
+                <td className="num">
+                  <input
+                    aria-label={`Instalment ${k + 1} amount`}
+                    inputMode="decimal"
+                    value={r.amount}
+                    onChange={(e) => setRows(rows.map((x, j) => (j === k ? { ...x, amount: e.target.value } : x)))}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className={total === invoice.balance_kobo ? 'muted small' : 'error-text small'}>
+          Adds up to {formatKobo(total)} of {formatKobo(invoice.balance_kobo)} owed.
+        </p>
+        <Field label="Note (optional)" hint="e.g. what was agreed and with whom">
+          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
+        </Field>
+        <ErrorAlert error={save.error && !fieldError(save.error, 'instalments') ? save.error : null} />
+        {fieldError(save.error, 'instalments') && <p className="error-text">{fieldError(save.error, 'instalments')}</p>}
+        <div className="row end">
+          <button type="button" className="secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" disabled={!valid || save.isPending}>
+            Agree plan
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function CancelPlan({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const refresh = useRefresh(invoice);
+  const [reason, setReason] = useState('');
+  const cancel = useMutation({
+    mutationFn: async () =>
+      unwrap(await api.POST('/api/v1/invoices/{invoice_id}/plan/cancel', { params: { path: { invoice_id: invoice.id } }, body: { reason } })),
+    onSuccess: (data) => {
+      refresh(data);
+      onClose();
+    },
+  });
+  return (
+    <Modal title="Cancel the payment plan" onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          cancel.mutate();
+        }}
+      >
+        <p>The bill goes back to its own due date. Payments already made stay applied. You can agree a new plan afterwards.</p>
+        <ErrorAlert error={cancel.error} />
+        <Field label="Reason (kept in the activity log)">
+          <input value={reason} onChange={(e) => setReason(e.target.value)} required minLength={3} />
+        </Field>
+        <div className="row end">
+          <button type="button" className="secondary" onClick={onClose}>
+            Keep the plan
+          </button>
+          <button type="submit" className="danger" disabled={cancel.isPending}>
+            Cancel plan
           </button>
         </div>
       </form>

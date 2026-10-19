@@ -35,6 +35,7 @@ from app.core.money import format_naira
 from app.core.tenancy import scope_platform_wide, scope_to_school
 from app.modules.fees.invoicing import account_summaries, amounts_for
 from app.modules.fees.models import Invoice, InvoiceKind
+from app.modules.fees.plans import plan_phrase, plan_views, progress_cte
 from app.modules.payments.models import Payment, VirtualAccount, VirtualAccountStatus
 from app.modules.receipts.models import Receipt
 from app.modules.receipts.service import verification_url
@@ -185,13 +186,17 @@ def schedule_reminders(now: datetime | None = None) -> int:
         ]
         if not schools:
             return 0
+        # A bill on a payment plan is reminded about around its next unpaid instalment
+        plan = progress_cte(today)
+        due_on = func.coalesce(plan.c.next_due, Invoice.due_date)
         candidates = session.execute(
-            select(Invoice.id, Invoice.school_id, Invoice.student_id, Invoice.due_date)
+            select(Invoice.id, Invoice.school_id, Invoice.student_id, due_on)
             .join(Student, Student.id == Invoice.student_id)
+            .outerjoin(plan, plan.c.invoice_id == Invoice.id)
             .where(
                 Invoice.school_id.in_(schools),
                 Invoice.voided_at.is_(None),
-                Invoice.due_date.is_not(None),
+                due_on.is_not(None),
                 Invoice.kind != InvoiceKind.OPENING_BALANCE,
                 Student.status == StudentStatus.ACTIVE,
             )
@@ -307,6 +312,12 @@ def _values(session: Session, message: MessageLog, guardian: Guardian, student: 
                 values["due_date"] = f"{invoice.due_date.day} {invoice.due_date.strftime('%b %Y')}"
                 past = invoice.due_date < datetime.now(LAGOS).date()
                 values["due_phrase"] = f" ({'was due' if past else 'due'} {values['due_date']})"
+            plan = plan_views(session, [invoice.id]).get(invoice.id)
+            if plan and plan.next_due and message.kind == MessageKind.REMINDER:
+                # Ask for the next instalment, not the whole balance
+                values["balance"] = format_naira(plan.next_amount_kobo)
+                values["due_date"] = f"{plan.next_due.day} {plan.next_due:%b %Y}"
+                values["due_phrase"] = plan_phrase(plan)
     return values
 
 

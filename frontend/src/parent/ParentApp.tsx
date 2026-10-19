@@ -4,6 +4,7 @@ import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-d
 
 import { api, unwrap, type Schemas } from '../api/client';
 import { saveBlob } from '../lib/download';
+import { PlanSchedule } from '../lib/PlanSchedule';
 import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
 import { ParentAuthProvider, useParentAuth } from './ParentAuth';
@@ -229,6 +230,14 @@ function ChildPage() {
             <div className="small">
               {formatKobo(inv.total_kobo)} · {inv.balance_kobo > 0 ? `${formatKobo(inv.balance_kobo)} left to pay` : 'paid'}
             </div>
+            {inv.plan && (
+              <div className="plan-box">
+                <div className="small">
+                  <strong>Paying in instalments</strong>
+                </div>
+                <PlanSchedule plan={inv.plan} />
+              </div>
+            )}
             {openInvoice === inv.id && <InvoiceLines invoiceId={inv.id} />}
           </div>
         ))}

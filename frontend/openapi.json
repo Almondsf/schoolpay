@@ -527,6 +527,21 @@
         "title": "Body_students_import_students",
         "type": "object"
       },
+      "CancelPlanIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CancelPlanIn",
+        "type": "object"
+      },
       "ChangedCount": {
         "properties": {
           "changed": {
@@ -1229,6 +1244,10 @@
             ],
             "title": "Oldest Due"
           },
+          "on_plan": {
+            "title": "On Plan",
+            "type": "boolean"
+          },
           "owed_kobo": {
             "title": "Owed Kobo",
             "type": "integer"
@@ -1263,7 +1282,8 @@
           "guardian_phone",
           "reminders_off",
           "reminders_sent",
-          "last_paid_at"
+          "last_paid_at",
+          "on_plan"
         ],
         "title": "DebtorOut",
         "type": "object"
@@ -2252,6 +2272,69 @@
         "title": "ImportReportOut",
         "type": "object"
       },
+      "InstalmentIn": {
+        "properties": {
+          "amount_kobo": {
+            "description": "Amount in kobo (\u20a61 = 100)",
+            "exclusiveMinimum": 0.0,
+            "maximum": 10000000000.0,
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "due_date",
+          "amount_kobo"
+        ],
+        "title": "InstalmentIn",
+        "type": "object"
+      },
+      "InstalmentOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "paid_kobo": {
+            "title": "Paid Kobo",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "paid",
+              "part_paid",
+              "overdue",
+              "due_today",
+              "upcoming"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "due_date",
+          "amount_kobo",
+          "paid_kobo",
+          "status"
+        ],
+        "title": "InstalmentOut",
+        "type": "object"
+      },
       "IntentStatus": {
         "enum": [
           "pending",
@@ -2368,6 +2451,17 @@
             "title": "Paid Kobo",
             "type": "integer"
           },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentPlanOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live payment plan, if the bill is being paid in instalments"
+          },
           "status": {
             "enum": [
               "unpaid",
@@ -2422,7 +2516,8 @@
           "balance_kobo",
           "status",
           "void_reason",
-          "lines"
+          "lines",
+          "plan"
         ],
         "title": "InvoiceOut",
         "type": "object"
@@ -3640,6 +3735,16 @@
             "title": "Paid Kobo",
             "type": "integer"
           },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentPlanOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3702,6 +3807,16 @@
           "paid_kobo": {
             "title": "Paid Kobo",
             "type": "integer"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentPlanOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "title": "Status",
@@ -4189,6 +4304,108 @@
           "receipt_number"
         ],
         "title": "PaymentOut",
+        "type": "object"
+      },
+      "PaymentPlanIn": {
+        "properties": {
+          "instalments": {
+            "items": {
+              "$ref": "#/components/schemas/InstalmentIn"
+            },
+            "maxItems": 12,
+            "minItems": 2,
+            "title": "Instalments",
+            "type": "array"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instalments"
+        ],
+        "title": "PaymentPlanIn",
+        "type": "object"
+      },
+      "PaymentPlanOut": {
+        "properties": {
+          "behind_kobo": {
+            "title": "Behind Kobo",
+            "type": "integer"
+          },
+          "covered_kobo": {
+            "title": "Covered Kobo",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "instalments": {
+            "items": {
+              "$ref": "#/components/schemas/InstalmentOut"
+            },
+            "title": "Instalments",
+            "type": "array"
+          },
+          "next_amount_kobo": {
+            "title": "Next Amount Kobo",
+            "type": "integer"
+          },
+          "next_due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due"
+          },
+          "next_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Number"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "paid_on_plan_kobo": {
+            "title": "Paid On Plan Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "note",
+          "created_at",
+          "covered_kobo",
+          "paid_on_plan_kobo",
+          "behind_kobo",
+          "next_due",
+          "next_amount_kobo",
+          "next_number",
+          "instalments"
+        ],
+        "title": "PaymentPlanOut",
         "type": "object"
       },
       "PaymentSettingsOut": {
@@ -10996,6 +11213,242 @@
           }
         ],
         "summary": "Add a charge or a correction (lines are never edited)",
+        "tags": [
+          "fees"
+        ]
+      }
+    },
+    "/api/v1/invoices/{invoice_id}/plan": {
+      "post": {
+        "operationId": "fees_create_payment_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Agree to take what's left on a bill in instalments (2 to 12, adding up to what's owed)",
+        "tags": [
+          "fees"
+        ]
+      }
+    },
+    "/api/v1/invoices/{invoice_id}/plan/cancel": {
+      "post": {
+        "operationId": "fees_cancel_payment_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "End a bill's payment plan",
         "tags": [
           "fees"
         ]
