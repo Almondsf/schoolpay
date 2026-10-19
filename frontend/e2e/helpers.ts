@@ -47,6 +47,9 @@ export async function signIn(page: Page, email: string, { mfa = false, landing =
 /** Go to a console page from the main menu, opening the Setup menu when the link lives there. */
 export async function navigate(page: Page, name: string) {
   const link = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
-  if (!(await link.isVisible())) await page.locator('summary', { hasText: 'Setup' }).click();
-  await link.click();
+  // The Setup menu remounts (closed) after every navigation, possibly just after we looked: retry until the click lands
+  await expect(async () => {
+    if (!(await link.isVisible())) await page.locator('summary', { hasText: 'Setup' }).click();
+    await link.click({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
 }
