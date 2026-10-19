@@ -97,7 +97,7 @@ def export_guardian(session: Session, actor: Acting, guardian_id: uuid.UUID) -> 
     data = {
         "about": (
             f"Personal data {school.name if school else 'the school'} holds about you and your children, "
-            "as processed by SchoolPay for the school."
+            f"as processed by {get_settings().app_name} for the school."
         ),
         "generated_at": datetime.now(UTC).isoformat(),
         "school": school.name if school else "",

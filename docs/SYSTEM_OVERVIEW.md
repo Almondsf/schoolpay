@@ -995,7 +995,8 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 
 ## 23. Known gaps
 
-- The product name "SchoolPay" is a placeholder.
+- The product is called "ParentPay" for now (`APP_NAME` / `VITE_APP_NAME`; the code uses the codename
+  `schoolpay`). It's also a UK company's brand: check the trademark before a public launch.
 - Gateway virtual-account KYC requirements and messaging-provider accounts
   are still open (see OWNER_TODO.md). Plan prices are placeholders.
 - Schools pay subscriptions by bank transfer, recorded by a platform admin;

@@ -4,7 +4,7 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-19 (production hardening done)
+Last updated: 2026-10-19 (product name and providers noted)
 
 ## Decisions
 
@@ -13,9 +13,10 @@ Last updated: 2026-10-19 (production hardening done)
       for parents; PLAN.md §3.4). The built-in "Standard" plan has
       placeholder amounts; change them in the platform console (Plans)
       before selling.
-- [ ] **Product name.** "SchoolPay" is a placeholder; check the name and
-      domain are free and the trademark is clear. _Blocks:_ branding, sender
-      IDs, WhatsApp display name, domain.
+- [ ] **Product name: "ParentPay" for now** (decided 2026-10-19; it's one setting,
+      `APP_NAME`). _(new)_ **Check the trademark before a public launch:** ParentPay
+      is the brand of ParentPay Ltd (UK), the product we modelled this on. Using it
+      publicly in Nigeria could draw a complaint, and they may expand into Africa.
 
 ## Accounts to open
 
@@ -23,9 +24,10 @@ Last updated: 2026-10-19 (production hardening done)
 |---|---|---|
 | **Paystack** (business) | Open the account, get test keys, then ask Paystack what approval/KYC **Dedicated Virtual Accounts** need for a platform with subaccounts (PLAN.md §3.2). Send me the answer. | Per-student account numbers on real money |
 | **Flutterwave** | Optional second gateway. Permanent virtual accounts need each customer's BVN, so we use it for card payments only unless they offer another route. | Card payments via Flutterwave |
-| **Meta WhatsApp Business** | Create a WhatsApp Business account and phone number in Meta Business Manager, a permanent access token, and submit the three message templates in `docs/DEPLOYMENT.md` ("Messages to parents") for approval. | WhatsApp receipts and reminders (SMS is used until then) |
+| **Meta WhatsApp Business** | _(new)_ You plan to use **Zoho** for WhatsApp: Zoho Voice can send WhatsApp messages (approved templates) for you, but **not WhatsApp calls**, and Meta reportedly doesn't allow business-started WhatsApp calls in Nigeria. Either way: create a WhatsApp Business account and phone number in Meta Business Manager, a permanent access token, and submit the three message templates in `docs/DEPLOYMENT.md` ("Messages to parents") for approval. | WhatsApp receipts and reminders (SMS is used until then) |
 | **Termii** (SMS) | Open an account, register a sender ID (up to 11 characters, e.g. the product name), and enable the DND route. | Parent sign-in codes and SMS messages on a live system |
-| **Email sending** | Pick a provider (e.g. Postmark, Amazon SES, Zoho) and a sending domain. | Staff invites and password resets on a live system |
+| **Email sending** | _(new)_ **Zoho Mail chosen** (2026-10-19). Create the mailbox on your domain, then set `EMAIL_BACKEND=smtp`, `SMTP_HOST=smtp.zoho.com` (or `smtppro.zoho.com` for a paid domain plan), `SMTP_PORT=587`, `SMTP_USERNAME`, `SMTP_PASSWORD` (an app password) and `EMAIL_FROM`. Nothing to build. | Staff invites and password resets on a live system |
+| _(new)_ **Voice calls** | You plan to use **Zoho Voice**: confirm with Zoho that it can place ordinary phone calls to Nigerian numbers from its API, and the price per minute. If not, Termii voice or Africa's Talking. Decide which languages to offer (English plus Pidgin, Yoruba, Hausa, Igbo?) and whether recorded voices or text-to-speech. | Voice call reminders |
 | _(new)_ **Platform bank account** | A business account for SchoolPay itself (not a school's). Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` so subscription invoices tell schools where to pay. | Schools paying their subscription |
 | _(new)_ **Backups** | Off-site storage (any S3-compatible bucket or similar) and an [age](https://age-encryption.org) key pair. The private key and the `FIELD_ENCRYPTION_KEYS` are kept by you, off the server, apart from each other. See `docs/DEPLOYMENT.md` → Backups. | Recovering from a lost server |
 | _(new)_ **Error monitoring** (optional) | A Sentry project; set `SENTRY_DSN`. | Hearing about errors before schools do |

@@ -18,7 +18,7 @@ test('school admin signs in, sees staff, and the session survives a reload', asy
   await page.reload(); // access token is in memory only; the refresh cookie restores the session
   await expect(page.getByRole('heading', { name: 'Staff' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in to SchoolPay' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to ParentPay' })).toBeVisible();
 });
 
 test('proprietor passes two-factor sign-in and invites a bursar', async ({ page }) => {

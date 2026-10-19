@@ -20,7 +20,7 @@ def send_code(to: str, code: str) -> None:
         Sms(
             to=decrypt(to),
             route="dnd",
-            text=f"{decrypt(code)} is your SchoolPay sign-in code. It expires in {minutes} minutes. "
+            text=f"{decrypt(code)} is your {get_settings().app_name} sign-in code. It expires in {minutes} minutes. "
             "Never share it, not even with school staff.",
         )
     )

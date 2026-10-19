@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 
 import { api, unwrap, type Schemas } from '../../api/client';
+import { BRAND } from '../../lib/brand';
 import { formatKobo, koboToInput, parseNairaToKobo } from '../../lib/format';
 import { ErrorAlert, Field, Loading, Modal, PageHeader, fieldError } from '../../lib/ui';
 
@@ -15,7 +16,7 @@ export function PlatformPlans() {
     <>
       <PageHeader
         title="Plans"
-        subtitle="The school pays; parents use SchoolPay free. Price changes apply to bills made afterwards."
+        subtitle={`The school pays; parents use ${BRAND} free. Price changes apply to bills made afterwards.`}
         actions={<button onClick={() => setEditing('new')}>New plan</button>}
       />
       {plans.isPending ? (

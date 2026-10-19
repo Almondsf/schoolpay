@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../auth/AuthContext';
+import { BRAND } from '../../lib/brand';
 import { ErrorAlert, Field } from '../../lib/ui';
 
 export function Login() {
@@ -45,7 +46,7 @@ export function Login() {
   return (
     <main className="auth-page">
       <form className="card auth-card" onSubmit={submit}>
-        <h1>{ticket ? 'Two-factor sign-in' : 'Sign in to SchoolPay'}</h1>
+        <h1>{ticket ? 'Two-factor sign-in' : `Sign in to ${BRAND}`}</h1>
         <ErrorAlert error={error} />
         {ticket ? (
           <>
