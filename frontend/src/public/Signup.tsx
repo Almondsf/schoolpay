@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../api/client';
+import { BRAND } from '../lib/brand';
 import { ErrorAlert, Field, fieldError } from '../lib/ui';
 
 /** A school signs itself up. The proprietor confirms by email, which opens the school's account. */
@@ -84,7 +85,7 @@ export function Signup() {
           {submit.isPending ? 'Sending…' : 'Sign up'}
         </button>
         <Link to="/console/login" className="link">
-          Already using SchoolPay? Sign in
+          Already using {BRAND}? Sign in
         </Link>
       </form>
     </main>

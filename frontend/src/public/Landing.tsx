@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../api/client';
+import { BRAND } from '../lib/brand';
 import { formatKobo } from '../lib/format';
 
 const STEPS = [
@@ -22,7 +23,7 @@ const FEATURES = [
 /** The public website: what SchoolPay does, how it's priced, and where to start. */
 export function Landing() {
   const info = useQuery({ queryKey: ['public-info'], queryFn: async () => unwrap(await api.GET('/api/v1/public/info')) });
-  const name = info.data?.app_name ?? 'SchoolPay';
+  const name = info.data?.app_name ?? BRAND;
   return (
     <div className="site">
       <header className="site-bar">
@@ -101,7 +102,7 @@ export function Landing() {
               <p>A one-off set-up fee, a yearly licence and a small fee per pupil each term.</p>
             )}
             <p className="muted small">
-              Parents&apos; payments go straight into the school&apos;s own bank account; SchoolPay never holds school money. Bank and card
+              Parents&apos; payments go straight into the school&apos;s own bank account; {name} never holds school money. Bank and card
               charges come off each payment.
             </p>
           </div>

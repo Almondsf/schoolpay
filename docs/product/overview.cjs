@@ -1,0 +1,270 @@
+// Builds "<BRAND> - what it does.docx": a plain-language overview of what's built and how it helps
+// schools and parents. Edit the content below when a feature ships, add a line to CHANGES, then run
+//   cd docs/product && npm install && npm run build
+const fs = require('fs');
+const path = require('path');
+const {
+  AlignmentType, BorderStyle, Document, Footer, Header, HeadingLevel, LevelFormat, PageNumber, Packer,
+  Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType,
+} = require('docx');
+
+const BRAND = 'ParentPay'; // the product's working name (APP_NAME)
+const UPDATED = '19 October 2026';
+const GREEN = '0F5132';
+const LIGHT = 'E8F3EE';
+
+// --- Content ------------------------------------------------------------------------------------
+
+const SUMMARY = [
+  `${BRAND} helps Nigerian private schools bill fees, collect them and know at any moment who has paid. ` +
+    'Every pupil gets their own bank account number, so a transfer into it is matched to that child and receipted automatically, ' +
+    'with no bursar matching bank narrations by hand.',
+  'Parents see all their children in one place on their phone, pay by transfer or card, get a receipt on WhatsApp or by text, ' +
+    'and are reminded politely before and after fees are due. Proprietors see billed, collected and owed at a glance.',
+  `The school’s money goes straight into the school’s own bank account; ${BRAND} never holds it. ` +
+    `Parents use ${BRAND} free; the school pays a set-up fee, a yearly licence and a small fee per pupil each term.`,
+];
+
+const AREAS = [
+  {
+    title: 'For the proprietor (school owner)',
+    rows: [
+      ['A live dashboard: billed, collected and still owed for the term, per class, with a progress bar each',
+        'Know where the money stands without asking the bursar or waiting for month-end'],
+      ['Money received per day and how parents paid (transfer, card, cash, teller, POS)',
+        'Spot slow weeks early and see which payment channels parents actually use'],
+      ['How late the debts are: not yet due, 1–30, 31–60, 61–90 and over 90 days',
+        'Focus follow-up on the oldest debts first'],
+      ['Every figure comes from the same records as invoices and receipts',
+        'Trust the numbers: they can’t drift from the books'],
+      ['Connect the school’s own bank account once (proprietor only)',
+        'Parents’ payments settle directly to the school; nobody in between holds the money'],
+      ['An activity log nobody can edit: every sign-in, payment, correction and change, with who and when',
+        'Accountability for staff, and evidence if something is ever disputed'],
+      ['Two-factor sign-in for proprietors and bursars',
+        'A stolen password alone can’t move money or see the books'],
+    ],
+  },
+  {
+    title: 'For the bursar',
+    rows: [
+      ['Set fees once per term in one grid per class, copy last term’s, mark items like the bus as optional',
+        'Term set-up takes minutes, not days'],
+      ['Sibling discounts applied automatically; scholarships and staff-child discounts given to chosen pupils',
+        'No more working out discounts by hand on every bill'],
+      ['Generate every pupil’s bill for the term in one click, after a preview; old debts carry forward',
+        'Bills go out on day one, correct and consistent'],
+      ['Each pupil has their own bank account number; transfers into it are matched and receipted within seconds',
+        'The biggest time-saver: no reconciling bank statements against names'],
+      ['Record cash, teller and POS payments, approved by a second person before they count',
+        'Cash is controlled; one person can’t record and approve their own entry'],
+      ['Payments clear the oldest debt first; overpayments are kept as credit and used on the next bill',
+        'Arrears are handled fairly and automatically'],
+      ['Numbered receipts with no gaps, as a PDF with a QR code anyone can scan to check it’s genuine',
+        'Fake or altered receipts are caught; missing receipt numbers can’t hide'],
+      ['Reverse a payment recorded in error (e.g. a bounced teller) without deleting anything',
+        'Mistakes are fixed openly, with a trail'],
+      ['Correct a bill by adding a line (lines are never edited), void a bill issued by mistake, record old debts',
+        'The full history of every bill is always visible'],
+      ['Debtors list: who owes, how much, how late, the parent’s phone (tap to call), reminders sent; download for Excel or PDF',
+        'Follow-up calls start from an up-to-date list'],
+      ['Add a fee to some classes after the bills have gone out (WAEC, NECO, JAMB, an end-of-year party), ticking off pupils not taking part',
+        'Mid-term fees reach the right pupils in one step, without editing bills one by one'],
+      ['Exempt a pupil from a class fee; it comes off their bill and stays off',
+        'Pupils who aren’t taking part are never charged by mistake'],
+      ['A price list for uniforms, textbooks and other extras; add them to one pupil’s bill with a quantity',
+        'Individual purchases are billed and tracked like everything else'],
+      ['Agree with a parent to pay a bill in instalments (2 to 12 dated amounts)',
+        'Parents who keep to a plan aren’t chased; reminders ask for the next instalment, not the whole bill'],
+      ['Automatic polite reminders before and after the due date by WhatsApp, then text, then email',
+        'Fewer awkward phone calls; parents are reminded consistently, never at night'],
+      ['Write the messages in the school’s own words, with a preview; send one parent a reminder on demand',
+        'Messages sound like the school, not a robot'],
+    ],
+  },
+  {
+    title: 'For the school admin',
+    rows: [
+      ['Load all pupils and their parents from the school’s existing Excel or CSV list, see every problem by row before saving',
+        'Getting started takes an afternoon, not weeks of typing'],
+      ['Set up the school year, terms, classes and arms; move everyone into the next term or promote them at the end of the year',
+        'The calendar and classes stay right year after year'],
+      ['Brothers and sisters share one parent record; record which parent gets fee messages',
+        'Parents see all their children together; no duplicate messages'],
+      ['A getting-started checklist on the dashboard for new schools',
+        'Nobody has to guess what to set up next'],
+      ['Give a parent a copy of their data, and erase a former pupil’s or parent’s details when asked',
+        'The school meets its duties under the Nigeria Data Protection Act without spreadsheets'],
+    ],
+  },
+  {
+    title: 'For parents',
+    rows: [
+      ['Sign in with the phone number the school has on record and a one-time code; no password',
+        'Nothing to forget, and nothing to reset'],
+      ['All their children at the school on one screen: what’s owed, credit, and each child’s account number',
+        'One place for every child, with a copy button for the account number'],
+      ['Pay by bank transfer to the child’s own account number, or by card',
+        'Pay the way that suits them; the payment finds the right child automatically'],
+      ['See every bill with its items, every payment, and download receipts any time',
+        'No more asking the bursary for a receipt or a breakdown'],
+      ['A receipt by WhatsApp or text as soon as a payment arrives; a message when a new bill is ready',
+        'Peace of mind that the payment was received'],
+      ['See an instalment plan, what’s paid against it and what’s next',
+        'Clarity on what’s due and when'],
+      ['Turn off bill messages and reminders (receipts still come); download all their data',
+        'Parents stay in control of their messages and information'],
+      ['Works comfortably on a phone; free for parents',
+        'No app to install and no extra charges'],
+    ],
+  },
+  {
+    title: 'Money safety and trust',
+    rows: [
+      [`${BRAND} never holds school money: payments settle to the school’s account through the payment company`,
+        'No risk of the platform holding or delaying a school’s funds'],
+      ['Payments, receipts and the activity log can’t be edited or deleted, by anyone, even in the database',
+        'The books can’t be quietly changed'],
+      ['Every school’s data is kept apart; staff of one school can never see another’s',
+        'Schools can trust a shared platform with their records'],
+      ['Encrypted backups kept off the server; regular test restores',
+        'A lost server doesn’t mean lost records'],
+    ],
+  },
+  {
+    title: 'Children’s data (NDPA 2023)',
+    rows: [
+      ['Only what fee collection needs is collected; parents’ phones and emails are encrypted',
+        'Less data held means less to lose'],
+      ['Parents’ consent recorded; a plain-language privacy notice on the website',
+        'The school can show how it handles children’s data'],
+      ['Old message texts deleted after a year; pupils who left over six years ago are anonymised automatically',
+        'Data isn’t kept longer than needed'],
+      ['Error reports and logs never contain codes, tokens, BVNs or full account numbers',
+        'Sensitive details don’t leak through technical systems'],
+    ],
+  },
+  {
+    title: `For ${BRAND} itself (the platform)`,
+    rows: [
+      ['Schools sign themselves up on the website; the proprietor confirms by email',
+        'New schools can start without a sales call'],
+      ['Platform overview: active schools, new sign-ups, pupils, money processed, subscription income owed',
+        'Run the business from one screen'],
+      ['Bill every school for the term in one click; record their payments; PDF invoices emailed to proprietors',
+        'Subscription income is collected without spreadsheets'],
+      ['Support lookup by school, staff email, payment reference, account number or receipt (children shown as initials only)',
+        'Answer "I paid but it isn’t showing" calls quickly, without exposing children’s details'],
+    ],
+  },
+];
+
+const PRICING = [
+  ['Set-up fee', 'Once, when the school joins'],
+  ['Licence', 'Once per school year'],
+  ['Per pupil', 'A third of the yearly fee each term, for the pupils enrolled that term'],
+  ['Parents', 'Free. Card and bank charges come off each payment.'],
+];
+
+const COMING = [
+  'A payment link a parent keeps and opens any time for all their children, with no sign-in',
+  'Voice call reminders: an automated call reading the reminder aloud, in English or a local language, for parents who don’t read messages',
+  'Going live needs your accounts: Paystack approval for pupil account numbers, WhatsApp Business and Termii for messages (see OWNER_TODO.md)',
+];
+
+// Newest first. Add a line whenever something ships.
+const CHANGES = [
+  ['19 Oct 2026', 'Fees added to classes mid-term, pupil exemptions, and a price list for uniforms and books'],
+  ['19 Oct 2026', 'Payment plans: bills can be paid in instalments; lateness and reminders follow the plan'],
+  ['19 Oct 2026', 'Data protection tools, error monitoring, encrypted backups, public website and privacy notice'],
+  ['18 Oct 2026', 'School sign-up, subscription billing and the platform console'],
+  ['18 Oct 2026', 'Dashboard and reports: debtors, money received, Excel and PDF downloads'],
+  ['18 Oct 2026', 'Messages to parents: receipts, bill notices and reminders by WhatsApp, text and email'],
+  ['18 Oct 2026', 'Parent portal with phone sign-in'],
+  ['18 Oct 2026', 'Receipts with QR verification'],
+  ['18 Oct 2026', 'Payments: pupil account numbers, card payments, cash and teller with approval'],
+  ['17 Oct 2026', 'Fees and one-click termly billing'],
+  ['17 Oct 2026', 'School set-up, pupils and parents, spreadsheet import'],
+  ['17 Oct 2026', 'Sign-in, roles, two-factor sign-in and the activity log'],
+];
+
+// --- Layout -------------------------------------------------------------------------------------
+
+const PAGE_WIDTH = 11906; // A4
+const MARGIN = 1134; // 2 cm
+const CONTENT = PAGE_WIDTH - 2 * MARGIN;
+const border = { style: BorderStyle.SINGLE, size: 4, color: 'D0D7D3' };
+const borders = { top: border, bottom: border, left: border, right: border };
+
+function cell(text, width, { header = false, shade } = {}) {
+  return new TableCell({
+    borders,
+    width: { size: width, type: WidthType.DXA },
+    shading: header ? { fill: GREEN, type: ShadingType.CLEAR, color: 'auto' } : shade ? { fill: shade, type: ShadingType.CLEAR, color: 'auto' } : undefined,
+    margins: { top: 80, bottom: 80, left: 120, right: 120 },
+    children: [new Paragraph({ children: [new TextRun({ text, bold: header, color: header ? 'FFFFFF' : undefined, size: 20 })] })],
+  });
+}
+
+function table(headers, rows, widths) {
+  return new Table({
+    width: { size: CONTENT, type: WidthType.DXA },
+    columnWidths: widths,
+    rows: [
+      new TableRow({ tableHeader: true, children: headers.map((h, i) => cell(h, widths[i], { header: true })) }),
+      ...rows.map((r, n) => new TableRow({ children: r.map((t, i) => cell(t, widths[i], { shade: n % 2 ? 'F6F8F7' : undefined })) })),
+    ],
+  });
+}
+
+const p = (text, opts = {}) => new Paragraph({ spacing: { after: 120 }, ...opts, children: [new TextRun({ text, size: 22, ...(opts.run || {}) })] });
+const h1 = (text) => new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 360, after: 160 }, children: [new TextRun(text)] });
+const bullet = (text) => new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { after: 80 }, children: [new TextRun({ text, size: 22 })] });
+
+const children = [
+  new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: BRAND, bold: true, size: 48, color: GREEN })] }),
+  new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: 'What it does for schools and parents', size: 32 })] }),
+  new Paragraph({
+    spacing: { after: 240 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: GREEN, space: 6 } },
+    children: [new TextRun({ text: `Updated ${UPDATED}. Everything listed here is built and tested unless it’s under “Coming next”.`, size: 20, color: '5F6B73' })],
+  }),
+  h1('In one minute'),
+  ...SUMMARY.map((t) => p(t)),
+  ...AREAS.flatMap((area) => [h1(area.title), table(['What it does', 'How it helps'], area.rows, [5400, CONTENT - 5400])]),
+  h1('Pricing'),
+  p('Modelled on ParentPay in the UK: the school pays, parents use it free. Prices are set in the platform console.'),
+  table(['Charge', 'When'], PRICING, [2600, CONTENT - 2600]),
+  h1('Coming next'),
+  ...COMING.map(bullet),
+  h1('What’s new'),
+  table(['Date', 'Added'], CHANGES, [1800, CONTENT - 1800]),
+];
+
+const doc = new Document({
+  creator: 'Oluwafemi Oloyede',
+  title: `${BRAND}: what it does`,
+  styles: {
+    default: { document: { run: { font: 'Arial', size: 22 } } },
+    paragraphStyles: [
+      { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+        run: { size: 30, bold: true, font: 'Arial', color: GREEN }, paragraph: { spacing: { before: 360, after: 160 }, outlineLevel: 0 } },
+    ],
+  },
+  numbering: {
+    config: [{ reference: 'bullets', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT,
+      style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] }],
+  },
+  sections: [{
+    properties: { page: { size: { width: PAGE_WIDTH, height: 16838 }, margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN } } },
+    headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${BRAND} · what it does`, size: 16, color: '5F6B73' })] })] }) },
+    footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: ['Page ', PageNumber.CURRENT], size: 16, color: '5F6B73' })] })] }) },
+    children,
+  }],
+});
+
+const out = path.join(__dirname, `${BRAND} - what it does.docx`);
+Packer.toBuffer(doc).then((buffer) => {
+  fs.writeFileSync(out, buffer);
+  console.log(`Written: ${out}`);
+});

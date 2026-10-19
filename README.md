@@ -1,4 +1,9 @@
-# SchoolPay (working name)
+# ParentPay (working name)
+
+> The product is called **ParentPay** for now (owner, 2026-10-19). The name is one setting: `APP_NAME` for the
+> backend (texts, emails, receipts, the authenticator app) and `VITE_APP_NAME` for the web app. The code and
+> repository still use the codename `schoolpay`. ParentPay is also a UK company's brand, so check the trademark
+> before launching publicly under it.
 
 School fee collection and parent communication for Nigerian private schools.
 Each student gets their own bank account number. When a parent transfers

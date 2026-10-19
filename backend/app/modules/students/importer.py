@@ -671,7 +671,7 @@ def template_workbook(levels: list[ClassLevel]) -> bytes:
     for line in (
         "One row per student. Delete the example row before importing.",
         "Required: Admission Number, Surname, First Name, Class.",
-        "Class and Arm must match the classes set up in SchoolPay (e.g. Class 'JSS 1', Arm 'A'),",
+        "Class and Arm must match the classes set up in the console (e.g. Class 'JSS 1', Arm 'A'),",
         "or put both in the Class column, e.g. 'JSS 1A'.",
         "Gender: Male or Female. Date of Birth: DD/MM/YYYY. Both are optional.",
         "Phone numbers can be written as 0803..., 234803... or +234803....",

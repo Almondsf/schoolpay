@@ -13,6 +13,8 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.core.config import get_settings
+
 from .models import Receipt
 from .service import verification_url
 from .words import naira_in_words
@@ -134,7 +136,11 @@ def render_receipt(receipt: Receipt, *, reversed_: bool = False) -> bytes:
     story += [
         verify,
         Spacer(1, 6 * mm),
-        Paragraph("Issued electronically by SchoolPay on behalf of the school. No signature is required.", small),
+        Paragraph(
+            f"Issued electronically by {escape(get_settings().app_name)} on behalf of the school. "
+            "No signature is required.",
+            small,
+        ),
     ]
     doc.build(story)
     return buffer.getvalue()

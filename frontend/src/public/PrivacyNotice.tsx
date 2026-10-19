@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../api/client';
+import { BRAND } from '../lib/brand';
 
 /**
  * Plain-language privacy notice for parents and schools (NDPA 2023). It describes
@@ -9,7 +10,7 @@ import { api, unwrap } from '../api/client';
  */
 export function PrivacyNotice() {
   const info = useQuery({ queryKey: ['public-info'], queryFn: async () => unwrap(await api.GET('/api/v1/public/info')) });
-  const name = info.data?.app_name ?? 'SchoolPay';
+  const name = info.data?.app_name ?? BRAND;
   const contact = info.data?.support_email;
   return (
     <div className="site">

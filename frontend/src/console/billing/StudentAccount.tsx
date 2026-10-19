@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { BRAND } from '../../lib/brand';
 import { INVOICE_KIND_LABELS, formatKobo, koboToInput, parseNairaToKobo } from '../../lib/format';
 import { ErrorAlert, Field, Loading, Modal, StatusBadge, fieldError } from '../../lib/ui';
 import { describeDiscount } from '../fees/FeeSetup';
@@ -154,7 +155,7 @@ function NewInvoice({ studentId, kind, onClose }: { studentId: string; kind: 'op
       >
         <p className="muted">
           {kind === 'opening_balance'
-            ? 'What the student already owed before the school started using SchoolPay. Payments clear the oldest debts first.'
+            ? `What the student already owed before the school started using ${BRAND}. Payments clear the oldest debts first.`
             : 'A charge outside the term fees, e.g. an excursion or a replacement ID card.'}
         </p>
         <ErrorAlert error={save.error} />

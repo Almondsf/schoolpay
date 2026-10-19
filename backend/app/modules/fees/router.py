@@ -618,7 +618,7 @@ def list_invoices(
     "/invoices",
     response_model=InvoiceOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Record an opening balance (debt from before SchoolPay) or a one-off charge",
+    summary="Record an opening balance (debt from before joining) or a one-off charge",
 )
 def create_invoice(body: NewInvoiceIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)) -> InvoiceOut:
     invoice = invoicing.create_invoice(

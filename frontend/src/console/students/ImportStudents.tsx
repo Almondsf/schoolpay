@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
+import { BRAND } from '../../lib/brand';
 import { ErrorAlert, Field, Notice, PageHeader } from '../../lib/ui';
 
 type Report = Schemas['ImportReportOut'];
@@ -111,7 +112,7 @@ export function ImportStudents() {
           <Field label="Spreadsheet">
             <input type="file" accept=".xlsx,.csv" onChange={choose} />
           </Field>
-          <Field label="Students already in SchoolPay (same admission number)">
+          <Field label={`Students already in ${BRAND} (same admission number)`}>
             <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
               <option value="skip">Leave them as they are</option>
               <option value="update">Update their names, class and parents from the file</option>

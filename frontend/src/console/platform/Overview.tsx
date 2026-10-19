@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../../api/client';
+import { BRAND } from '../../lib/brand';
 import { formatKobo } from '../../lib/format';
 import { ErrorAlert, Loading, PageHeader } from '../../lib/ui';
 
@@ -17,7 +18,7 @@ export function PlatformOverview() {
   const o = overview.data;
   return (
     <>
-      <PageHeader title="Platform overview" subtitle="Every school on SchoolPay" />
+      <PageHeader title="Platform overview" subtitle={`Every school on ${BRAND}`} />
       <h2 className="section-title">Schools</h2>
       <div className="stats">
         <Card label="Active schools" value={String(o.schools_active)} note={<Link to="/console/platform/schools">See all schools</Link>} />
@@ -30,7 +31,7 @@ export function PlatformOverview() {
         <Card label="New sign-ups" value={String(o.signups_30_days)} note="In the last 30 days" />
         <Card label="Pupils" value={o.pupils.toLocaleString('en-NG')} note="Enrolled this term at active schools" />
       </div>
-      <h2 className="section-title">Money parents paid schools through SchoolPay</h2>
+      <h2 className="section-title">Money parents paid schools through {BRAND}</h2>
       <div className="stats">
         <Card label="This month" value={formatKobo(o.processed_this_month_kobo)} note={`${o.payments_this_month} payments`} />
         <Card label="Last month" value={formatKobo(o.processed_last_month_kobo)} />

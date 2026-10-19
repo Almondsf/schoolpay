@@ -42,7 +42,8 @@ class Settings(BaseSettings):
 
     environment: Environment = "production"
     debug: bool = False
-    app_name: str = "SchoolPay"
+    # The product name parents and staff see (texts, emails, receipts, the authenticator app)
+    app_name: str = "ParentPay"
 
     # Signing key for JWTs and other short-lived tokens. Rotate by deploying a new value
     # (all sessions end). Never reuse it as the field-encryption key.
@@ -71,7 +72,7 @@ class Settings(BaseSettings):
 
     access_token_minutes: int = Field(default=15, ge=1, le=60)
     refresh_token_days: int = Field(default=14, ge=1, le=90)
-    mfa_issuer: str = "SchoolPay"
+    mfa_issuer: str = "ParentPay"
     # Proprietors and bursars must enrol in two-factor sign-in before doing anything else
     enforce_mfa: bool = True
 
@@ -82,7 +83,7 @@ class Settings(BaseSettings):
 
     # Outgoing email: console (log only), memory (tests) or smtp
     email_backend: Literal["console", "memory", "smtp"] = "console"
-    email_from: str = "SchoolPay <no-reply@schoolpay.ng>"
+    email_from: str = "ParentPay <no-reply@example.com>"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
@@ -126,8 +127,8 @@ class Settings(BaseSettings):
     # Text messages (parent sign-in codes; reminders come later): console (log only), memory (tests) or termii
     sms_backend: Literal["console", "memory", "termii"] = "console"
     termii_api_key: str = ""
-    # Registered Termii sender ID (up to 11 characters), e.g. "SchoolPay"
-    termii_sender_id: str = "SchoolPay"
+    # Registered Termii sender ID (up to 11 characters), e.g. "ParentPay"
+    termii_sender_id: str = "ParentPay"
     # WhatsApp (Meta Cloud API): off | console (log only) | memory (tests) | cloud
     whatsapp_backend: Literal["off", "console", "memory", "cloud"] = "off"
     whatsapp_token: str = ""

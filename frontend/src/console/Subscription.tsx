@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { api, unwrap, type Schemas } from '../api/client';
+import { BRAND } from '../lib/brand';
 import { saveBlob } from '../lib/download';
 import { formatDate, formatKobo } from '../lib/format';
 import { Empty, ErrorAlert, Loading, PageHeader } from '../lib/ui';
@@ -26,7 +27,7 @@ export function Subscription() {
   const owed = sub.data.invoices.reduce((sum, i) => sum + i.balance_kobo, 0);
   return (
     <>
-      <PageHeader title="Subscription" subtitle="What your school pays for SchoolPay. Parents never pay anything extra." />
+      <PageHeader title="Subscription" subtitle={`What your school pays for ${BRAND}. Parents never pay anything extra.`} />
       <div className="grid-2">
         <section className="card" aria-label="Your plan">
           <h2>{plan.name} plan</h2>

@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
 import { useAuth, type Capability } from '../auth/AuthContext';
+import { BRAND } from '../lib/brand';
 import { ROLE_LABELS } from '../lib/format';
 import { Loading } from '../lib/ui';
 import { Account } from './Account';
@@ -136,7 +137,7 @@ function Layout() {
     <div className="console">
       <header className="topbar">
         <div className="brand">
-          SchoolPay
+          {BRAND}
           {user.school && <span className="school-name">{user.school.name}</span>}
         </div>
         <nav aria-label="Main">
