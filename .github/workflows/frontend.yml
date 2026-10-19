@@ -5,6 +5,7 @@ on:
     paths: ["frontend/**", "backend/app/**", ".github/workflows/frontend.yml"]
   pull_request:
     paths: ["frontend/**", "backend/app/**", ".github/workflows/frontend.yml"]
+  workflow_dispatch:
 
 permissions:
   contents: read

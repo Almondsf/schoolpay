@@ -100,7 +100,8 @@ cd backend && uv run python -m app.openapi > ../frontend/openapi.json
 cd ../frontend && npm run gen:api       # regenerates src/api/schema.d.ts
 ```
 
-CI fails if either file is stale.
+CI fails if either file is stale. Each workflow only runs when its own paths change; both can also be started by hand
+from the Actions tab (or `gh workflow run Backend --ref <branch>`).
 
 ### Dependencies
 

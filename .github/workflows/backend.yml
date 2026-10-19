@@ -1,10 +1,12 @@
 name: Backend
 
 on:
+  # frontend/openapi.json too: the job checks the generated API types match the backend
   push:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "frontend/openapi.json", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "frontend/openapi.json", ".github/workflows/backend.yml"]
+  workflow_dispatch:
 
 permissions:
   contents: read
