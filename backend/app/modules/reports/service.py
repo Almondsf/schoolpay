@@ -576,7 +576,7 @@ def collected_payments(session: Session, start: date, end: date) -> list[Collect
         .outerjoin(ClassLevel, ClassLevel.id == placement.c.class_level_id)
         .outerjoin(Arm, Arm.id == placement.c.arm_id)
         .where(day >= start, day <= end)
-        .order_by(Payment.received_at, Payment.created_at)
+        .order_by(Payment.received_at, Receipt.number.nulls_last(), Payment.created_at, Payment.id)
         .limit(EXPORT_ROW_LIMIT + 1)
     ).all()
     if len(rows) > EXPORT_ROW_LIMIT:
