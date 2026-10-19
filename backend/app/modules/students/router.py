@@ -17,7 +17,7 @@ from app.modules.accounts.permissions import Capability
 from app.modules.schools.academics_service import list_class_levels, require_current_term
 from app.modules.schools.models import Term
 
-from . import importer, promotion, service
+from . import importer, promotion, service, summary
 from .models import Gender, Relationship, Student, StudentStatus
 
 router = APIRouter(tags=["students"], responses=ERROR_RESPONSES)
@@ -259,7 +259,45 @@ def _detail_out(detail: service.StudentDetail) -> StudentDetailOut:
     )
 
 
+class ArmCountOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    arm_id: uuid.UUID
+    arm_name: str
+    pupils: int
+
+
+class ClassCountOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    class_level_id: uuid.UUID
+    class_name: str
+    pupils: int
+    boys: int
+    girls: int
+    arms: list[ArmCountOut]
+
+
+class RollSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    term_id: uuid.UUID | None = Field(description="The current term; null until one is set")
+    term_label: str | None
+    on_roll: int = Field(description="Pupils currently at the school")
+    placed: int = Field(description="Pupils on roll with a class this term")
+    unplaced: int = Field(description="Pupils on roll with no class this term")
+    joined_this_term: int = Field(description="Pupils whose first class is this term's")
+    left_this_term: int = Field(description="Pupils who withdrew or graduated since the term started")
+    no_parent: int = Field(description="Pupils on roll with no parent or guardian recorded")
+    no_consent: int = Field(description="Pupils on roll with no parent whose consent is recorded")
+    no_account_number: int = Field(description="Pupils on roll without an active bank account number")
+    parents: int = Field(description="Parents and guardians of pupils on roll")
+    by_class: list[ClassCountOut] = Field(description="This term's pupils per class and arm, in promotion order")
+
+
 # --- Students --------------------------------------------------------------------------------------
+
+
+@router.get("/school/roll", response_model=RollSummaryOut, summary="The school's pupils at a glance (no money)")
+def roll_summary(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> summary.RollSummary:
+    return summary.roll_summary(db)
 
 
 @router.get("/students", response_model=Page[StudentListItem], summary="Students with their class for a term")
@@ -273,6 +311,7 @@ def list_students(
     arm_id: uuid.UUID | None = None,
     status_filter: StudentStatus | None = Query(default=StudentStatus.ACTIVE, alias="status"),
     unplaced: bool = Query(default=False, description="Only students with no class this term"),
+    missing: service.Missing | None = Query(default=None, description="Only students missing this record"),
 ) -> Page[StudentListItem]:
     term = get_or_404(db, Term, term_id, label="Term") if term_id else require_current_term(db)
     rows, total = service.list_students(
@@ -285,6 +324,7 @@ def list_students(
         arm_id=arm_id,
         status=status_filter,
         unplaced_only=unplaced,
+        missing=missing,
     )
     items = [
         StudentListItem(

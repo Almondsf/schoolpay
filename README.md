@@ -49,7 +49,7 @@ API docs: http://localhost:8002/api/docs (not served in production).
 Demo data and the first admin:
 
 ```bash
-uv run python -m app.cli seed-demo        # "Demo Model College" mid-term: 240 students, bills, payments, receipts, messages; password demo-password-123
+uv run python -m app.cli seed-demo        # "Demo Model College" mid-term: 240 billed students (plus a few loose ends), bills, payments, receipts, messages; password demo-password-123
 uv run python -m app.cli seed-demo --bare # the small version: 60 students, fees set, no bills yet (what the browser tests use)
 uv run python -m app.cli create-platform-admin --email you@example.com --name "Your Name"   # prints a set-password link
 ```

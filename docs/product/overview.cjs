@@ -93,6 +93,8 @@ const AREAS = [
         'Parents see all their children together; no duplicate messages'],
       ['A getting-started checklist on the dashboard for new schools',
         'Nobody has to guess what to set up next'],
+      ['The school at a glance when they sign in: pupils on roll, who joined or left this term, pupils per class and arm, and which pupils still need a class, a parent, consent or an account number (one click shows who)',
+        'Gaps are fixed before bills go out, without the admin seeing any money figures'],
       ['Give a parent a copy of their data, and erase a former pupil’s or parent’s details when asked',
         'The school meets its duties under the Nigeria Data Protection Act without spreadsheets'],
     ],
@@ -174,6 +176,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['19 Oct 2026', 'School at a glance for school admins: pupils, classes and records that need attention'],
   ['19 Oct 2026', 'Fees added to classes mid-term, pupil exemptions, and a price list for uniforms and books'],
   ['19 Oct 2026', 'Payment plans: bills can be paid in instalments; lateness and reminders follow the plan'],
   ['19 Oct 2026', 'Data protection tools, error monitoring, encrypted backups, public website and privacy notice'],

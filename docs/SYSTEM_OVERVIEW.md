@@ -255,6 +255,18 @@ rank, into the arm with the same name (or the only arm). Students in the top
 level graduate, and anyone who can't be placed is listed. Already-enrolled
 students are left alone, so it's safe to re-run. `dry_run` previews it.
 
+**The school at a glance** (`students/summary.py`, `GET /school/roll`,
+`students.view`). The dashboard for staff who don't see money (school admins):
+pupils on roll, placed this term, joined this term (first class is this
+term's), left since the term started, parents, pupils per class and arm (with
+boys/girls) in promotion order, and **records needing attention**: pupils with
+no class this term, no parent, no parent whose consent is recorded, or no
+active account number. Always three queries. The "missing" conditions live in
+one place (`students.service.lacks`) and also filter the list:
+`GET /students?missing=parent|consent|account_number` (and `unplaced=true`),
+so each count on the dashboard links to exactly those pupils
+(`/console/students?show=…`, `?class=…`).
+
 ## 9. Fees and invoices
 
 Module: `app/modules/fees`. All amounts are **integer kobo** (`BigInteger`);
@@ -564,7 +576,8 @@ text.
 
 Module: `app/modules/reports`. Console: the **Overview** page (the dashboard)
 and **Reports** (debtors, money received). Capability `reports.view`
-(proprietor and bursar).
+(proprietor and bursar). Staff without it see the school at a glance instead
+(§8), never money.
 
 **Where the numbers come from.** Every figure is built from the ledger: the
 invoice lines (`fees.invoicing.totals_subquery`) and payment allocations
@@ -844,7 +857,7 @@ production.
 | Platform | `GET/POST /platform/schools`; `POST /platform/schools/{id}/suspend`, `/reactivate`; `GET /platform/audit` |
 | Calendar | `GET/POST /academic-sessions`; `PATCH /academic-sessions/{id}`; `GET /terms/current`; `PATCH /terms/{id}`; `POST /terms/{id}/make-current` |
 | Classes | `GET/POST /class-levels`; `PUT /class-levels/order`; `PATCH /class-levels/{id}`; `POST /class-levels/{id}/arms`; `PATCH /arms/{id}` |
-| Students | `GET/POST /students`; `GET/PATCH /students/{id}`; `PUT /students/{id}/class`; `POST /students/{id}/withdraw`, `/reinstate` |
+| Students | `GET /school/roll`; `GET/POST /students` (`missing=`, `unplaced=`); `GET/PATCH /students/{id}`; `PUT /students/{id}/class`; `POST /students/{id}/withdraw`, `/reinstate` |
 | Guardians | `POST /students/{id}/guardians`; `DELETE /students/{id}/guardians/{gid}`; `POST /students/{id}/guardians/{gid}/primary`; `GET /guardians`; `PATCH /guardians/{id}` |
 | Import | `GET /students/import-template`; `POST /students/import` (multipart) |
 | Promotion | `POST /terms/{id}/roll-forward` |
@@ -911,7 +924,8 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   recent payments). Receipt numbers on payments download the PDF.
   **Overview** (the dashboard: term figures, a progress bar per class, money
   received per day as a plain SVG chart, payment methods, how late the debts
-  are; a term picker) and **Reports** (debtors with filters, phone links and
+  are; a term picker; school admins get pupils, classes and a "Needs attention"
+  list instead) and **Reports** (debtors with filters, phone links and
   paging; money received over a date range; Excel and PDF downloads through
   `src/lib/download.ts`). Money queries are re-read every time the page is
   shown (`staleTime: 0`), so the figures are never 30 seconds stale.
@@ -972,7 +986,10 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   families (siblings share a parent, ages match their class), and first-term
   fees (tuition by class, optional bus, levies, a sibling discount). On top
   of that, `app/demo_activity.py` makes the school "lived in": last session
-  and its carried-over debts, bus sign-ups, staff-child and scholarship
+  (returning pupils were in the class below; Primary 1, JSS 1 and a few
+  transfers are new) and its carried-over debts, a few loose ends for the
+  school admin's overview (new admissions without a parent, consent or account
+  number, two pupils not placed, one leaver), bus sign-ups, staff-child and scholarship
   discounts, the term's bills (due 30 September), about two months of
   payments by every method with numbered receipts, part-payers, non-payers and
   a little credit, a reversed teller, two entries awaiting approval, and the

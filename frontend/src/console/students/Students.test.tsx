@@ -61,6 +61,22 @@ describe('students', () => {
     expect(new URL(listCall.url).searchParams.get('term_id')).toBe('t1');
   });
 
+  it('opens filtered from the school overview links', async () => {
+    const calls = mockApi({ ...base, 'GET /api/v1/students': () => json({ items: [], total: 0, limit: 50, offset: 0 }) });
+    renderAt('/console/students?show=parent&class=l1');
+    expect(await screen.findByLabelText('Show')).toHaveValue('parent');
+    const query = new URL(calls.find((c) => c.url.includes('/api/v1/students?'))!.url).searchParams;
+    expect(query.get('missing')).toBe('parent');
+    expect(query.get('class_level_id')).toBe('l1');
+    expect(query.get('unplaced')).toBeNull();
+
+    await userEvent.selectOptions(screen.getByLabelText('Show'), 'unplaced');
+    await screen.findByLabelText('Show');
+    const last = new URL(calls.filter((c) => c.url.includes('/api/v1/students?')).at(-1)!.url).searchParams;
+    expect(last.get('unplaced')).toBe('true');
+    expect(last.get('missing')).toBeNull();
+  });
+
   it('previews an import with row problems, then imports', async () => {
     // jsdom's FormData/File can't pass through Node's Request, so stop at the client boundary and
     // check the exact multipart form the page builds

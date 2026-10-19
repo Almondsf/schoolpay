@@ -6,11 +6,12 @@ bodies (arm, term, guardian) are loaded through that scope too, so another
 school's IDs are simply "not found".
 """
 
+import enum
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Select, and_, func, or_, select, update
+from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
@@ -21,6 +22,7 @@ from app.core.repo import get_or_404
 from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import changed_fields, record
+from app.modules.payments.models import VirtualAccount, VirtualAccountStatus
 from app.modules.schools.academics_service import require_current_term
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, Term
 
@@ -81,6 +83,32 @@ def phone_lookup(raw: str, field_name: str = "phone") -> tuple[str, str]:
 # --- Listing ---------------------------------------------------------------------------------------
 
 
+class Missing(enum.StrEnum):
+    """Records a pupil should have but doesn't (the school-at-a-glance counts and the list filter)."""
+
+    PARENT = "parent"  # no parent or guardian at all
+    CONSENT = "consent"  # no parent whose consent is recorded
+    ACCOUNT_NUMBER = "account_number"  # no active bank account number
+
+
+def lacks(missing: Missing) -> ColumnElement[bool]:
+    """True for a student (correlated to `Student`) who is missing this record."""
+    match missing:
+        case Missing.PARENT:
+            has = exists().where(GuardianStudent.student_id == Student.id)
+        case Missing.CONSENT:
+            has = exists().where(
+                GuardianStudent.student_id == Student.id,
+                GuardianStudent.guardian_id == Guardian.id,
+                Guardian.consent_at.is_not(None),
+            )
+        case Missing.ACCOUNT_NUMBER:
+            has = exists().where(
+                VirtualAccount.student_id == Student.id, VirtualAccount.status == VirtualAccountStatus.ACTIVE
+            )
+    return ~has
+
+
 def students_query(
     term_id: uuid.UUID,
     *,
@@ -89,6 +117,7 @@ def students_query(
     arm_id: uuid.UUID | None = None,
     status: StudentStatus | None = StudentStatus.ACTIVE,
     unplaced_only: bool = False,
+    missing: Missing | None = None,
 ) -> Select[Student, uuid.UUID, str, uuid.UUID, str]:
     """Students with their class for `term_id`, in one query (no per-row lookups)."""
     stmt = (
@@ -106,6 +135,8 @@ def students_query(
         stmt = stmt.where(Enrollment.arm_id == arm_id)
     if unplaced_only:
         stmt = stmt.where(Enrollment.id.is_(None))
+    if missing:
+        stmt = stmt.where(lacks(missing))
     if search and search.strip():
         terms = [t for t in search.strip().split() if t][:4]
         for t in terms:

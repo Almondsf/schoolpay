@@ -313,6 +313,30 @@
         "title": "AppliedOut",
         "type": "object"
       },
+      "ArmCountOut": {
+        "properties": {
+          "arm_id": {
+            "format": "uuid",
+            "title": "Arm Id",
+            "type": "string"
+          },
+          "arm_name": {
+            "title": "Arm Name",
+            "type": "string"
+          },
+          "pupils": {
+            "title": "Pupils",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "arm_id",
+          "arm_name",
+          "pupils"
+        ],
+        "title": "ArmCountOut",
+        "type": "object"
+      },
       "ArmIn": {
         "properties": {
           "name": {
@@ -923,6 +947,48 @@
           "students"
         ],
         "title": "ClassChargeOut",
+        "type": "object"
+      },
+      "ClassCountOut": {
+        "properties": {
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/ArmCountOut"
+            },
+            "title": "Arms",
+            "type": "array"
+          },
+          "boys": {
+            "title": "Boys",
+            "type": "integer"
+          },
+          "class_level_id": {
+            "format": "uuid",
+            "title": "Class Level Id",
+            "type": "string"
+          },
+          "class_name": {
+            "title": "Class Name",
+            "type": "string"
+          },
+          "girls": {
+            "title": "Girls",
+            "type": "integer"
+          },
+          "pupils": {
+            "title": "Pupils",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "class_level_id",
+          "class_name",
+          "pupils",
+          "boys",
+          "girls",
+          "arms"
+        ],
+        "title": "ClassCountOut",
         "type": "object"
       },
       "ClassLevelIn": {
@@ -3370,6 +3436,16 @@
         "title": "MfaSetupOut",
         "type": "object"
       },
+      "Missing": {
+        "description": "Records a pupil should have but doesn't (the school-at-a-glance counts and the list filter).",
+        "enum": [
+          "parent",
+          "consent",
+          "account_number"
+        ],
+        "title": "Missing",
+        "type": "string"
+      },
       "NewInvoiceIn": {
         "properties": {
           "due_date": {
@@ -5460,6 +5536,103 @@
           "unplaced"
         ],
         "title": "RollForwardOut",
+        "type": "object"
+      },
+      "RollSummaryOut": {
+        "properties": {
+          "by_class": {
+            "description": "This term's pupils per class and arm, in promotion order",
+            "items": {
+              "$ref": "#/components/schemas/ClassCountOut"
+            },
+            "title": "By Class",
+            "type": "array"
+          },
+          "joined_this_term": {
+            "description": "Pupils whose first class is this term's",
+            "title": "Joined This Term",
+            "type": "integer"
+          },
+          "left_this_term": {
+            "description": "Pupils who withdrew or graduated since the term started",
+            "title": "Left This Term",
+            "type": "integer"
+          },
+          "no_account_number": {
+            "description": "Pupils on roll without an active bank account number",
+            "title": "No Account Number",
+            "type": "integer"
+          },
+          "no_consent": {
+            "description": "Pupils on roll with no parent whose consent is recorded",
+            "title": "No Consent",
+            "type": "integer"
+          },
+          "no_parent": {
+            "description": "Pupils on roll with no parent or guardian recorded",
+            "title": "No Parent",
+            "type": "integer"
+          },
+          "on_roll": {
+            "description": "Pupils currently at the school",
+            "title": "On Roll",
+            "type": "integer"
+          },
+          "parents": {
+            "description": "Parents and guardians of pupils on roll",
+            "title": "Parents",
+            "type": "integer"
+          },
+          "placed": {
+            "description": "Pupils on roll with a class this term",
+            "title": "Placed",
+            "type": "integer"
+          },
+          "term_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The current term; null until one is set",
+            "title": "Term Id"
+          },
+          "term_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term Label"
+          },
+          "unplaced": {
+            "description": "Pupils on roll with no class this term",
+            "title": "Unplaced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "term_id",
+          "term_label",
+          "on_roll",
+          "placed",
+          "unplaced",
+          "joined_this_term",
+          "left_this_term",
+          "no_parent",
+          "no_consent",
+          "no_account_number",
+          "parents",
+          "by_class"
+        ],
+        "title": "RollSummaryOut",
         "type": "object"
       },
       "ScheduleEntryIn": {
@@ -18885,6 +19058,102 @@
         ]
       }
     },
+    "/api/v1/school/roll": {
+      "get": {
+        "operationId": "students_roll_summary",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The school's pupils at a glance (no money)",
+        "tags": [
+          "students"
+        ]
+      }
+    },
     "/api/v1/staff": {
       "get": {
         "operationId": "staff_list_staff",
@@ -19761,6 +20030,24 @@
               "description": "Only students with no class this term",
               "title": "Unplaced",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Only students missing this record",
+            "in": "query",
+            "name": "missing",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Missing"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only students missing this record",
+              "title": "Missing"
             }
           },
           {

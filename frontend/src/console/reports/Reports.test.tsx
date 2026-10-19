@@ -122,6 +122,55 @@ describe('dashboard and reports', () => {
     expect(screen.getByRole('img', { name: 'Money received on 2 days' })).toBeInTheDocument();
   });
 
+  it("gives staff who don't see money the school at a glance instead", async () => {
+    const admin = me({ role: 'school_admin', capabilities: ['school.view', 'students.view'] });
+    const calls = mockApi({
+      'POST /api/v1/auth/refresh': () => json(signedIn(admin)),
+      'GET /api/v1/school/onboarding': () => json([]),
+      'GET /api/v1/school/roll': () =>
+        json({
+          term_id: 't1',
+          term_label: '2026/2027 First term',
+          on_roll: 240,
+          placed: 236,
+          unplaced: 4,
+          joined_this_term: 12,
+          left_this_term: 3,
+          no_parent: 2,
+          no_consent: 0,
+          no_account_number: 1,
+          parents: 180,
+          by_class: [
+            {
+              class_level_id: 'l1',
+              class_name: 'JSS 1',
+              pupils: 40,
+              boys: 21,
+              girls: 19,
+              arms: [
+                { arm_id: 'a1', arm_name: 'A', pupils: 20 },
+                { arm_id: 'a2', arm_name: 'B', pupils: 20 },
+              ],
+            },
+          ],
+        }),
+    });
+    renderConsole('/console');
+    expect(await screen.findByText('240')).toBeInTheDocument();
+    expect(screen.getByText('12 joined this term · 3 left')).toBeInTheDocument();
+    expect(screen.getByText('98% of pupils')).toBeInTheDocument();
+    const attention = screen.getByRole('region', { name: 'Needs attention' });
+    expect(within(attention).getByRole('link', { name: '4 pupils' })).toHaveAttribute('href', '/console/students?show=unplaced');
+    expect(within(attention).getByRole('link', { name: '2 pupils' })).toHaveAttribute('href', '/console/students?show=parent');
+    expect(within(attention).getByRole('link', { name: '1 pupil' })).toHaveAttribute('href', '/console/students?show=account_number');
+    expect(within(attention).queryByText(/consent/)).not.toBeInTheDocument(); // nothing to fix there
+    const byClass = screen.getByRole('region', { name: 'Pupils by class' });
+    expect(within(byClass).getByRole('link', { name: 'JSS 1' })).toHaveAttribute('href', '/console/students?class=l1');
+    expect(within(byClass).getByText('A: 20 · B: 20')).toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes('/reports/'))).toBe(false); // never asks for money figures
+    expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
+  });
+
   it('points to billing before the term has bills', async () => {
     mockApi({
       ...session,
@@ -130,13 +179,6 @@ describe('dashboard and reports', () => {
     });
     renderConsole('/console');
     expect(await screen.findByRole('link', { name: "Generate the term's bills" })).toBeInTheDocument();
-  });
-
-  it('staff without money access get a plain welcome', async () => {
-    mockApi({ 'POST /api/v1/auth/refresh': () => json(signedIn(me())) });
-    renderConsole('/console');
-    expect(await screen.findByText(/Use the menu to manage students/)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
   });
 
   it('lists debtors with filters and downloads the list', async () => {

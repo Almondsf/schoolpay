@@ -1563,6 +1563,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/school/roll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The school's pupils at a glance (no money) */
+        get: operations["students_roll_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff": {
         parameters: {
             query?: never;
@@ -2387,6 +2404,18 @@ export interface components {
             /** Invoice Number */
             invoice_number: number;
         };
+        /** ArmCountOut */
+        ArmCountOut: {
+            /**
+             * Arm Id
+             * Format: uuid
+             */
+            arm_id: string;
+            /** Arm Name */
+            arm_name: string;
+            /** Pupils */
+            pupils: number;
+        };
         /** ArmIn */
         ArmIn: {
             /** Name */
@@ -2631,6 +2660,24 @@ export interface components {
             students: components["schemas"]["ChargeStudentOut"][];
             /** Total Kobo */
             total_kobo: number;
+        };
+        /** ClassCountOut */
+        ClassCountOut: {
+            /** Arms */
+            arms: components["schemas"]["ArmCountOut"][];
+            /** Boys */
+            boys: number;
+            /**
+             * Class Level Id
+             * Format: uuid
+             */
+            class_level_id: string;
+            /** Class Name */
+            class_name: string;
+            /** Girls */
+            girls: number;
+            /** Pupils */
+            pupils: number;
         };
         /** ClassLevelIn */
         ClassLevelIn: {
@@ -3609,6 +3656,12 @@ export interface components {
             /** Secret */
             secret: string;
         };
+        /**
+         * Missing
+         * @description Records a pupil should have but doesn't (the school-at-a-glance counts and the list filter).
+         * @enum {string}
+         */
+        Missing: "parent" | "consent" | "account_number";
         /** NewInvoiceIn */
         NewInvoiceIn: {
             /** Due Date */
@@ -4438,6 +4491,66 @@ export interface components {
             promoted: number;
             /** Unplaced */
             unplaced: components["schemas"]["UnplacedOut"][];
+        };
+        /** RollSummaryOut */
+        RollSummaryOut: {
+            /**
+             * By Class
+             * @description This term's pupils per class and arm, in promotion order
+             */
+            by_class: components["schemas"]["ClassCountOut"][];
+            /**
+             * Joined This Term
+             * @description Pupils whose first class is this term's
+             */
+            joined_this_term: number;
+            /**
+             * Left This Term
+             * @description Pupils who withdrew or graduated since the term started
+             */
+            left_this_term: number;
+            /**
+             * No Account Number
+             * @description Pupils on roll without an active bank account number
+             */
+            no_account_number: number;
+            /**
+             * No Consent
+             * @description Pupils on roll with no parent whose consent is recorded
+             */
+            no_consent: number;
+            /**
+             * No Parent
+             * @description Pupils on roll with no parent or guardian recorded
+             */
+            no_parent: number;
+            /**
+             * On Roll
+             * @description Pupils currently at the school
+             */
+            on_roll: number;
+            /**
+             * Parents
+             * @description Parents and guardians of pupils on roll
+             */
+            parents: number;
+            /**
+             * Placed
+             * @description Pupils on roll with a class this term
+             */
+            placed: number;
+            /**
+             * Term Id
+             * @description The current term; null until one is set
+             */
+            term_id: string | null;
+            /** Term Label */
+            term_label: string | null;
+            /**
+             * Unplaced
+             * @description Pupils on roll with no class this term
+             */
+            unplaced: number;
         };
         /** ScheduleEntryIn */
         ScheduleEntryIn: {
@@ -13981,6 +14094,89 @@ export interface operations {
             };
         };
     };
+    students_roll_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RollSummaryOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     staff_list_staff: {
         parameters: {
             query?: {
@@ -14594,6 +14790,8 @@ export interface operations {
                 status?: components["schemas"]["StudentStatus"] | null;
                 /** @description Only students with no class this term */
                 unplaced?: boolean;
+                /** @description Only students missing this record */
+                missing?: components["schemas"]["Missing"] | null;
                 limit?: number;
                 offset?: number;
             };

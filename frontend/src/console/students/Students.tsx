@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
@@ -10,22 +10,34 @@ import { armOptions, useClassLevels, useCurrentTerm, useSessions } from '../hook
 const PAGE = 50;
 type Status = NonNullable<Schemas['StudentListItem']['status']>;
 
+/** Narrower views of the roll; the school overview links here with ?show=… (and ?class=…). */
+const SHOW_LABELS = {
+  unplaced: 'Not placed this term',
+  parent: 'No parent recorded',
+  consent: 'No parent consent',
+  account_number: 'No account number',
+} as const;
+type Show = keyof typeof SHOW_LABELS;
+const isShow = (v: string | null): v is Show => !!v && v in SHOW_LABELS;
+
 export function Students() {
   const { can } = useAuth();
   const manage = can('students.manage');
   const sessions = useSessions();
   const current = useCurrentTerm();
   const levels = useClassLevels();
+  const [params] = useSearchParams();
   const [termId, setTermId] = useState('');
   const [search, setSearch] = useState('');
-  const [levelId, setLevelId] = useState('');
+  const [levelId, setLevelId] = useState(params.get('class') ?? '');
+  const [show, setShow] = useState<Show | ''>(isShow(params.get('show')) ? (params.get('show') as Show) : '');
   const [status, setStatus] = useState<Status>('active');
   const [offset, setOffset] = useState(0);
   const [adding, setAdding] = useState(false);
 
   const effectiveTerm = termId || current.data?.id || '';
   const students = useQuery({
-    queryKey: ['students', effectiveTerm, search, levelId, status, offset],
+    queryKey: ['students', effectiveTerm, search, levelId, status, show, offset],
     enabled: !!effectiveTerm,
     queryFn: async () =>
       unwrap(
@@ -36,6 +48,8 @@ export function Students() {
               search: search || undefined,
               class_level_id: levelId || undefined,
               status,
+              unplaced: show === 'unplaced' || undefined,
+              missing: show && show !== 'unplaced' ? show : undefined,
               limit: PAGE,
               offset,
             },
@@ -100,6 +114,14 @@ export function Students() {
           <option value="active">Current students</option>
           <option value="withdrawn">Withdrawn</option>
           <option value="graduated">Graduated</option>
+        </select>
+        <select aria-label="Show" value={show} onChange={(e) => reset(setShow)(e.target.value as Show | '')}>
+          <option value="">Everyone</option>
+          {Object.entries(SHOW_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
       {students.isPending ? (

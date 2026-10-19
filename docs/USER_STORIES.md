@@ -42,6 +42,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ See every message sent to parents: when, how (WhatsApp, text or email), or why it wasn't sent.
 
 ## School admin
+- ✅ Open the console to the school at a glance: pupils on roll, who joined or left this term, pupils per class and arm, and which pupils still need a class, a parent, consent or an account number (each a link to those pupils). No money figures.
 - ✅ Keep the school's profile (name, address, phone, email) up to date.
 - ✅ Set up the session and its three terms, and say which term is current.
 - ✅ Set up classes and arms in promotion order, and retire ones no longer used.

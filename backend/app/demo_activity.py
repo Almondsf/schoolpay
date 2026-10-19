@@ -1,8 +1,11 @@
 """
 A "lived-in" demo school: what the first half of a term looks like.
 
-- Last session (2025/2026) exists, and about one student in eight carries a
-  debt from it (opening balance).
+- Last session (2025/2026) exists. Returning pupils were in the class below in
+  its third term; Primary 1 and JSS 1 and a few transfers are new this term.
+  About one returning pupil in eight carries a debt from it (opening balance).
+- Loose ends a real school has mid-term: new admissions without a parent, consent
+  or account number yet, two returning pupils not yet placed, one who has left.
 - Some students take the school bus; a few have a staff-child discount or a
   scholarship.
 - The first-term bills were generated on 7 September, due 30 September.
@@ -31,6 +34,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.crypto import blind_index
 from app.core.http import RequestMeta
 from app.core.money import format_naira
 from app.core.sequences import reserve
@@ -63,8 +67,17 @@ from app.modules.payments.models import (
 from app.modules.payments.service import reverse_payment
 from app.modules.receipts.models import Receipt
 from app.modules.receipts.service import RECEIPT_SEQUENCE, verification_url
-from app.modules.schools.models import AcademicSession, Term
-from app.modules.students.models import Guardian
+from app.modules.schools.models import AcademicSession, Arm, ClassLevel, Term
+from app.modules.students.models import (
+    ConsentMethod,
+    Enrollment,
+    Gender,
+    Guardian,
+    GuardianStudent,
+    Relationship,
+    Student,
+    StudentStatus,
+)
 
 LAGOS = ZoneInfo("Africa/Lagos")
 BILLED_ON = datetime(2026, 9, 7, 8, 0, tzinfo=LAGOS)
@@ -88,9 +101,9 @@ def add_activity(session: Session, demo: DemoSchool, *, transfers_by_account: bo
     ids = [s.id for s in students]
     ctx = StaffContext(user=demo.bursar, session_id=uuid.uuid4(), meta=RequestMeta(ip="127.0.0.1"), school_id=school.id)
 
-    _last_session(session, school.id)
+    returning = _last_session(session, demo)
     _choices_and_discounts(session, demo, rng)
-    opening = _opening_balances(session, demo, rng)
+    opening = _opening_balances(session, demo, rng, returning)
     session.flush()
 
     # The term's bills, through the real generator (discounts, bus, sibling rule), dated 7 September
@@ -158,8 +171,17 @@ def add_activity(session: Session, demo: DemoSchool, *, transfers_by_account: bo
         returned = min(bounced.received_at + timedelta(days=3), datetime.combine(last_day, time(16, 0), tzinfo=LAGOS))
         reverse_payment(session, ctx, bounced.id, "Teller returned unpaid by the bank", at=returned)
 
+    _loose_ends(session, demo)  # after billing, so they're not billed yet
+    session.commit()
 
-def _last_session(session: Session, school_id: uuid.UUID) -> None:
+
+def _last_session(session: Session, demo: DemoSchool) -> set[uuid.UUID]:
+    """
+    Last session's terms, with returning pupils in the class below in its third term.
+    Primary 1 and JSS 1 (the intakes) and about one in twenty others are new this term.
+    Returns the returning pupils.
+    """
+    school_id = demo.school.id
     academic = AcademicSession(
         id=uuid.uuid4(), school_id=school_id, name="2025/2026", start_date=date(2025, 9, 1), end_date=date(2026, 7, 31)
     )
@@ -176,6 +198,114 @@ def _last_session(session: Session, school_id: uuid.UUID) -> None:
             start=1,
         )
     )
+    session.flush()
+    third = session.scalar(select(Term.id).where(Term.session_id == academic.id, Term.number == 3))
+    level_of = dict(
+        session.execute(
+            select(Enrollment.student_id, Enrollment.class_level_id).where(Enrollment.term_id == demo.term.id)
+        ).all()
+    )
+    arms: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+    for arm_id, level_id in session.execute(select(Arm.id, Arm.class_level_id).order_by(Arm.name)):
+        arms[level_id].append(arm_id)
+    rank = {level_id: n for n, level_id in enumerate(demo.level_ids)}
+    intakes = {demo.level_ids[0], demo.level_ids[6]}  # Primary 1, JSS 1
+    rng = random.Random(2025)  # noqa: S311  (demo data, not security); its own, so the rest stays the same
+    enrollments = []
+    for n, student in enumerate(demo.students):
+        level_id = level_of[student.id]
+        if level_id in intakes or (n >= 2 and rng.random() < 0.05):  # the first family is returning
+            continue
+        below = demo.level_ids[rank[level_id] - 1]
+        enrollments.append(
+            Enrollment(
+                school_id=school_id,
+                student_id=student.id,
+                term_id=third,
+                arm_id=rng.choice(arms[below]),
+                class_level_id=below,
+            )
+        )
+    session.add_all(enrollments)
+    return {e.student_id for e in enrollments}
+
+
+def _loose_ends(session: Session, demo: DemoSchool) -> None:
+    """
+    What a real school has mid-term, for the school overview's "needs attention": new
+    admissions still missing a parent, consent or account number, two returning pupils
+    not yet placed this term, and one who has left. None of them is billed yet.
+    """
+    school_id = demo.school.id
+    arm_of = {
+        f"{level} {arm}": (arm_id, level_id)
+        for arm_id, arm, level_id, level in session.execute(
+            select(Arm.id, Arm.name, ClassLevel.id, ClassLevel.name).join(ClassLevel)
+        )
+    }
+    last_third = session.scalar(
+        select(Term.id).join(AcademicSession).where(AcademicSession.name == "2025/2026", Term.number == 3)
+    )
+    joined = datetime(2026, 10, 12, 10, tzinfo=LAGOS)
+    # (first, last, gender, class this term or None, class last term or None, parent?, consented?, left on)
+    people = [
+        ("Tobi", "Adeyemi", Gender.MALE, "JSS 2 A", None, True, False, None),
+        ("Zainab", "Musa", Gender.FEMALE, "Primary 3 A", None, False, False, None),
+        ("Kelechi", "Nwosu", Gender.MALE, "SSS 1 Science", None, True, True, None),
+        ("Femi", "Ogunleye", Gender.MALE, None, "SSS 1 Arts", True, True, None),
+        ("Halima", "Bello", Gender.FEMALE, None, "JSS 2 A", True, True, None),
+        ("Chinedu", "Okeke", Gender.MALE, "JSS 3 A", "JSS 2 A", True, True, date(2026, 10, 9)),
+    ]
+    students, guardians, links, enrollments = [], [], [], []
+    for n, (first, last, gender, now_in, then_in, parent, consented, left_on) in enumerate(people, start=1):
+        student = Student(
+            id=uuid.uuid4(),
+            school_id=school_id,
+            admission_number=f"DMC/2026/{9000 + n}",
+            first_name=first,
+            last_name=last,
+            gender=gender,
+            status=StudentStatus.WITHDRAWN if left_on else StudentStatus.ACTIVE,
+            left_on=left_on,
+            created_at=joined,
+        )
+        students.append(student)
+        for term_id, placed in ((demo.term.id, now_in), (last_third, then_in)):
+            if placed:
+                arm_id, level_id = arm_of[placed]
+                enrollments.append(
+                    Enrollment(
+                        school_id=school_id,
+                        student_id=student.id,
+                        term_id=term_id,
+                        arm_id=arm_id,
+                        class_level_id=level_id,
+                    )
+                )
+        if parent:
+            phone = f"+2348099{n:06d}"
+            guardian = Guardian(
+                id=uuid.uuid4(),
+                school_id=school_id,
+                full_name=f"Mrs {last}",
+                phone=phone,
+                phone_index=blind_index(phone),
+                consent_at=joined if consented else None,
+                consent_method=ConsentMethod.SCHOOL_ATTESTED if consented else None,
+            )
+            guardians.append(guardian)
+            links.append(
+                GuardianStudent(
+                    school_id=school_id,
+                    guardian_id=guardian.id,
+                    student_id=student.id,
+                    relationship_to_student=Relationship.MOTHER,
+                    is_primary=True,
+                )
+            )
+    session.add_all([*students, *guardians])
+    session.flush()
+    session.add_all([*enrollments, *links])
 
 
 def _choices_and_discounts(session: Session, demo: DemoSchool, rng: random.Random) -> None:
@@ -212,9 +342,12 @@ def _choices_and_discounts(session: Session, demo: DemoSchool, rng: random.Rando
     )
 
 
-def _opening_balances(session: Session, demo: DemoSchool, rng: random.Random) -> dict[uuid.UUID, int]:
+def _opening_balances(
+    session: Session, demo: DemoSchool, rng: random.Random, returning: set[uuid.UUID]
+) -> dict[uuid.UUID, int]:
     """About one student in eight owes from last session, including the first family's younger child."""
-    owing = [demo.students[1], *rng.sample(demo.students[2:], len(demo.students) // 8)]
+    pool = [s for s in demo.students[2:] if s.id in returning]
+    owing = [demo.students[1], *rng.sample(pool, len(demo.students) // 8)]
     amounts = {s.id: rng.randrange(15_000, 120_000, 2_500) * 100 for s in owing}
     numbers = reserve(session, demo.school.id, INVOICE_SEQUENCE, len(owing))
     issued = datetime(2026, 9, 1, 9, 0, tzinfo=LAGOS)

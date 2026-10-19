@@ -10,6 +10,7 @@ import { GettingStarted } from './GettingStarted';
 import { useSessions } from './hooks';
 
 type Overview = Schemas['OverviewOut'];
+type Roll = Schemas['RollSummaryOut'];
 
 export const METHOD_LABELS: Record<Schemas['PaymentMethod'], string> = {
   virtual_account: 'Transfer to student account',
@@ -33,7 +34,10 @@ export function percent(part: number, whole: number): number {
   return whole > 0 ? Math.floor((part * 100) / whole) : 0;
 }
 
-/** Collections at a glance: billed, collected and outstanding for a term, and how money is coming in. */
+/**
+ * Staff who see money get collections at a glance; everyone else (school admins)
+ * gets the school at a glance: pupils, classes and records needing attention.
+ */
 export function Dashboard() {
   const { user, can } = useAuth();
   const first = user?.full_name.split(' ')[0] ?? '';
@@ -42,9 +46,7 @@ export function Dashboard() {
       <>
         <PageHeader title={`Welcome, ${first}`} subtitle={user?.school?.name} />
         <GettingStarted />
-        <div className="card">
-          <p>Use the menu to manage students, classes and the school calendar.</p>
-        </div>
+        <SchoolAtAGlance />
       </>
     );
   }
@@ -237,6 +239,116 @@ function Figures({ data }: { data: Overview }) {
           ))}
         </div>
       </section>
+    </>
+  );
+}
+
+function SchoolAtAGlance() {
+  const roll = useQuery({
+    queryKey: ['school-roll'],
+    staleTime: 0,
+    queryFn: async () => unwrap(await api.GET('/api/v1/school/roll')),
+  });
+  if (roll.isPending) return <Loading />;
+  if (roll.isError) return <ErrorAlert error={roll.error} />;
+  return <RollFigures data={roll.data} />;
+}
+
+function RollFigures({ data }: { data: Roll }) {
+  if (data.on_roll === 0) {
+    return (
+      <Empty>
+        No pupils yet. <Link to="/console/students/import">Import your student spreadsheet</Link> and this page shows your classes.
+      </Empty>
+    );
+  }
+  const placedRate = percent(data.placed, data.on_roll);
+  const attention = (
+    [
+      ['unplaced', data.unplaced, 'have no class this term, so they get no bill'],
+      ['parent', data.no_parent, 'have no parent or guardian recorded, so nobody gets their bills or receipts'],
+      ['consent', data.no_consent, 'have no parent whose consent is recorded (NDPA)'],
+      ['account_number', data.no_account_number, 'have no bank account number yet (the bursar or proprietor sets these up)'],
+    ] as const
+  ).filter(([, count]) => count > 0);
+  return (
+    <>
+      {data.term_label && <h2 className="section-title">{data.term_label}</h2>}
+      <div className="stats">
+        <Stat
+          label="Pupils on roll"
+          value={data.on_roll.toLocaleString()}
+          note={`${data.joined_this_term} joined this term · ${data.left_this_term} left`}
+        />
+        <Stat label="In a class this term" value={data.placed.toLocaleString()} tone={data.unplaced > 0 ? 'warn' : 'ok'}>
+          <Progress value={placedRate} label={`${placedRate}% of pupils`} />
+        </Stat>
+        <Stat label="Parents and guardians" value={data.parents.toLocaleString()} note="Of pupils on roll" />
+      </div>
+
+      <section className="card section" aria-label="Needs attention">
+        <h2>Needs attention</h2>
+        {attention.length === 0 ? (
+          <p className="muted">Every pupil has a class, a parent with consent recorded, and an account number.</p>
+        ) : (
+          <ul className="attention">
+            {attention.map(([show, count, why]) => (
+              <li key={show}>
+                <Link to={`/console/students?show=${show}`}>
+                  {count} {count === 1 ? 'pupil' : 'pupils'}
+                </Link>{' '}
+                {why}.
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {data.by_class.length > 0 && (
+        <section className="card table-card" aria-label="Pupils by class">
+          <div className="row between card-pad">
+            <h2>Pupils by class</h2>
+            <Link to="/console/classes" className="small">
+              Classes →
+            </Link>
+          </div>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Class</th>
+                  <th>Arms</th>
+                  <th className="num">Boys</th>
+                  <th className="num">Girls</th>
+                  <th className="num">Pupils</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.by_class.map((c) => (
+                  <tr key={c.class_level_id}>
+                    <td className="nowrap">
+                      <Link to={`/console/students?class=${c.class_level_id}`}>{c.class_name}</Link>
+                    </td>
+                    <td className="small">{c.arms.map((a) => `${a.arm_name}: ${a.pupils}`).join(' · ')}</td>
+                    <td className="num">{c.boys}</td>
+                    <td className="num">{c.girls}</td>
+                    <td className="num">{c.pupils}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th>Total</th>
+                  <td />
+                  <td className="num">{data.by_class.reduce((n, c) => n + c.boys, 0)}</td>
+                  <td className="num">{data.by_class.reduce((n, c) => n + c.girls, 0)}</td>
+                  <td className="num">{data.by_class.reduce((n, c) => n + c.pupils, 0)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      )}
     </>
   );
 }
