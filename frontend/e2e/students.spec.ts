@@ -6,7 +6,7 @@ const signInAsAdmin = (page: Parameters<typeof signIn>[0]) => signIn(page, 'admi
 
 test('school admin imports students from a spreadsheet', async ({ page }) => {
   await signInAsAdmin(page);
-  await page.getByRole('link', { name: 'Students' }).click();
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
   await expect(page.getByText(/60 active students/)).toBeVisible();
   await page.getByRole('link', { name: 'Import from spreadsheet' }).click();
 

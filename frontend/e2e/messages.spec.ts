@@ -6,7 +6,7 @@ const PHONE = '08035000000';
 
 test('the bursar words a reminder, sends one, and sees it in the log', async ({ page }) => {
   await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
-  await page.getByRole('link', { name: 'Messages' }).click();
+  await page.getByRole('link', { name: 'Messages', exact: true }).click();
   await page.getByRole('tab', { name: 'Wording' }).click();
 
   const reminder = page.getByRole('form', { name: 'Reminder' });
@@ -27,7 +27,7 @@ test('the bursar words a reminder, sends one, and sees it in the log', async ({ 
   await expect(page.getByText('Saved.')).toBeVisible();
 
   // A student far down the list (other tests pay into the first family's accounts)
-  await page.getByRole('link', { name: 'Students' }).click();
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
   await page.locator('table tbody tr').last().getByRole('link').first().click();
   // Something to remind about, whether or not this term's bills have been generated yet
   await page.getByRole('button', { name: 'Add a charge' }).click();
@@ -40,7 +40,7 @@ test('the bursar words a reminder, sends one, and sees it in the log', async ({ 
   await expect(page.getByText(/A reminder is on its way/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reminder sent' })).toBeDisabled();
 
-  await page.getByRole('link', { name: 'Messages' }).click();
+  await page.getByRole('link', { name: 'Messages', exact: true }).click();
   const row = page.locator('table tbody tr').first();
   await expect(row).toContainText('Reminder');
   // Sent at once by day; held until morning during quiet hours

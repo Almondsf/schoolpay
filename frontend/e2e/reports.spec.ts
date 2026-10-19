@@ -16,7 +16,7 @@ test('the proprietor sees the term at a glance and downloads the debtors list', 
     await page.getByRole('button', { name: /^Generate \d+ invoices$/ }).click();
     await expect(page.getByText(/Done: \d+ invoices/)).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();
-    await page.getByRole('link', { name: 'Overview' }).click();
+    await page.getByRole('link', { name: 'Overview', exact: true }).click();
   }
   await expect(page.getByText('Billed', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('region', { name: 'By class' }).getByRole('cell', { name: 'Primary 1' })).toBeVisible();

@@ -4,7 +4,7 @@ import { signIn } from './helpers';
 
 test('bursar generates the term invoices in one click and corrects one', async ({ page }) => {
   await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
-  await page.getByRole('link', { name: 'Billing' }).click();
+  await page.getByRole('link', { name: 'Billing', exact: true }).click();
   await page.getByRole('button', { name: 'Generate invoices' }).click();
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByText(/Preview: \d+ invoices totalling/)).toBeVisible();
@@ -40,7 +40,7 @@ test('bursar generates the term invoices in one click and corrects one', async (
 
 test('a fee is added to SSS 3 after billing, with one pupil left out', async ({ page }) => {
   await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
-  await page.getByRole('link', { name: 'Billing' }).click();
+  await page.getByRole('link', { name: 'Billing', exact: true }).click();
   await page.getByRole('button', { name: 'Add a fee to classes' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel("New fee's name").fill(`WAEC ${Date.now() % 100000}`);

@@ -4,7 +4,7 @@ import { signIn } from './helpers';
 
 test('a transfer into a student account number is matched automatically', async ({ page }) => {
   await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
-  await page.getByRole('link', { name: 'Students' }).click();
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
   await page.getByRole('row').nth(1).getByRole('link').first().click();
   const accountNumber = (await page.locator('.account-number').textContent())!.trim();
   expect(accountNumber).toMatch(/^\d{10}$/);
@@ -16,8 +16,8 @@ test('a transfer into a student account number is matched automatically', async 
   expect(sent.ok()).toBeTruthy();
 
   await page.reload();
-  await expect(page.getByRole('cell', { name: 'Virtual account' })).toBeVisible();
-  await page.getByRole('link', { name: 'Payments' }).click();
+  await expect(page.getByRole('cell', { name: 'Transfer to student account' })).toBeVisible();
+  await page.getByRole('link', { name: 'Payments', exact: true }).click();
   await expect(page.getByRole('cell', { name: /₦25,000\.00/ }).first()).toBeVisible();
 
   // Its numbered receipt downloads as a PDF
@@ -33,7 +33,7 @@ test('a made-up receipt code is reported as not genuine', async ({ page }) => {
 test('cash recorded by the admin is approved by the bursar', async ({ browser }) => {
   const admin = await browser.newPage();
   await signIn(admin, 'admin@demo.schoolpay.ng');
-  await admin.getByRole('link', { name: 'Payments' }).click();
+  await admin.getByRole('link', { name: 'Payments', exact: true }).click();
   await admin.getByRole('button', { name: 'Record cash or teller' }).click();
   await admin.getByLabel('Find student').fill('DMC');
   await admin.getByRole('listbox').getByRole('option').first().click();
@@ -44,7 +44,7 @@ test('cash recorded by the admin is approved by the bursar', async ({ browser })
 
   const bursar = await browser.newPage();
   await signIn(bursar, 'bursar@demo.schoolpay.ng', { mfa: true });
-  await bursar.getByRole('link', { name: 'Payments' }).click();
+  await bursar.getByRole('link', { name: 'Payments', exact: true }).click();
   await bursar.getByRole('tab', { name: 'Awaiting approval' }).click();
   const row = bursar.getByRole('row', { name: /₦12,345\.00/ });
   await row.getByRole('button', { name: 'Approve' }).click();
