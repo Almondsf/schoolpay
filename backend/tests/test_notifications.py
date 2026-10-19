@@ -189,7 +189,8 @@ async def test_falls_back_to_sms_then_email(client, world, db, monkeypatch):
     with tenant_writer() as w:
         w.get(Guardian, world["guardian"].id).email = "parent@example.ng"
     await pay_cash(client, world, 2_000)
-    newest = (await messages(client, world))[0]
+    # Both messages share the test transaction's timestamp, so find the second payment's by its amount
+    newest = next(m for m in await messages(client, world) if "₦2,000.00" in m["body"])
     assert newest["channel"] == "email"
     assert sent_email[0].to == "parent@example.ng" and sent_email[0].subject == "Payment received: Tolu Adeyemi"
 

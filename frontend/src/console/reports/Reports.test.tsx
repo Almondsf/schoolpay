@@ -167,7 +167,7 @@ describe('dashboard and reports', () => {
           total_owed_kobo: 24_500_000,
         }),
       'GET /api/v1/reports/debtors/export': () =>
-        new Response(new Blob(['xlsx']), {
+        new Response('xlsx', {
           headers: {
             'Content-Disposition': 'attachment; filename="debtors-2026-10-20.xlsx"',
           },
