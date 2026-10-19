@@ -241,6 +241,9 @@ function FeeItems() {
             <tr>
               <th>Fee</th>
               <th>Category</th>
+              <th className="num" title="For charging one pupil, e.g. a uniform or textbooks">
+                Standard price
+              </th>
               {manage && <th aria-label="Actions" />}
             </tr>
           </thead>
@@ -251,6 +254,15 @@ function FeeItems() {
                   {item.name} {!item.is_active && <span className="badge">Retired</span>}
                 </td>
                 <td>{humanize(item.category)}</td>
+                <td className="num">
+                  {manage ? (
+                    <PriceInput item={item} onSave={(kobo) => update.mutate({ item, body: { default_amount_kobo: kobo } })} />
+                  ) : item.default_amount_kobo ? (
+                    formatKobo(item.default_amount_kobo)
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
                 {manage && (
                   <td className="actions">
                     <button className="secondary small" onClick={() => update.mutate({ item, body: { is_active: !item.is_active } })}>
@@ -264,6 +276,26 @@ function FeeItems() {
         </table>
       )}
     </div>
+  );
+}
+
+/** The item's standard price, saved when the field loses focus (empty clears it). */
+function PriceInput({ item, onSave }: { item: FeeItem; onSave: (kobo: number | null) => void }) {
+  const saved = item.default_amount_kobo ? koboToInput(item.default_amount_kobo) : '';
+  const [value, setValue] = useState(saved);
+  const kobo = value.trim() ? parseNairaToKobo(value) : null;
+  return (
+    <input
+      className="price-input"
+      aria-label={`Standard price for ${item.name}`}
+      inputMode="decimal"
+      placeholder="None"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        if (value !== saved && (kobo === null || kobo > 0)) onSave(kobo);
+      }}
+    />
   );
 }
 

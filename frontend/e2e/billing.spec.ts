@@ -37,3 +37,19 @@ test('bursar generates the term invoices in one click and corrects one', async (
   await expect(page.getByRole('heading', { name: 'Fees' })).toBeVisible();
   await expect(page.getByText('Owed')).toBeVisible();
 });
+
+test('a fee is added to SSS 3 after billing, with one pupil left out', async ({ page }) => {
+  await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
+  await page.getByRole('link', { name: 'Billing' }).click();
+  await page.getByRole('button', { name: 'Add a fee to classes' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel("New fee's name").fill(`WAEC ${Date.now() % 100000}`);
+  await dialog.getByLabel('Amount per pupil (₦)').fill('25000');
+  await dialog.getByLabel('SSS 3', { exact: true }).check();
+  await dialog.getByRole('button', { name: 'Preview' }).click();
+  await expect(dialog.getByText(/pupils will pay WAEC/)).toBeVisible();
+  await dialog.locator('.student-ticks input[type=checkbox]').first().uncheck();
+  await dialog.getByRole('button', { name: /^Add to \d+ pupils$/ }).click();
+  await expect(dialog.getByText(/added\./)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+});

@@ -1753,6 +1753,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/students/{student_id}/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Charge one pupil for an item (uniform, books), on this term's bill or a one-off bill */
+        post: operations["fees_pupil_charge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/students/{student_id}/class": {
         parameters: {
             query?: never;
@@ -1834,6 +1851,41 @@ export interface paths {
         /** Erase a former pupil's personal details (bills and payments stay, anonymised) */
         post: operations["privacy_erase_student"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{student_id}/exemptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Class fees this pupil doesn't pay */
+        get: operations["fees_list_exemptions"];
+        put?: never;
+        /** Exempt a pupil from a class fee this term (comes off their bill if already billed) */
+        post: operations["fees_add_exemption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{student_id}/exemptions/{fee_item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Charge the pupil the fee again */
+        delete: operations["fees_remove_exemption"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2054,6 +2106,23 @@ export interface paths {
         get: operations["fees_billing_summary"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terms/{term_id}/class-charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a fee to whole classes this term (e.g. WAEC), now and on later bills; dry_run to preview */
+        post: operations["fees_class_charge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2421,6 +2490,24 @@ export interface components {
          * @enum {string}
          */
         Channel: "whatsapp" | "sms" | "email";
+        /** ChargeStudentOut */
+        ChargeStudentOut: {
+            /** Admission Number */
+            admission_number: string;
+            /** Billed */
+            billed: boolean;
+            /** Class Name */
+            class_name: string;
+            /** Excluded */
+            excluded: boolean;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Student Id
+             * Format: uuid
+             */
+            student_id: string;
+        };
         /** CheckoutOut */
         CheckoutOut: {
             /** Amount Kobo */
@@ -2505,6 +2592,45 @@ export interface components {
             arm_id: string;
             /** Term Id */
             term_id?: string | null;
+        };
+        /** ClassChargeIn */
+        ClassChargeIn: {
+            /**
+             * Amount Kobo
+             * @description Amount in kobo (₦1 = 100)
+             */
+            amount_kobo: number;
+            /** Class Level Ids */
+            class_level_ids: string[];
+            /**
+             * Dry Run
+             * @default true
+             */
+            dry_run?: boolean;
+            /** Excluded Student Ids */
+            excluded_student_ids?: string[];
+            /**
+             * Fee Item Id
+             * @description An existing fee, or name a new one
+             */
+            fee_item_id?: string | null;
+            /** New Item Name */
+            new_item_name?: string | null;
+        };
+        /** ClassChargeOut */
+        ClassChargeOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            /** Charged Now */
+            charged_now: number;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Item Name */
+            item_name: string;
+            /** Students */
+            students: components["schemas"]["ChargeStudentOut"][];
+            /** Total Kobo */
+            total_kobo: number;
         };
         /** ClassLevelIn */
         ClassLevelIn: {
@@ -2853,6 +2979,49 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorBody"];
         };
+        /** ExemptionChangeOut */
+        ExemptionChangeOut: {
+            /**
+             * Changed Kobo
+             * @description Taken off (exempt) or put back on (unexempt) the pupil's bill
+             */
+            changed_kobo: number;
+        };
+        /** ExemptionIn */
+        ExemptionIn: {
+            /**
+             * Fee Item Id
+             * Format: uuid
+             */
+            fee_item_id: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason?: string;
+            /**
+             * Term Id
+             * Format: uuid
+             */
+            term_id: string;
+        };
+        /** ExemptionOut */
+        ExemptionOut: {
+            /**
+             * Fee Item Id
+             * Format: uuid
+             */
+            fee_item_id: string;
+            /** Item Name */
+            item_name: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Term Id
+             * Format: uuid
+             */
+            term_id: string;
+        };
         /**
          * FeeCategory
          * @enum {string}
@@ -2862,12 +3031,19 @@ export interface components {
         FeeItemIn: {
             /** @default other */
             category?: components["schemas"]["FeeCategory"];
+            /** Default Amount Kobo */
+            default_amount_kobo?: number | null;
             /** Name */
             name: string;
         };
         /** FeeItemOut */
         FeeItemOut: {
             category: components["schemas"]["FeeCategory"];
+            /**
+             * Default Amount Kobo
+             * @description Standard price for charging one pupil (uniform, books)
+             */
+            default_amount_kobo: number | null;
             /**
              * Id
              * Format: uuid
@@ -2881,6 +3057,11 @@ export interface components {
         /** FeeItemUpdateIn */
         FeeItemUpdateIn: {
             category?: components["schemas"]["FeeCategory"] | null;
+            /**
+             * Default Amount Kobo
+             * @description Send null to clear the standard price
+             */
+            default_amount_kobo?: number | null;
             /** Is Active */
             is_active?: boolean | null;
             /** Name */
@@ -4105,6 +4286,39 @@ export interface components {
             status: "valid" | "reversed";
             /** Student Initials */
             student_initials: string;
+        };
+        /** PupilChargeIn */
+        PupilChargeIn: {
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
+            /** Fee Item Id */
+            fee_item_id?: string | null;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity?: number;
+            /**
+             * Reason
+             * @default
+             */
+            reason?: string;
+            /**
+             * Unit Kobo
+             * @description Default: the item's standard price
+             */
+            unit_kobo?: number | null;
+        };
+        /** PupilChargeOut */
+        PupilChargeOut: {
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
         };
         /** QueuedOut */
         QueuedOut: {
@@ -14979,6 +15193,95 @@ export interface operations {
             };
         };
     };
+    fees_pupil_charge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PupilChargeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PupilChargeOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     students_change_class: {
         parameters: {
             query?: never;
@@ -15431,6 +15734,268 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErasedOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fees_list_exemptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExemptionOut"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fees_add_exemption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExemptionChangeOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fees_remove_exemption: {
+        parameters: {
+            query: {
+                term_id: string;
+            };
+            header?: never;
+            path: {
+                student_id: string;
+                fee_item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExemptionChangeOut"];
                 };
             };
             /** @description Bad Request */
@@ -16546,6 +17111,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TermSummaryOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fees_class_charge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                term_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassChargeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassChargeOut"];
                 };
             };
             /** @description Bad Request */

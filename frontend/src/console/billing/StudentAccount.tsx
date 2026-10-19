@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { INVOICE_KIND_LABELS, formatKobo, parseNairaToKobo } from '../../lib/format';
-import { ErrorAlert, Field, Loading, Modal, StatusBadge } from '../../lib/ui';
+import { INVOICE_KIND_LABELS, formatKobo, koboToInput, parseNairaToKobo } from '../../lib/format';
+import { ErrorAlert, Field, Loading, Modal, StatusBadge, fieldError } from '../../lib/ui';
 import { describeDiscount } from '../fees/FeeSetup';
+import { useCurrentTerm } from '../hooks';
 
 /** A student's fees: balance across all invoices (arrears included), each invoice, and their discounts. */
 export function StudentAccount({ studentId }: { studentId: string }) {
@@ -19,7 +20,7 @@ export function StudentAccount({ studentId }: { studentId: string }) {
   const given = useQuery({ queryKey: ['student-discounts', studentId], queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/discounts', path)) });
   const discounts = useQuery({ queryKey: ['discounts'], enabled: manageFees, queryFn: async () => unwrap(await api.GET('/api/v1/discounts')) });
   const items = useQuery({ queryKey: ['fee-items'], queryFn: async () => unwrap(await api.GET('/api/v1/fee-items')) });
-  const [adding, setAdding] = useState<'opening_balance' | 'adhoc' | null>(null);
+  const [adding, setAdding] = useState<'opening_balance' | 'charge' | 'exempt' | null>(null);
   const [discountId, setDiscountId] = useState('');
   const refreshDiscounts = () => void queryClient.invalidateQueries({ queryKey: ['student-discounts', studentId] });
   const give = useMutation({
@@ -46,8 +47,8 @@ export function StudentAccount({ studentId }: { studentId: string }) {
         <h2>Fees</h2>
         {issue && (
           <div className="row">
-            <button className="secondary small" onClick={() => setAdding('adhoc')}>
-              One-off charge
+            <button className="secondary small" onClick={() => setAdding('charge')}>
+              Add a charge
             </button>
             {!a.invoices.some((i) => i.kind === 'opening_balance' && i.status !== 'void') && (
               <button className="secondary small" onClick={() => setAdding('opening_balance')}>
@@ -121,12 +122,15 @@ export function StudentAccount({ studentId }: { studentId: string }) {
           </button>
         </div>
       )}
-      {adding && <NewInvoice studentId={studentId} kind={adding} onClose={() => setAdding(null)} />}
+      <Exemptions studentId={studentId} canChange={issue} onExempt={() => setAdding('exempt')} />
+      {adding === 'opening_balance' && <NewInvoice studentId={studentId} kind={adding} onClose={() => setAdding(null)} />}
+      {adding === 'charge' && <AddCharge studentId={studentId} onClose={() => setAdding(null)} />}
+      {adding === 'exempt' && <Exempt studentId={studentId} onClose={() => setAdding(null)} />}
     </div>
   );
 }
 
-function NewInvoice({ studentId, kind, onClose }: { studentId: string; kind: 'opening_balance' | 'adhoc'; onClose: () => void }) {
+function NewInvoice({ studentId, kind, onClose }: { studentId: string; kind: 'opening_balance'; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [description, setDescription] = useState(kind === 'opening_balance' ? 'Balance brought forward' : '');
   const [amount, setAmount] = useState('');
@@ -169,6 +173,208 @@ function NewInvoice({ studentId, kind, onClose }: { studentId: string; kind: 'op
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function useRefreshAccount(studentId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    for (const key of [['account', studentId], ['exemptions', studentId], ['invoices'], ['billing-summary']]) {
+      void queryClient.invalidateQueries({ queryKey: key });
+    }
+  };
+}
+
+/** An item for this pupil: from the price list, or typed in; it goes on this term's bill (or a one-off bill). */
+function AddCharge({ studentId, onClose }: { studentId: string; onClose: () => void }) {
+  const refresh = useRefreshAccount(studentId);
+  const items = useQuery({ queryKey: ['fee-items'], queryFn: async () => unwrap(await api.GET('/api/v1/fee-items')) });
+  const priced = (items.data ?? []).filter((i) => i.is_active && i.default_amount_kobo);
+  const [itemId, setItemId] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [reason, setReason] = useState('');
+  const unit = parseNairaToKobo(price);
+  const save = useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST('/api/v1/students/{student_id}/charges', {
+          params: { path: { student_id: studentId } },
+          body: { fee_item_id: itemId || null, description, unit_kobo: unit, quantity, reason },
+        }),
+      ),
+    onSuccess: () => {
+      refresh();
+      onClose();
+    },
+  });
+  const choose = (id: string) => {
+    setItemId(id);
+    const item = priced.find((i) => i.id === id);
+    setDescription(item ? '' : description);
+    setPrice(item?.default_amount_kobo ? koboToInput(item.default_amount_kobo) : '');
+  };
+  return (
+    <Modal title="Add a charge" onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          save.mutate();
+        }}
+      >
+        <p className="muted small">It goes on this term's bill, or on a bill of its own if the pupil hasn't been billed this term.</p>
+        <Field label="Item">
+          <select value={itemId} onChange={(e) => choose(e.target.value)}>
+            <option value="">Something else (type it below)</option>
+            {priced.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name} ({formatKobo(i.default_amount_kobo ?? 0)})
+              </option>
+            ))}
+          </select>
+        </Field>
+        {!itemId && (
+          <Field label="What it's for" error={fieldError(save.error, 'description')}>
+            <input value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={200} placeholder="e.g. Textbooks" />
+          </Field>
+        )}
+        <div className="grid-2 tight">
+          <Field label="Price (₦)" error={fieldError(save.error, 'unit_kobo') ?? (price && unit === null ? 'Not a valid amount' : undefined)}>
+            <input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" required />
+          </Field>
+          <Field label="Quantity">
+            <input type="number" min={1} max={100} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+          </Field>
+        </div>
+        {unit !== null && unit > 0 && quantity > 1 && <p className="small">Total: {formatKobo(unit * quantity)}</p>}
+        <Field label="Note (optional)">
+          <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />
+        </Field>
+        <ErrorAlert error={save.error && !fieldError(save.error, 'description') && !fieldError(save.error, 'unit_kobo') ? save.error : null} />
+        <div className="row end">
+          <button type="button" className="secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" disabled={!unit || save.isPending}>
+            Add charge
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** Class fees this pupil doesn't pay (e.g. not sitting WAEC). */
+function Exemptions({ studentId, canChange, onExempt }: { studentId: string; canChange: boolean; onExempt: () => void }) {
+  const refresh = useRefreshAccount(studentId);
+  const list = useQuery({
+    queryKey: ['exemptions', studentId],
+    queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/exemptions', { params: { path: { student_id: studentId } } })),
+  });
+  const undo = useMutation({
+    mutationFn: async (e: { term_id: string; fee_item_id: string }) =>
+      unwrap(
+        await api.DELETE('/api/v1/students/{student_id}/exemptions/{fee_item_id}', {
+          params: { path: { student_id: studentId, fee_item_id: e.fee_item_id }, query: { term_id: e.term_id } },
+        }),
+      ),
+    onSuccess: refresh,
+  });
+  return (
+    <>
+      <div className="row between">
+        <h3>Not paying this term</h3>
+        {canChange && (
+          <button className="link small" onClick={onExempt}>
+            Exempt from a fee
+          </button>
+        )}
+      </div>
+      <ErrorAlert error={undo.error} />
+      {(list.data ?? []).length === 0 ? (
+        <p className="muted small">None. Pupils pay every fee for their class unless exempted here.</p>
+      ) : (
+        <ul className="plain">
+          {(list.data ?? []).map((e) => (
+            <li key={`${e.term_id}-${e.fee_item_id}`}>
+              {e.item_name} {e.reason && <span className="muted small">({e.reason})</span>}{' '}
+              {canChange && (
+                <button className="link small" onClick={() => undo.mutate(e)} disabled={undo.isPending}>
+                  Charge again
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function Exempt({ studentId, onClose }: { studentId: string; onClose: () => void }) {
+  const refresh = useRefreshAccount(studentId);
+  const items = useQuery({ queryKey: ['fee-items'], queryFn: async () => unwrap(await api.GET('/api/v1/fee-items')) });
+  const term = useCurrentTerm();
+  const [itemId, setItemId] = useState('');
+  const [reason, setReason] = useState('');
+  const [done, setDone] = useState<number | null>(null);
+  const save = useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST('/api/v1/students/{student_id}/exemptions', {
+          params: { path: { student_id: studentId } },
+          body: { term_id: term.data?.id ?? '', fee_item_id: itemId, reason },
+        }),
+      ),
+    onSuccess: (data) => {
+      refresh();
+      setDone(data.changed_kobo);
+    },
+  });
+  return (
+    <Modal title="Exempt from a fee this term" onClose={onClose}>
+      {done !== null ? (
+        <>
+          <p>{done > 0 ? `${formatKobo(done)} was taken off this term's bill.` : 'Done. It will be left off when the term is billed.'}</p>
+          <div className="row end">
+            <button onClick={onClose}>Close</button>
+          </div>
+        </>
+      ) : (
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <Field label="Fee">
+            <select value={itemId} onChange={(e) => setItemId(e.target.value)} required>
+              <option value="">Choose…</option>
+              {(items.data ?? [])
+                .filter((i) => i.is_active)
+                .map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="Reason (kept with the bill)">
+            <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="e.g. Not going on the excursion" />
+          </Field>
+          <ErrorAlert error={save.error} />
+          <div className="row end">
+            <button type="button" className="secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" disabled={!itemId || !term.data || save.isPending}>
+              Exempt
+            </button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }

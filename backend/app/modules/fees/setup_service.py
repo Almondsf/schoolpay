@@ -62,11 +62,18 @@ def list_fee_items(session: Session) -> list[FeeItem]:
     return list(session.scalars(select(FeeItem).order_by(FeeItem.is_active.desc(), FeeItem.name)))
 
 
-def create_fee_item(session: Session, ctx: StaffContext, *, name: str, category: FeeCategory) -> FeeItem:
-    item = FeeItem(id=uuid.uuid4(), name=name.strip(), category=category)
+def create_fee_item(
+    session: Session,
+    ctx: StaffContext,
+    *,
+    name: str,
+    category: FeeCategory,
+    default_amount_kobo: int | None = None,
+) -> FeeItem:
+    item = FeeItem(id=uuid.uuid4(), name=name.strip(), category=category, default_amount_kobo=default_amount_kobo)
     session.add(item)
     _flush_unique(session, f"There's already a fee called {name.strip()}.", "name")
-    _audit(session, ctx, item, {"created": item.name, "category": category})
+    _audit(session, ctx, item, {"created": item.name, "category": category, "price_kobo": default_amount_kobo})
     session.commit()
     return item
 
@@ -79,9 +86,19 @@ def update_fee_item(
     name: str | None,
     category: FeeCategory | None,
     is_active: bool | None,
+    set_price: bool = False,
+    default_amount_kobo: int | None = None,
 ) -> FeeItem:
+    """Change a fee item. `set_price` changes the standard price (None clears it)."""
     item = get_or_404(session, FeeItem, item_id, label="Fee", lock=True)
-    before = {"name": item.name, "category": item.category, "is_active": item.is_active}
+    before = {
+        "name": item.name,
+        "category": item.category,
+        "is_active": item.is_active,
+        "price": item.default_amount_kobo,
+    }
+    if set_price:
+        item.default_amount_kobo = default_amount_kobo
     if name is not None:
         item.name = name.strip()
     if category is not None:
@@ -89,7 +106,10 @@ def update_fee_item(
     if is_active is not None:
         item.is_active = is_active
     _flush_unique(session, "Another fee already has that name.", "name")
-    diff = changed_fields(before, {"name": item.name, "category": item.category, "is_active": item.is_active})
+    diff = changed_fields(
+        before,
+        {"name": item.name, "category": item.category, "is_active": item.is_active, "price": item.default_amount_kobo},
+    )
     if diff:
         _audit(session, ctx, item, diff)
     session.commit()

@@ -49,11 +49,16 @@ class FeeItem(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     """Something the school charges for, e.g. "Tuition", "School bus", "PTA levy"."""
 
     __tablename__ = "fee_items"
-    __table_args__ = (UniqueConstraint("school_id", "name"),)
+    __table_args__ = (
+        UniqueConstraint("school_id", "name"),
+        CheckConstraint("default_amount_kobo IS NULL OR default_amount_kobo > 0", name="price_positive"),
+    )
 
     name: Mapped[str] = mapped_column(String(80))
     category: Mapped[FeeCategory] = mapped_column(enum_type(FeeCategory, "fee_category"), default=FeeCategory.OTHER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # A standard price for items charged to individual pupils (uniform, textbooks); class fees are set per term
+    default_amount_kobo: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class FeeSchedule(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
@@ -72,6 +77,23 @@ class FeeSchedule(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
     # Optional items (bus, lunch) are only billed to students opted in for the term
     is_optional: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class StudentFeeExemption(TenantMixin, Base):
+    """
+    A pupil doesn't pay a class fee this term (e.g. not sitting WAEC, not going on the
+    end-of-year trip). Term bills generated afterwards leave the item out; a bill already
+    issued gets a correcting line when the exemption is added.
+    """
+
+    __tablename__ = "student_fee_exemptions"
+
+    student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+    term_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("terms.id", ondelete="RESTRICT"), primary_key=True)
+    fee_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fee_items.id", ondelete="RESTRICT"), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    created_by: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class StudentFeeChoice(TenantMixin, Base):

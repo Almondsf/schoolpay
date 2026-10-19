@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { formatKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Pager, StatusBadge } from '../../lib/ui';
 import { useClassLevels, useCurrentTerm, useSessions } from '../hooks';
+import { ClassCharge } from './ClassCharge';
 
 const PAGE = 50;
 type InvoiceStatus = 'unpaid' | 'part_paid' | 'paid' | 'void' | 'outstanding';
@@ -22,6 +23,7 @@ export function Billing() {
   const [search, setSearch] = useState('');
   const [offset, setOffset] = useState(0);
   const [generating, setGenerating] = useState(false);
+  const [charging, setCharging] = useState(false);
   const term = termId || current.data?.id || '';
 
   const summary = useQuery({
@@ -55,7 +57,16 @@ export function Billing() {
       <PageHeader
         title="Billing"
         subtitle="Invoices for the term and what's still owed."
-        actions={can('invoices.issue') && <button onClick={() => setGenerating(true)}>Generate invoices</button>}
+        actions={
+          can('invoices.issue') && (
+            <>
+              <button className="secondary" onClick={() => setCharging(true)}>
+                Add a fee to classes
+              </button>
+              <button onClick={() => setGenerating(true)}>Generate invoices</button>
+            </>
+          )
+        }
       />
       <div className="filters">
         <select aria-label="Term" value={term} onChange={(e) => reset(setTermId)(e.target.value)}>
@@ -143,6 +154,7 @@ export function Billing() {
         </div>
       )}
       {generating && <Generate termId={term} onClose={() => setGenerating(false)} />}
+      {charging && <ClassCharge termId={term} onClose={() => setCharging(false)} />}
     </>
   );
 }

@@ -315,6 +315,29 @@ a fee notice (section 13), and the response says how many were queued. It runs
 **a fixed number of queries** whatever the number of students (tested), and 60
 invoices take about 0.4 s.
 
+**Charges after the term starts** (`charges.py`; capability `invoices.issue`):
+
+- **Class charges** (`POST /terms/{id}/class-charges`, with a dry run that
+  lists every pupil). A fee for whole classes, such as WAEC for SSS 3. It's added
+  to the term's fee list for those classes (so later bills include it) and as a
+  line on every bill already issued there. Credit already paid covers it.
+  Excluded pupils get an exemption, so regenerating can't add it back. The same
+  fee twice for one class is refused.
+- **Exemptions** (`StudentFeeExemption`; `GET/POST /students/{id}/exemptions`,
+  `DELETE .../exemptions/{fee_item_id}?term_id=`). A pupil doesn't pay a class
+  fee this term. Term generation leaves the item out. If the pupil is already
+  billed, an adjustment line takes it off; that's refused if more has been paid
+  than the bill would then total. Removing the exemption charges the class
+  price again.
+- **Individual extras** (`POST /students/{id}/charges`). One pupil's uniform or
+  textbooks, with a quantity, priced from the item's standard price
+  (`FeeItem.default_amount_kobo`, the school's price list) or typed in. It goes
+  on the pupil's term bill, or on a one-off bill if they haven't been billed
+  this term.
+
+Each of these is a fixed number of statements however many pupils it touches,
+and each is audited.
+
 **Payment plans** (`plans.py`, `POST /invoices/{id}/plan`,
 `/plan/cancel`; capability `invoices.issue`). The school can agree with a
 parent to pay what's left on a bill in 2 to 12 dated instalments that add up
@@ -842,7 +865,7 @@ production.
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |
-| Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `POST /invoices/{id}/plan`, `/plan/cancel`; `GET /students/{id}/account` |
+| Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `POST /invoices/{id}/plan`, `/plan/cancel`; `POST /terms/{id}/class-charges`; `GET/POST /students/{id}/exemptions`, `DELETE /students/{id}/exemptions/{fee_item_id}`; `POST /students/{id}/charges`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
@@ -876,7 +899,9 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   one-click generation with preview, invoice list filtered by status, class and
   search), **Invoice** detail (lines, add a charge, correct an amount, void),
   and a **Fees** panel on each student (owed/billed/paid, invoices, discounts,
-  opening balance, one-off charges). `src/lib/format.ts` converts between naira
+  opening balance, "Add a charge" from the price list, and "Not paying this
+  term" exemptions). Billing has "Add a fee to classes" (preview, untick
+  pupils, apply); the Fees page sets each item's standard price. `src/lib/format.ts` converts between naira
   text and kobo with string arithmetic.
   Payments: **Payments** (received payments with where each was applied, a
   record-cash/teller form with a student search, an approval queue that hides

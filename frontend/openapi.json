@@ -564,6 +564,45 @@
         "title": "Channel",
         "type": "string"
       },
+      "ChargeStudentOut": {
+        "properties": {
+          "admission_number": {
+            "title": "Admission Number",
+            "type": "string"
+          },
+          "billed": {
+            "title": "Billed",
+            "type": "boolean"
+          },
+          "class_name": {
+            "title": "Class Name",
+            "type": "string"
+          },
+          "excluded": {
+            "title": "Excluded",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "student_id": {
+            "format": "uuid",
+            "title": "Student Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_id",
+          "full_name",
+          "admission_number",
+          "class_name",
+          "billed",
+          "excluded"
+        ],
+        "title": "ChargeStudentOut",
+        "type": "object"
+      },
       "CheckoutOut": {
         "properties": {
           "amount_kobo": {
@@ -776,6 +815,114 @@
           "arm_id"
         ],
         "title": "ClassChangeIn",
+        "type": "object"
+      },
+      "ClassChargeIn": {
+        "properties": {
+          "amount_kobo": {
+            "description": "Amount in kobo (\u20a61 = 100)",
+            "exclusiveMinimum": 0.0,
+            "maximum": 10000000000.0,
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "class_level_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Class Level Ids",
+            "type": "array"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "excluded_student_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 5000,
+            "title": "Excluded Student Ids",
+            "type": "array"
+          },
+          "fee_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An existing fee, or name a new one",
+            "title": "Fee Item Id"
+          },
+          "new_item_name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Item Name"
+          }
+        },
+        "required": [
+          "amount_kobo",
+          "class_level_ids"
+        ],
+        "title": "ClassChargeIn",
+        "type": "object"
+      },
+      "ClassChargeOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "charged_now": {
+            "title": "Charged Now",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "item_name": {
+            "title": "Item Name",
+            "type": "string"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeStudentOut"
+            },
+            "title": "Students",
+            "type": "array"
+          },
+          "total_kobo": {
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dry_run",
+          "item_name",
+          "amount_kobo",
+          "charged_now",
+          "total_kobo",
+          "students"
+        ],
+        "title": "ClassChargeOut",
         "type": "object"
       },
       "ClassLevelIn": {
@@ -1667,6 +1814,76 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "ExemptionChangeOut": {
+        "properties": {
+          "changed_kobo": {
+            "description": "Taken off (exempt) or put back on (unexempt) the pupil's bill",
+            "title": "Changed Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed_kobo"
+        ],
+        "title": "ExemptionChangeOut",
+        "type": "object"
+      },
+      "ExemptionIn": {
+        "properties": {
+          "fee_item_id": {
+            "format": "uuid",
+            "title": "Fee Item Id",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          },
+          "term_id": {
+            "format": "uuid",
+            "title": "Term Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term_id",
+          "fee_item_id"
+        ],
+        "title": "ExemptionIn",
+        "type": "object"
+      },
+      "ExemptionOut": {
+        "properties": {
+          "fee_item_id": {
+            "format": "uuid",
+            "title": "Fee Item Id",
+            "type": "string"
+          },
+          "item_name": {
+            "title": "Item Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "term_id": {
+            "format": "uuid",
+            "title": "Term Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term_id",
+          "fee_item_id",
+          "item_name",
+          "reason"
+        ],
+        "title": "ExemptionOut",
+        "type": "object"
+      },
       "FeeCategory": {
         "enum": [
           "tuition",
@@ -1683,6 +1900,20 @@
           "category": {
             "$ref": "#/components/schemas/FeeCategory",
             "default": "other"
+          },
+          "default_amount_kobo": {
+            "anyOf": [
+              {
+                "description": "Amount in kobo (\u20a61 = 100)",
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Amount Kobo"
           },
           "name": {
             "maxLength": 80,
@@ -1702,6 +1933,18 @@
           "category": {
             "$ref": "#/components/schemas/FeeCategory"
           },
+          "default_amount_kobo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Standard price for charging one pupil (uniform, books)",
+            "title": "Default Amount Kobo"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1720,7 +1963,8 @@
           "id",
           "name",
           "category",
-          "is_active"
+          "is_active",
+          "default_amount_kobo"
         ],
         "title": "FeeItemOut",
         "type": "object"
@@ -1736,6 +1980,21 @@
                 "type": "null"
               }
             ]
+          },
+          "default_amount_kobo": {
+            "anyOf": [
+              {
+                "description": "Amount in kobo (\u20a61 = 100)",
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Send null to clear the standard price",
+            "title": "Default Amount Kobo"
           },
           "is_active": {
             "anyOf": [
@@ -4872,6 +5131,72 @@
           "student_initials"
         ],
         "title": "PublicReceiptOut",
+        "type": "object"
+      },
+      "PupilChargeIn": {
+        "properties": {
+          "description": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Description",
+            "type": "string"
+          },
+          "fee_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Item Id"
+          },
+          "quantity": {
+            "default": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          },
+          "unit_kobo": {
+            "anyOf": [
+              {
+                "description": "Amount in kobo (\u20a61 = 100)",
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: the item's standard price",
+            "title": "Unit Kobo"
+          }
+        },
+        "title": "PupilChargeIn",
+        "type": "object"
+      },
+      "PupilChargeOut": {
+        "properties": {
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_id"
+        ],
+        "title": "PupilChargeOut",
         "type": "object"
       },
       "QueuedOut": {
@@ -20189,6 +20514,124 @@
         ]
       }
     },
+    "/api/v1/students/{student_id}/charges": {
+      "post": {
+        "operationId": "fees_pupil_charge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PupilChargeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PupilChargeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Charge one pupil for an item (uniform, books), on this term's bill or a one-off bill",
+        "tags": [
+          "fees"
+        ]
+      }
+    },
     "/api/v1/students/{student_id}/class": {
       "put": {
         "operationId": "students_change_class",
@@ -20863,6 +21306,362 @@
         "summary": "Erase a former pupil's personal details (bills and payments stay, anonymised)",
         "tags": [
           "privacy"
+        ]
+      }
+    },
+    "/api/v1/students/{student_id}/exemptions": {
+      "get": {
+        "operationId": "fees_list_exemptions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExemptionOut"
+                  },
+                  "title": "Response Fees List Exemptions",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Class fees this pupil doesn't pay",
+        "tags": [
+          "fees"
+        ]
+      },
+      "post": {
+        "operationId": "fees_add_exemption",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExemptionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExemptionChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Exempt a pupil from a class fee this term (comes off their bill if already billed)",
+        "tags": [
+          "fees"
+        ]
+      }
+    },
+    "/api/v1/students/{student_id}/exemptions/{fee_item_id}": {
+      "delete": {
+        "operationId": "fees_remove_exemption",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fee_item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fee Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "term_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Term Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExemptionChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Charge the pupil the fee again",
+        "tags": [
+          "fees"
         ]
       }
     },
@@ -22299,6 +23098,124 @@
           }
         ],
         "summary": "Billed, paid and owed",
+        "tags": [
+          "fees"
+        ]
+      }
+    },
+    "/api/v1/terms/{term_id}/class-charges": {
+      "post": {
+        "operationId": "fees_class_charge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "term_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Term Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassChargeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassChargeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add a fee to whole classes this term (e.g. WAEC), now and on later bills; dry_run to preview",
         "tags": [
           "fees"
         ]

@@ -30,11 +30,12 @@ test('the bursar words a reminder, sends one, and sees it in the log', async ({ 
   await page.getByRole('link', { name: 'Students' }).click();
   await page.locator('table tbody tr').last().getByRole('link').first().click();
   // Something to remind about, whether or not this term's bills have been generated yet
-  await page.getByRole('button', { name: 'One-off charge' }).click();
-  await page.getByLabel('Description').fill('Excursion to the National Museum');
-  await page.getByLabel('Amount (₦)').fill('7500');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('One-off charge', { exact: true }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Add a charge' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel("What it's for").fill('Excursion to the National Museum');
+  await dialog.getByLabel('Price (₦)').fill('7500');
+  await dialog.getByRole('button', { name: 'Add charge' }).click();
+  await expect(dialog).toBeHidden();
   await page.getByRole('button', { name: 'Send reminder' }).click();
   await expect(page.getByText(/A reminder is on its way/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reminder sent' })).toBeDisabled();

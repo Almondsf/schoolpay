@@ -39,6 +39,7 @@ from .models import (
     LineKind,
     StudentDiscount,
     StudentFeeChoice,
+    StudentFeeExemption,
 )
 from .setup_service import MAX_AMOUNT_KOBO
 
@@ -309,6 +310,13 @@ def draft_term_invoices(
             select(StudentFeeChoice.student_id, StudentFeeChoice.fee_item_id).where(StudentFeeChoice.term_id == term.id)
         )
     )
+    exempt = set(
+        session.execute(
+            select(StudentFeeExemption.student_id, StudentFeeExemption.fee_item_id).where(
+                StudentFeeExemption.term_id == term.id
+            )
+        )
+    )
     discounts = list(session.scalars(select(Discount).where(Discount.is_active.is_(True)).order_by(Discount.name)))
     manual: dict[uuid.UUID, list[Discount]] = defaultdict(list)
     discount_by_id = {d.id: d for d in discounts}
@@ -354,7 +362,8 @@ def draft_term_invoices(
         lines = [
             DraftLine(LineKind.FEE, item_name, schedule.amount_kobo, fee_item_id=schedule.fee_item_id)
             for schedule, item_name in by_level.get(level_id, [])
-            if not schedule.is_optional or (student_id, schedule.fee_item_id) in chosen
+            if (not schedule.is_optional or (student_id, schedule.fee_item_id) in chosen)
+            and (student_id, schedule.fee_item_id) not in exempt
         ]
         if not lines:
             missing_fees.add(level_name)

@@ -15,7 +15,7 @@ from app.modules.accounts.permissions import Capability
 from app.modules.schools.models import Term
 from app.modules.students.models import Student
 
-from . import invoicing, plans, setup_service
+from . import charges, invoicing, plans, setup_service
 from .models import DiscountKind, DiscountRule, FeeCategory, Invoice, InvoiceKind, LineKind
 
 router = APIRouter(tags=["fees"], responses=ERROR_RESPONSES)
@@ -40,17 +40,80 @@ class FeeItemOut(BaseModel):
     name: str
     category: FeeCategory
     is_active: bool
+    default_amount_kobo: int | None = Field(description="Standard price for charging one pupil (uniform, books)")
 
 
 class FeeItemIn(BaseModel):
     name: Name
     category: FeeCategory = FeeCategory.OTHER
+    default_amount_kobo: Kobo | None = None
 
 
 class FeeItemUpdateIn(BaseModel):
     name: Name | None = None
     category: FeeCategory | None = None
     is_active: bool | None = None
+    default_amount_kobo: Kobo | None = Field(default=None, description="Send null to clear the standard price")
+
+
+class ClassChargeIn(BaseModel):
+    fee_item_id: uuid.UUID | None = Field(default=None, description="An existing fee, or name a new one")
+    new_item_name: Name | None = None
+    amount_kobo: Kobo
+    class_level_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+    excluded_student_ids: list[uuid.UUID] = Field(default_factory=list, max_length=5000)
+    dry_run: bool = True
+
+
+class ChargeStudentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    student_id: uuid.UUID
+    full_name: str
+    admission_number: str
+    class_name: str
+    billed: bool
+    excluded: bool
+
+
+class ClassChargeOut(BaseModel):
+    dry_run: bool
+    item_name: str
+    amount_kobo: int
+    charged_now: int
+    total_kobo: int
+    students: list[ChargeStudentOut]
+
+
+class ExemptionIn(BaseModel):
+    term_id: uuid.UUID
+    fee_item_id: uuid.UUID
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class ExemptionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    term_id: uuid.UUID
+    fee_item_id: uuid.UUID
+    item_name: str
+    reason: str
+
+
+class ExemptionChangeOut(BaseModel):
+    changed_kobo: int = Field(description="Taken off (exempt) or put back on (unexempt) the pupil's bill")
+
+
+class PupilChargeIn(BaseModel):
+    fee_item_id: uuid.UUID | None = None
+    description: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] = ""
+    unit_kobo: Kobo | None = Field(default=None, description="Default: the item's standard price")
+    quantity: int = Field(default=1, ge=1, le=100)
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class PupilChargeOut(BaseModel):
+    invoice_id: uuid.UUID
 
 
 class ScheduleEntryOut(BaseModel):
@@ -332,7 +395,11 @@ def list_fee_items(ctx: StaffContext = FEES_VIEW, db: Session = Depends(get_db))
 
 @router.post("/fee-items", response_model=FeeItemOut, status_code=status.HTTP_201_CREATED, summary="Add a fee item")
 def create_fee_item(body: FeeItemIn, ctx: StaffContext = FEES_MANAGE, db: Session = Depends(get_db)) -> FeeItemOut:
-    return FeeItemOut.model_validate(setup_service.create_fee_item(db, ctx, name=body.name, category=body.category))
+    return FeeItemOut.model_validate(
+        setup_service.create_fee_item(
+            db, ctx, name=body.name, category=body.category, default_amount_kobo=body.default_amount_kobo
+        )
+    )
 
 
 @router.patch("/fee-items/{item_id}", response_model=FeeItemOut, summary="Rename, recategorise or retire a fee")
@@ -341,7 +408,14 @@ def update_fee_item(
 ) -> FeeItemOut:
     return FeeItemOut.model_validate(
         setup_service.update_fee_item(
-            db, ctx, item_id, name=body.name, category=body.category, is_active=body.is_active
+            db,
+            ctx,
+            item_id,
+            name=body.name,
+            category=body.category,
+            is_active=body.is_active,
+            set_price="default_amount_kobo" in body.model_fields_set,
+            default_amount_kobo=body.default_amount_kobo,
         )
     )
 
@@ -586,6 +660,96 @@ def add_line(
         fee_item_id=body.fee_item_id,
     )
     return _invoice_out(db, invoice_id)
+
+
+@router.post(
+    "/terms/{term_id}/class-charges",
+    response_model=ClassChargeOut,
+    summary="Add a fee to whole classes this term (e.g. WAEC), now and on later bills; dry_run to preview",
+)
+def class_charge(
+    term_id: uuid.UUID, body: ClassChargeIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
+) -> ClassChargeOut:
+    report = charges.charge_classes(
+        db,
+        ctx,
+        term_id=term_id,
+        fee_item_id=body.fee_item_id,
+        new_item_name=body.new_item_name,
+        amount_kobo=body.amount_kobo,
+        class_level_ids=set(body.class_level_ids),
+        excluded_student_ids=set(body.excluded_student_ids),
+        dry_run=body.dry_run,
+    )
+    return ClassChargeOut(
+        dry_run=report.dry_run,
+        item_name=report.item_name,
+        amount_kobo=report.amount_kobo,
+        charged_now=report.charged_now,
+        total_kobo=report.total_kobo,
+        students=[ChargeStudentOut.model_validate(s) for s in report.students],
+    )
+
+
+@router.get(
+    "/students/{student_id}/exemptions", response_model=list[ExemptionOut], summary="Class fees this pupil doesn't pay"
+)
+def list_exemptions(
+    student_id: uuid.UUID, ctx: StaffContext = FEES_VIEW, db: Session = Depends(get_db)
+) -> list[ExemptionOut]:
+    get_or_404(db, Student, student_id, label="Student")
+    return [ExemptionOut.model_validate(e) for e in charges.exemptions(db, student_id)]
+
+
+@router.post(
+    "/students/{student_id}/exemptions",
+    response_model=ExemptionChangeOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Exempt a pupil from a class fee this term (comes off their bill if already billed)",
+)
+def add_exemption(
+    student_id: uuid.UUID, body: ExemptionIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
+) -> ExemptionChangeOut:
+    return ExemptionChangeOut(
+        changed_kobo=charges.exempt(db, ctx, student_id, body.term_id, body.fee_item_id, body.reason)
+    )
+
+
+@router.delete(
+    "/students/{student_id}/exemptions/{fee_item_id}",
+    response_model=ExemptionChangeOut,
+    summary="Charge the pupil the fee again",
+)
+def remove_exemption(
+    student_id: uuid.UUID,
+    fee_item_id: uuid.UUID,
+    term_id: uuid.UUID,
+    ctx: StaffContext = INVOICES_ISSUE,
+    db: Session = Depends(get_db),
+) -> ExemptionChangeOut:
+    return ExemptionChangeOut(changed_kobo=charges.unexempt(db, ctx, student_id, term_id, fee_item_id))
+
+
+@router.post(
+    "/students/{student_id}/charges",
+    response_model=PupilChargeOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Charge one pupil for an item (uniform, books), on this term's bill or a one-off bill",
+)
+def pupil_charge(
+    student_id: uuid.UUID, body: PupilChargeIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
+) -> PupilChargeOut:
+    invoice_id = charges.charge_pupil(
+        db,
+        ctx,
+        student_id,
+        fee_item_id=body.fee_item_id,
+        description=body.description,
+        unit_kobo=body.unit_kobo,
+        quantity=body.quantity,
+        reason=body.reason,
+    )
+    return PupilChargeOut(invoice_id=invoice_id)
 
 
 @router.post(

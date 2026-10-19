@@ -31,6 +31,9 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Every payment gets a numbered receipt (no gaps) that I can download as a PDF.
 - ✅ Keep a debtors list that's always current: filter by class, amount or overdue, sort by most owed or longest overdue, call the parent from the list, and download it for Excel or to print.
 - ✅ Report money received for any period, by day and by method, with the full payment list in Excel.
+- ✅ Add a fee to some classes after the term's bills have gone out (WAEC, NECO, JAMB, an end-of-year party), leaving out pupils who aren't taking part.
+- ✅ Exempt one pupil from a class fee; it comes off their bill, and billing again won't put it back.
+- ✅ Keep a price list for things only some pupils buy (uniforms, textbooks) and add them to a pupil's bill with a quantity.
 - ✅ Agree with a parent to pay a bill in instalments: reminders follow the instalment dates, and they aren't counted as a debtor while they keep to the plan.
 - ✅ Send polite reminders without phoning every parent: reminders go automatically before and after the due date on a schedule I set, stop as soon as the bill is paid, and never exceed a cap per bill.
 - ✅ Tell every parent about their new bill when I generate the term's invoices.
