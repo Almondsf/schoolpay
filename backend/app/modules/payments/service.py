@@ -110,7 +110,9 @@ def record_payment(
     return Recorded(payment, allocations, receipt)
 
 
-def reverse_payment(session: Session, ctx: StaffContext, payment_id: uuid.UUID, reason: str) -> Payment:
+def reverse_payment(
+    session: Session, ctx: StaffContext, payment_id: uuid.UUID, reason: str, *, at: datetime | None = None
+) -> Payment:
     """
     Undo a payment recorded in error (a bounced teller, a duplicate entry). A
     reversal is a new negative payment with negative allocations; the original
@@ -135,7 +137,7 @@ def reverse_payment(session: Session, ctx: StaffContext, payment_id: uuid.UUID, 
         method=original.method,
         gateway=original.gateway,
         reverses_payment_id=original.id,
-        received_at=datetime.now(UTC),
+        received_at=at or datetime.now(UTC),  # `at`: only the demo seed backdates a reversal
         note=reason.strip()[:300],
         recorded_by=ctx.user.id,
     )

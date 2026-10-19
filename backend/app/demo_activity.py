@@ -114,6 +114,8 @@ def add_activity(session: Session, demo: DemoSchool, *, transfers_by_account: bo
     today = datetime.now(LAGOS).date()
     last_day = max(date(2026, 9, 8), min(today - timedelta(days=1), demo.term.end_date))
     payments = _payments(demo, rng, billed, last_day, transfers_by_account)
+    if demo.term.start_date <= today <= demo.term.end_date:
+        payments += _this_morning(demo, rng, billed, payments, transfers_by_account)
     session.add_all(payments)
     session.flush()
     allocations = allocate(session, ids)
@@ -152,7 +154,9 @@ def add_activity(session: Session, demo: DemoSchool, *, transfers_by_account: bo
         None,
     )
     if bounced is not None:
-        reverse_payment(session, ctx, bounced.id, "Teller returned unpaid by the bank")
+        # The bank returned it a few days later (not "today", which would skew today's takings)
+        returned = min(bounced.received_at + timedelta(days=3), datetime.combine(last_day, time(16, 0), tzinfo=LAGOS))
+        reverse_payment(session, ctx, bounced.id, "Teller returned unpaid by the bank", at=returned)
 
 
 def _last_session(session: Session, school_id: uuid.UUID) -> None:
@@ -285,6 +289,34 @@ def _payments(
                 method = PaymentMethod.BANK_TRANSFER
             payments.append(_payment(demo, rng, student.id, amount, method, min(received_at, _end_of(last_day))))
     return payments
+
+
+def _this_morning(
+    demo: DemoSchool,
+    rng: random.Random,
+    billed: dict[uuid.UUID, int],
+    payments: list[Payment],
+    transfers_by_account: bool,
+) -> list[Payment]:
+    """A few transfers from parents who still owe, earlier today, so "received today" isn't empty."""
+    paid: dict[uuid.UUID, int] = {}
+    for p in payments:
+        paid[p.student_id] = paid.get(p.student_id, 0) + p.amount_kobo
+    owing = [s for s in demo.students[2:] if billed[s.id] - paid.get(s.id, 0) >= 30_000 * 100]
+    now = datetime.now(LAGOS)
+    method = PaymentMethod.VIRTUAL_ACCOUNT if transfers_by_account else PaymentMethod.BANK_TRANSFER
+    return [
+        _payment(
+            demo,
+            rng,
+            s.id,
+            rng.choice([10_000, 15_000, 20_000, 25_000]) * 100,
+            method,
+            now - timedelta(minutes=17 * (n + 1)),
+        )
+        for n, s in enumerate(rng.sample(owing, min(5, len(owing))))
+        if (now - timedelta(minutes=17 * (n + 1))).date() == now.date()  # only if it's still today in Lagos
+    ]
 
 
 def _end_of(day: date) -> datetime:
