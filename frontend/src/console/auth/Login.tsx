@@ -83,6 +83,9 @@ export function Login() {
             <Link to="/console/forgot-password" className="link">
               Forgot your password?
             </Link>
+            <Link to="/signup" className="link">
+              New school? Sign up
+            </Link>
           </>
         )}
       </form>

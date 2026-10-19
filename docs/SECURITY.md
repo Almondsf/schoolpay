@@ -163,6 +163,11 @@ It is updated with every change that affects security.
   The message log is visible only to staff with `messaging.manage` in that
   school.
 
+## Sign-up and the platform console
+- Sign-up gives the same answer whether or not an email is registered (the owner gets an "already have an account" email instead), is rate limited per IP, needs the terms accepted, and has a honeypot field. The school stays pending, and nobody can sign in to it, until the proprietor proves the email address by setting a password. `SIGNUP_ENABLED=false` closes it.
+- Platform endpoints need a platform admin (who must use two-factor sign-in). Support lookups show students as initials only, are rate limited, and every search is recorded in the platform audit trail. Plan changes, billing runs, payments and voids are audited too.
+- Subscription invoice lines and payments are append-only (database trigger); a payment can't exceed what's owed; a live bill per school per term is enforced by a unique index.
+
 ## Reports and downloads
 - Reports need `reports.view` (proprietor and bursar only); school admins
   can't see money.

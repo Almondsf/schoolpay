@@ -41,5 +41,7 @@ celery_app.conf.update(
         # On the hour: each school's reminders go out at its chosen hour (Lagos time)
         "schedule-reminders": {"task": "notifications.schedule_reminders", "schedule": crontab(minute=0)},
         "retry-unsent-messages": {"task": "notifications.retry_unsent", "schedule": crontab(minute=30)},
+        # Signed-up schools nobody confirmed are removed (they hold only the sign-up form's details)
+        "prune-pending-schools": {"task": "platform.prune_pending_schools", "schedule": crontab(minute=15, hour=3)},
     },
 )

@@ -10,8 +10,14 @@ from app.core.tenancy import TenantMixin
 
 
 class SchoolStatus(enum.StrEnum):
+    PENDING = "pending"  # signed up, proprietor hasn't confirmed their email (set a password) yet
     ACTIVE = "active"
     SUSPENDED = "suspended"  # staff and parents can't sign in; data is kept
+
+
+class SchoolOrigin(enum.StrEnum):
+    PLATFORM = "platform"  # created by a platform admin
+    SIGNUP = "signup"  # the school signed itself up
 
 
 class School(UUIDPrimaryKey, Timestamped, Base):
@@ -27,6 +33,11 @@ class School(UUIDPrimaryKey, Timestamped, Base):
     address: Mapped[str] = mapped_column(String(300), default="")
     phone: Mapped[str] = mapped_column(String(20), default="")
     email: Mapped[str] = mapped_column(String(255), default="")
+    origin: Mapped[SchoolOrigin] = mapped_column(
+        enum_type(SchoolOrigin, "school_origin"), default=SchoolOrigin.PLATFORM
+    )
+    # Its subscription plan; None means the default plan
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plans.id", ondelete="RESTRICT"))
 
     def __repr__(self) -> str:
         return f"<School {self.slug}>"

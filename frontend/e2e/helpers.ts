@@ -32,7 +32,7 @@ async function freshTotp(): Promise<string> {
   return totp(MFA_SECRET, step * 30_000);
 }
 
-export async function signIn(page: Page, email: string, { mfa = false } = {}) {
+export async function signIn(page: Page, email: string, { mfa = false, landing = /Welcome/ as string | RegExp } = {}) {
   await page.goto('/console/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
@@ -41,7 +41,7 @@ export async function signIn(page: Page, email: string, { mfa = false } = {}) {
     await page.getByLabel('Code').fill(await freshTotp());
     await page.getByRole('button', { name: 'Continue' }).click();
   }
-  await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: landing })).toBeVisible();
 }
 
 /** Go to a console page from the main menu, opening the Setup menu when the link lives there. */

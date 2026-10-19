@@ -41,6 +41,12 @@ Set `EMAIL_BACKEND=smtp` with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
 `SMTP_PASSWORD` and `EMAIL_FROM`; invites and password resets go out through it.
 With `console` they're only logged (subject and recipient domain).
 
+## Platform billing and sign-up
+
+Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` to the platform's own bank account: it's printed on every subscription invoice and email. `SUBSCRIPTION_DUE_DAYS` (30) sets the payment terms. Set the plan prices in the console (Plans) before the first billing run; the seeded "Standard" plan has placeholder prices.
+
+Self sign-up is on by default (`SIGNUP_ENABLED`), limited by `SIGNUP_RATE_PER_IP`. Beat must run for unconfirmed sign-ups to be cleaned up (`PENDING_SCHOOL_DAYS`).
+
 ## Messages to parents
 
 Messages go by **WhatsApp first**, then SMS, then email, whichever works.

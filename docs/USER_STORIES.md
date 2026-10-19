@@ -3,6 +3,8 @@
 What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ Sign my school up online, confirm my email, and get a checklist of what to set up next.
+- ✅ See our plan, what a term costs at our pupil numbers, where to pay, and our SchoolPay bills (PDF).
 - ✅ Connect the school's own bank account so all payments settle there (the platform never holds our money).
 - ✅ Invite staff by email, choose their role, rename them, change their role, deactivate or reactivate them.
 - ✅ Reset a staff member's two-factor sign-in when they lose their phone.
@@ -64,7 +66,12 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Create a school and invite its proprietor.
 - ✅ Suspend a school (its staff are signed out at once) and reactivate it, with the reason recorded.
 - ✅ See platform-level activity (school changes, platform sign-ins, failed sign-ins for unknown emails).
-- Manage plans and support lookups.
+- ✅ See every school at a glance: active, waiting to confirm, suspended, new sign-ups, pupils, money parents paid through SchoolPay, and subscription income owed and overdue.
+- ✅ Set the prices (set-up fee, yearly licence, per pupil per year billed termly) and move a school to another plan.
+- ✅ Bill every school for the term in one click, after a preview; never bill a school twice for a term.
+- ✅ Record a school's bank transfer against its bill, void a bill made in error, and download any bill as PDF.
+- ✅ Look a school, staff member, payment, account number or receipt up when someone calls for help, without seeing children's details.
+- ✅ See one school's staff (invited, two-factor, last sign-in), figures and bills on one page.
 
 ## Every staff member
 - ✅ Accept an invite by choosing my own password.

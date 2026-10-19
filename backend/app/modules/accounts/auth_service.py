@@ -342,8 +342,13 @@ def complete_password_link(session: Session, token: str, new_password: str, meta
     ):
         raise DomainError("This link has expired or was already used. Ask for a new one.", code="link_invalid")
     scope_for_user(session, user)
+    first_password = user.password_hash is None
     _set_password(user, new_password)
     revoke_sessions(session, user.id, "password_reset")
+    if first_password:
+        from app.modules.platform.signup import activate_if_pending  # signup builds on accounts
+
+        activate_if_pending(session, user)
     record(
         session,
         AuditAction.PASSWORD_RESET_COMPLETED,

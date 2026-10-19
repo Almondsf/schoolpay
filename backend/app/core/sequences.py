@@ -39,3 +39,26 @@ def reserve(session: Session, school_id: uuid.UUID, name: str, count: int = 1) -
     )
     last = session.execute(stmt).scalar_one()
     return range(last - count + 1, last + 1)
+
+
+class PlatformSequence(Base):
+    """Gapless numbering that isn't per school (the platform's own invoices to schools)."""
+
+    __tablename__ = "platform_sequences"
+
+    name: Mapped[str] = mapped_column(String(30), primary_key=True)
+    last_value: Mapped[int] = mapped_column(BigInteger, default=0)
+
+
+def reserve_platform(session: Session, name: str, count: int = 1) -> range:
+    """Like `reserve`, for platform-wide numbers. Locked until the caller's transaction ends."""
+    if count < 1:
+        return range(0)
+    stmt = (
+        insert(PlatformSequence)
+        .values(name=name, last_value=count)
+        .on_conflict_do_update(index_elements=["name"], set_={"last_value": PlatformSequence.last_value + count})
+        .returning(PlatformSequence.last_value)
+    )
+    last = session.execute(stmt).scalar_one()
+    return range(last - count + 1, last + 1)

@@ -4,12 +4,15 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-18 (reports and dashboard done)
+Last updated: 2026-10-18 (onboarding and platform billing done)
 
 ## Decisions
 
-- [ ] **Pricing model** (PLAN.md §3.4): per student per term, a parent
-      convenience fee, or both. _Blocks:_ platform billing (chunk 9).
+- [ ] _(new)_ **Set the actual prices.** The model is decided (ParentPay's:
+      set-up fee + annual licence + per pupil per year, billed termly, free
+      for parents; PLAN.md §3.4). The built-in "Standard" plan has
+      placeholder amounts; change them in the platform console (Plans)
+      before selling.
 - [ ] **Product name.** "SchoolPay" is a placeholder; check the name and
       domain are free and the trademark is clear. _Blocks:_ branding, sender
       IDs, WhatsApp display name, domain.
@@ -23,6 +26,7 @@ Last updated: 2026-10-18 (reports and dashboard done)
 | **Meta WhatsApp Business** | Create a WhatsApp Business account and phone number in Meta Business Manager, a permanent access token, and submit the three message templates in `docs/DEPLOYMENT.md` ("Messages to parents") for approval. | WhatsApp receipts and reminders (SMS is used until then) |
 | **Termii** (SMS) | Open an account, register a sender ID (up to 11 characters, e.g. the product name), and enable the DND route. | Parent sign-in codes and SMS messages on a live system |
 | **Email sending** | Pick a provider (e.g. Postmark, Amazon SES, Zoho) and a sending domain. | Staff invites and password resets on a live system |
+| _(new)_ **Platform bank account** | A business account for SchoolPay itself (not a school's). Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` so subscription invoices tell schools where to pay. | Schools paying their subscription |
 | **Hosting and domain** | Where the app will run (a VPS or a managed platform), plus the domain. | Going live |
 
 ## Validate with schools (PLAN.md §7)
@@ -36,7 +40,7 @@ Last updated: 2026-10-18 (reports and dashboard done)
 
 - [ ] Register with the NDPC as a data processor (children's data).
 - [ ] A Data Processing Agreement template for schools to sign.
-- [ ] Privacy policy and terms of service for the website and parent portal.
+- [ ] Privacy policy and terms of service for the website and parent portal. _(new)_ The sign-up page asks schools to accept the terms, so these are needed before sign-up goes public (or set `SIGNUP_ENABLED=false` until then).
 - [ ] _(new)_ Decide how long schools may keep downloaded debtor lists (they
       contain parents' phone numbers) and say so in the school agreement.
 
@@ -50,4 +54,4 @@ Last updated: 2026-10-18 (reports and dashboard done)
 
 ## Done
 
-- Nothing yet.
+- Pricing model chosen: ParentPay's (2026-10-18).

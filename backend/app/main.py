@@ -30,6 +30,9 @@ from app.modules.parents.router import auth_router as parent_auth_router
 from app.modules.parents.router import router as parent_router
 from app.modules.payments.router import dev_router, webhook_router
 from app.modules.payments.router import router as payments_router
+from app.modules.platform.router import public_router as signup_router
+from app.modules.platform.router import router as platform_router
+from app.modules.platform.router import school_router as subscription_router
 from app.modules.receipts.router import public_router as public_receipts_router
 from app.modules.receipts.router import router as receipts_router
 from app.modules.reports.router import router as reports_router
@@ -60,6 +63,9 @@ def build_api_router() -> APIRouter:
         messaging_router,
         parent_messaging_router,
         reports_router,
+        platform_router,
+        signup_router,
+        subscription_router,
         public_receipts_router,
         webhook_router,
         dev_router,

@@ -23,6 +23,12 @@ def _password_email(user: User, purpose: str, link: str) -> OutgoingEmail:
     if purpose == "invite":
         subject = f"You've been invited to {settings.app_name}"
         intro = f"An account has been created for you on {settings.app_name}. Set your password to get started:"
+    elif purpose == "signup":
+        subject = f"Confirm your school on {settings.app_name}"
+        intro = (
+            f"Thank you for signing your school up to {settings.app_name}. Confirm this is your email address by "
+            "choosing a password. Your school's account opens as soon as you do:"
+        )
     else:
         subject = f"Reset your {settings.app_name} password"
         intro = "Someone asked to reset the password for your account. If it was you, set a new password here:"
@@ -37,9 +43,9 @@ def send_password_link(user_id: str, purpose: str) -> None:
     """Build the link at send time, so no usable token is ever stored in the outbox."""
     with SessionLocal() as session:
         user = session.get(User, uuid.UUID(user_id))
-        if user is None or not user.is_active or purpose not in ("invite", "reset"):
+        if user is None or not user.is_active or purpose not in ("invite", "signup", "reset"):
             return
-        if purpose == "invite" and user.password_hash is not None:
+        if purpose in ("invite", "signup") and user.password_hash is not None:
             return  # already accepted; a retried task must not send a stale invite
         token = password_link_token(user, purpose)
         link = f"{get_settings().frontend_url}/console/set-password#token={token}"

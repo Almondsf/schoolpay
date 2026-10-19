@@ -16,6 +16,8 @@ from app.modules.notifications.sms import SmsError
 from app.modules.parents import tasks as parents_tasks
 from app.modules.payments import accounts as payment_accounts
 from app.modules.payments import webhooks
+from app.modules.platform import signup as platform_signup
+from app.modules.platform import tasks as platform_tasks
 from app.workers.celery_app import celery_app
 
 
@@ -91,3 +93,18 @@ def schedule_reminders() -> int:
 @celery_app.task(name="notifications.retry_unsent")
 def retry_unsent_messages() -> int:
     return notifications.retry_unsent()
+
+
+@celery_app.task(name="platform.send_subscription_invoice", autoretry_for=(OSError,), retry_backoff=True, max_retries=5)
+def send_subscription_invoice(invoice_id: str) -> int:
+    return platform_tasks.send_subscription_invoice(invoice_id)
+
+
+@celery_app.task(name="platform.signup_existing_account", autoretry_for=(OSError,), retry_backoff=True, max_retries=5)
+def signup_existing_account(user_id: str) -> None:
+    platform_tasks.signup_existing_account(user_id)
+
+
+@celery_app.task(name="platform.prune_pending_schools")
+def prune_pending_schools() -> int:
+    return platform_signup.prune_pending()

@@ -3,7 +3,7 @@
 import re
 import uuid
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -97,14 +97,6 @@ def create_school(
     )
     session.commit()
     return school, proprietor
-
-
-def list_schools(search: str | None = None) -> Select[School]:
-    stmt = select(School).order_by(School.name)
-    if search:
-        pattern = f"%{search.strip()}%"
-        stmt = stmt.where(or_(School.name.ilike(pattern), School.slug.ilike(pattern)))
-    return stmt
 
 
 def set_status(session: Session, admin: Principal, school_id: uuid.UUID, status: SchoolStatus, reason: str) -> School:

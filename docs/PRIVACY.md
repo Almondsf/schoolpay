@@ -63,6 +63,9 @@ can call about fees. Only the proprietor and bursar can see it. Every Excel or
 PDF download of it is recorded in the school's activity log with who took it,
 so a school can account for copies of parents' details that leave the system.
 
+## School sign-up and the platform
+A school that signs up but never confirms its email is deleted, with its proprietor's details, after `PENDING_SCHOOL_DAYS` (14). The platform's audit trail keeps only the school's name and a masked email. Platform admins see each school's figures (pupil counts, money), not pupils' or parents' details. Support lookups show a student's initials and admission number at most, and every lookup is recorded.
+
 ## Shared with payment gateways
 To issue a student's account number, the gateway (Paystack) receives the
 student's first and last name, the primary guardian's phone number, and the

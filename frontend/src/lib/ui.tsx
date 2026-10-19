@@ -6,6 +6,7 @@ import { humanize } from './format';
 const STATUS_TONE: Record<string, string> = {
   active: 'ok',
   suspended: 'danger',
+  pending: 'warn',
   invited: 'warn',
   inactive: '',
 };

@@ -15,6 +15,11 @@ import { Dashboard } from './Dashboard';
 import { FeeSetup } from './fees/FeeSetup';
 import { Payments } from './payments/Payments';
 import { PaymentSettings } from './payments/PaymentSettings';
+import { PlatformBilling } from './platform/Billing';
+import { PlatformLookup } from './platform/Lookup';
+import { PlatformOverview } from './platform/Overview';
+import { PlatformPlans } from './platform/Plans';
+import { PlatformSchoolDetail } from './platform/SchoolDetail';
 import { PlatformSchools } from './platform/Schools';
 import { SchoolProfile } from './SchoolProfile';
 import { Calendar } from './setup/Calendar';
@@ -23,6 +28,7 @@ import { ImportStudents } from './students/ImportStudents';
 import { StudentDetail } from './students/StudentDetail';
 import { Students } from './students/Students';
 import { StaffPage } from './Staff';
+import { Subscription } from './Subscription';
 
 interface NavItem {
   to: string;
@@ -44,11 +50,16 @@ const SCHOOL_NAV: NavItem[] = [
   { to: '/console/staff', label: 'Staff', capability: 'staff.view', setup: true },
   { to: '/console/school', label: 'School profile', capability: 'school.view', setup: true },
   { to: '/console/payment-settings', label: 'Payment settings', capability: 'payments.view', setup: true },
+  { to: '/console/subscription', label: 'Subscription', capability: 'reports.view', setup: true },
   { to: '/console/audit', label: 'Activity log', capability: 'audit.view', setup: true },
 ];
 
 const PLATFORM_NAV: NavItem[] = [
+  { to: '/console/platform', label: 'Overview', capability: 'platform.manage' },
   { to: '/console/platform/schools', label: 'Schools', capability: 'platform.manage' },
+  { to: '/console/platform/billing', label: 'Billing', capability: 'platform.manage' },
+  { to: '/console/platform/plans', label: 'Plans', capability: 'platform.manage' },
+  { to: '/console/platform/lookup', label: 'Support lookup', capability: 'platform.manage' },
   { to: '/console/platform/audit', label: 'Activity log', capability: 'platform.manage' },
 ];
 
@@ -77,7 +88,13 @@ export function ConsoleApp() {
           <Route path="staff" element={<Guard capability="staff.view"><StaffPage /></Guard>} />
           <Route path="audit" element={<Guard capability="audit.view"><AuditLog /></Guard>} />
           <Route path="school" element={<Guard capability="school.view"><SchoolProfile /></Guard>} />
+          <Route path="subscription" element={<Guard capability="reports.view"><Subscription /></Guard>} />
+          <Route path="platform" element={<Guard capability="platform.manage"><PlatformOverview /></Guard>} />
           <Route path="platform/schools" element={<Guard capability="platform.manage"><PlatformSchools /></Guard>} />
+          <Route path="platform/schools/:schoolId" element={<Guard capability="platform.manage"><PlatformSchoolDetail /></Guard>} />
+          <Route path="platform/billing" element={<Guard capability="platform.manage"><PlatformBilling /></Guard>} />
+          <Route path="platform/plans" element={<Guard capability="platform.manage"><PlatformPlans /></Guard>} />
+          <Route path="platform/lookup" element={<Guard capability="platform.manage"><PlatformLookup /></Guard>} />
           <Route path="platform/audit" element={<Guard capability="platform.manage"><AuditLog platform /></Guard>} />
           <Route path="*" element={<Navigate to="/console" replace />} />
         </Route>
@@ -105,7 +122,7 @@ function Guard({ capability, children }: { capability: Capability; children: JSX
 
 function Home() {
   const { can } = useAuth();
-  return can('platform.manage') ? <Navigate to="/console/platform/schools" replace /> : <Dashboard />;
+  return can('platform.manage') ? <Navigate to="/console/platform" replace /> : <Dashboard />;
 }
 
 function Layout() {
@@ -128,7 +145,7 @@ function Layout() {
               {nav
                 .filter((item) => !item.setup)
                 .map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.to === '/console'}>
+                  <NavLink key={item.to} to={item.to} end={item.to === '/console' || item.to === '/console/platform'}>
                     {item.label}
                   </NavLink>
                 ))}

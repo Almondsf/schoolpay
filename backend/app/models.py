@@ -10,6 +10,7 @@ def load_all_models() -> None:
     from app.modules.notifications import models as notifications  # noqa: F401
     from app.modules.parents import models as parents  # noqa: F401
     from app.modules.payments import models as payments  # noqa: F401
+    from app.modules.platform import models as platform  # noqa: F401
     from app.modules.receipts import models as receipts  # noqa: F401
     from app.modules.schools import models as schools  # noqa: F401
     from app.modules.students import models as students  # noqa: F401

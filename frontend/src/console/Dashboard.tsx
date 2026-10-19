@@ -6,6 +6,7 @@ import { api, unwrap, type Schemas } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { formatDate, formatKobo } from '../lib/format';
 import { Empty, ErrorAlert, Loading, PageHeader } from '../lib/ui';
+import { GettingStarted } from './GettingStarted';
 import { useSessions } from './hooks';
 
 type Overview = Schemas['OverviewOut'];
@@ -40,6 +41,7 @@ export function Dashboard() {
     return (
       <>
         <PageHeader title={`Welcome, ${first}`} subtitle={user?.school?.name} />
+        <GettingStarted />
         <div className="card">
           <p>Use the menu to manage students, classes and the school calendar.</p>
         </div>
@@ -88,6 +90,7 @@ function MoneyDashboard({ first, schoolName }: { first: string; schoolName: stri
           )
         }
       />
+      <GettingStarted />
       {overview.isPending ? <Loading /> : overview.isError ? <ErrorAlert error={overview.error} /> : <Figures data={overview.data} />}
     </>
   );

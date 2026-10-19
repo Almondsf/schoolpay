@@ -1,11 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.errors import ERROR_RESPONSES
-from app.core.pagination import Page, PageParams, page_params, paginate
 from app.modules.accounts.deps import Principal, StaffContext, require, require_platform_admin
 from app.modules.accounts.permissions import Capability
 
@@ -50,19 +49,6 @@ def create_school(
         proprietor_name=body.proprietor_name,
     )
     return SchoolOut.model_validate(school)
-
-
-@platform_schools_router.get("", response_model=Page[SchoolOut], summary="All schools")
-def list_schools(
-    admin: Principal = Depends(require_platform_admin),
-    db: Session = Depends(get_db),
-    params: PageParams = Depends(page_params),
-    search: str | None = Query(default=None, max_length=100),
-) -> Page[SchoolOut]:
-    rows, total = paginate(db, service.list_schools(search), params)
-    return Page(
-        items=[SchoolOut.model_validate(s) for s in rows], total=total, limit=params.limit, offset=params.offset
-    )
 
 
 @platform_schools_router.post(

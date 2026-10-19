@@ -22,13 +22,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 12. [Parent portal](#12-parent-portal)
 13. [Messages to parents](#13-messages-to-parents)
 14. [Reports and the dashboard](#14-reports-and-the-dashboard)
-15. [Backend layout and conventions](#15-backend-layout-and-conventions)
-16. [Background jobs and the outbox](#16-background-jobs-and-the-outbox)
-17. [API](#17-api)
-18. [Configuration](#18-configuration)
-19. [Frontend](#19-frontend)
-20. [Testing](#20-testing)
-21. [Known gaps](#21-known-gaps)
+15. [The platform: plans, subscription billing, sign-up](#15-the-platform-plans-subscription-billing-sign-up)
+16. [Backend layout and conventions](#16-backend-layout-and-conventions)
+17. [Background jobs and the outbox](#17-background-jobs-and-the-outbox)
+18. [API](#18-api)
+19. [Configuration](#19-configuration)
+20. [Frontend](#20-frontend)
+21. [Testing](#21-testing)
+22. [Known gaps](#22-known-gaps)
 
 ---
 
@@ -549,7 +550,89 @@ autovacuum runs. With plain subqueries the planner then chose nested loops
 that redid an aggregate for every row: 18 seconds instead of under one for 60
 students. Materializing makes each aggregate run once, whatever the plan.
 
-## 15. Backend layout and conventions
+## 15. The platform: plans, subscription billing, sign-up
+
+Module: `app/modules/platform`. Console: the platform admin's **Overview**,
+**Schools**, **Billing**, **Plans** and **Support lookup**; for schools,
+**Subscription** (under Setup) and the **Getting started** checklist on the
+dashboard; the public **/signup** page.
+
+**Pricing (ParentPay's model, PLAN.md §3.4).** The school pays and parents use
+SchoolPay free. A `Plan` has a one-off **set-up fee**, an **annual licence**,
+and a **per-pupil fee per year**, billed a third each term for the pupils
+enrolled that term (`billing.termly()` rounds halves up to the kobo). One plan
+is the default (partial unique index); a school can be moved to another
+(`schools.plan_id`). The migration seeds "Standard" with placeholder prices for
+the owner to set. The gateway percentage (`PLATFORM_FEE_BP`) still comes off
+each parent payment through the split.
+
+**Subscription billing (`billing.py`).** "Bill this term"
+(`POST /platform/billing/generate`, with a dry run) bills every **active**
+school for its current term, in a fixed number of queries and one insert:
+
+- the set-up fee on the school's first bill only;
+- the licence on its first bill of each school year;
+- pupils × a third of the yearly fee.
+
+Schools already billed for their term are skipped. A partial unique index
+(school, session, term) where not voided makes double billing impossible, so
+it's safe to run again after a school sets its calendar. Schools with no
+current term are listed, not billed. Invoices are numbered platform-wide with
+no gaps (`core/sequences.reserve_platform`), lines and payments are
+append-only (trigger), and paid amounts come from recorded payments. Each
+school's proprietor is emailed its bill through the outbox
+(`platform.send_subscription_invoice`).
+
+Schools pay by transfer to the platform's own account (`PLATFORM_ACCOUNT_*`,
+printed on the invoice and its PDF). A platform admin records each payment,
+which can't exceed the balance or be dated in the future. An unpaid bill can
+be voided with a reason, and the term billed again. Card payment for
+subscriptions isn't built yet.
+
+**Sign-up (`signup.py`).** `POST /public/signup` creates the school as
+**pending** (`schools.status`), its origin `signup`, a short name made from
+its name (`-2`, `-3`... if taken), and its proprietor without a password. It
+then emails a "confirm your school" link (the password-link flow, purpose
+`signup`). Setting the password proves the email address and makes the school
+**active** (`activate_if_pending`, called from
+`accounts.complete_password_link`). Pending schools can't be signed in to.
+
+The answer is the same for an email that already has an account; that person
+is emailed "you already have an account" instead. Requests are limited per IP
+(`SIGNUP_RATE_PER_IP`), the terms must be accepted, a hidden honeypot field
+catches bots, and `SIGNUP_ENABLED=false` closes sign-up. Unconfirmed schools
+are deleted after `PENDING_SCHOOL_DAYS` (task `platform.prune_pending_schools`,
+daily). The sign-up writes only the platform's audit trail (with a masked
+email), so a never-confirmed school can be removed completely.
+
+**Getting started (`onboarding.py`).** `GET /school/onboarding` lists nine
+steps, each worked out from the school's own data in one query: address and
+phone, current term, classes, students, this term's fees, a bursar, bank
+account, students' account numbers, and the term's bills. The dashboard shows
+the list until every step is done.
+
+**The platform console (`console.py`).** The overview counts schools by status
+and sign-ups, pupils enrolled at active schools, money parents paid through
+SchoolPay this month and last, and subscriptions billed, received, outstanding
+and overdue. The schools list shows each school's plan, pupils, proprietor,
+whether payments are set up, what it owes, and its last sign-in (filter by
+status). A school's page adds its staff (invited, two-factor, last sign-in),
+this term's bills and collections, the plan picker, its subscription bills,
+and suspend/reactivate.
+
+**Support lookup** (`GET /platform/lookup?q=`) finds:
+
+- a school, by name, short name or email;
+- a staff member, by exact email;
+- a payment, by gateway or bank reference;
+- a student's account number;
+- a receipt, by verification code.
+
+Students show only as initials and admission number. Every search is recorded
+in the platform audit trail (`platform.support_lookup`) and rate limited. The
+platform admin sees figures for every school, not pupils' or parents' details.
+
+## 16. Backend layout and conventions
 
 ```
 backend/app/
@@ -593,7 +676,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 16. Background jobs and the outbox
+## 17. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -626,9 +709,11 @@ All tasks are declared in `app/workers/tasks.py`. Scheduled tasks (Celery beat):
 | `parents.prune` | 6 h | Deletes sign-in codes after a day and ended parent sessions after 30 days |
 | `notifications.schedule_reminders` | hourly (:00) | Queues fee reminders for schools whose sending hour it is |
 | `notifications.retry_unsent` | hourly (:30) | Retries messages that failed on every channel (up to 3 attempts) |
+| `platform.prune_pending_schools` | daily 03:15 | Deletes signed-up schools nobody confirmed within `PENDING_SCHOOL_DAYS` |
 
 On-demand tasks: `accounts.send_password_link`, `payments.process_webhook`,
-`payments.provision_virtual_accounts`, `notifications.deliver`.
+`payments.provision_virtual_accounts`, `notifications.deliver`,
+`platform.send_subscription_invoice`, `platform.signup_existing_account`.
 
 A task can be held back: `outbox.enqueue(..., not_before=when)` leaves the row
 pending until then, and the sweeper hands it over once it's due. Messages use
@@ -639,7 +724,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 17. API
+## 18. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -669,6 +754,8 @@ production.
 | Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |
 | Parent portal | `GET /parent/home`; `GET /parent/children/{id}`; `GET /parent/invoices/{id}`; `POST /parent/children/{id}/pay`; `GET /parent/receipts/{id}/pdf` |
 | Messages | `GET /messages`; `GET /message-templates`, `PUT /message-templates/{kind}`, `POST /message-templates/preview`; `GET/PUT /reminder-settings`; `PUT /guardians/{id}/reminders`; `POST /students/{id}/remind`; parents: `GET/PUT /parent/preferences` |
+| Platform (platform admins) | `GET /platform/overview`; `GET /platform/schools` (search, status), `GET /platform/schools/{id}`, `PUT /platform/schools/{id}/plan`, `POST /platform/schools`, `/suspend`, `/reactivate`; `GET/POST /platform/plans`, `PUT /platform/plans/{id}`; `POST /platform/billing/generate`; `GET /platform/billing/invoices`, `GET /platform/billing/invoices/{id}`, `/pdf`, `POST .../payments`, `.../void`; `GET /platform/lookup` |
+| Subscription and sign-up | `GET /subscription`, `GET /subscription/invoices/{id}/pdf`; `GET /school/onboarding`; `POST /public/signup` (public, rate limited) |
 | Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export` (`format=xlsx|pdf`) |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
@@ -677,14 +764,14 @@ production.
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 18. Configuration
+## 19. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 19. Frontend
+## 20. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -722,7 +809,18 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   `src/lib/download.ts`). Money queries are re-read every time the page is
   shown (`staleTime: 0`), so the figures are never 30 seconds stale.
   Set-up pages (fees, classes, calendar, staff, school profile, payment
-  settings, activity log) sit under a **Setup** menu in the top bar.
+  settings, subscription, activity log) sit under a **Setup** menu in the top
+  bar. New schools see a **Getting started** checklist on the dashboard.
+  **Subscription** shows the school's plan, a term's cost at its pupil
+  numbers, where to pay, and its bills (PDF).
+- **Platform console** (`src/console/platform/`, platform admins): Overview,
+  Schools (filters, plan, pupils, payments set-up, what each owes) and a
+  school's page (figures, staff, plan picker, bills, suspend), Billing (bill
+  the term with a preview, record a transfer, void, PDF), Plans (prices, with
+  the termly per-pupil amount worked out), and Support lookup.
+- **Sign-up** (`src/public/Signup.tsx`, `/signup`, linked from the sign-in
+  page): the school's details, consent, and a hidden honeypot field; then
+  "check your email".
   **Messages** (log of every message with its channel or why it was skipped,
   the wording editor with placeholders and preview, the reminder schedule);
   "Send reminder" and a per-parent "Stop/Restart reminders" on the student
@@ -743,7 +841,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 20. Testing
+## 21. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -782,7 +880,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 21. Known gaps
+## 22. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
 - Pricing model, gateway virtual-account KYC requirements and messaging-provider

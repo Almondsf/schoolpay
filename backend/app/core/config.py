@@ -103,6 +103,18 @@ class Settings(BaseSettings):
     # Where the gateway sends parents after a card payment (the web app verifies and shows the result)
     payment_callback_path: str = "/pay/complete"
 
+    # The platform's own bank account, printed on subscription invoices so schools can pay by transfer
+    platform_bank_name: str = ""
+    platform_account_number: str = ""
+    platform_account_name: str = ""
+    # Days a school has to pay a subscription invoice
+    subscription_due_days: int = Field(default=30, ge=1, le=120)
+    # Schools can sign themselves up at /signup; limits per IP address
+    signup_enabled: bool = True
+    signup_rate_per_ip: str = "5/hour"
+    # Signed-up schools whose proprietor never confirms are removed after this many days
+    pending_school_days: int = Field(default=14, ge=1, le=90)
+
     # Text messages (parent sign-in codes; reminders come later): console (log only), memory (tests) or termii
     sms_backend: Literal["console", "memory", "termii"] = "console"
     termii_api_key: str = ""

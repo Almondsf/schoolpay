@@ -446,6 +446,29 @@
         "title": "AuditEntryOut",
         "type": "object"
       },
+      "BankDetailsOut": {
+        "properties": {
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "bank_name": {
+            "title": "Bank Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_name",
+          "account_number",
+          "account_name"
+        ],
+        "title": "BankDetailsOut",
+        "type": "object"
+      },
       "BankOut": {
         "properties": {
           "code": {
@@ -3040,6 +3063,39 @@
         "title": "NewLineIn",
         "type": "object"
       },
+      "OnboardingStepOut": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "hint",
+          "link",
+          "done"
+        ],
+        "title": "OnboardingStepOut",
+        "type": "object"
+      },
       "OverviewOut": {
         "properties": {
           "aging": {
@@ -3354,11 +3410,11 @@
         "title": "Page[PaymentOut]",
         "type": "object"
       },
-      "Page_SchoolOut_": {
+      "Page_PlatformSchoolOut_": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/SchoolOut"
+              "$ref": "#/components/schemas/PlatformSchoolOut"
             },
             "title": "Items",
             "type": "array"
@@ -3382,7 +3438,7 @@
           "limit",
           "offset"
         ],
-        "title": "Page[SchoolOut]",
+        "title": "Page[PlatformSchoolOut]",
         "type": "object"
       },
       "Page_StaffOut_": {
@@ -3445,6 +3501,37 @@
           "offset"
         ],
         "title": "Page[StudentListItem]",
+        "type": "object"
+      },
+      "Page_SubscriptionInvoiceOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionInvoiceOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[SubscriptionInvoiceOut]",
         "type": "object"
       },
       "ParentChooseSchool": {
@@ -4098,6 +4185,276 @@
         "title": "PaymentSettingsOut",
         "type": "object"
       },
+      "PlatformOverviewOut": {
+        "properties": {
+          "payments_this_month": {
+            "title": "Payments This Month",
+            "type": "integer"
+          },
+          "processed_last_month_kobo": {
+            "title": "Processed Last Month Kobo",
+            "type": "integer"
+          },
+          "processed_this_month_kobo": {
+            "title": "Processed This Month Kobo",
+            "type": "integer"
+          },
+          "pupils": {
+            "title": "Pupils",
+            "type": "integer"
+          },
+          "schools_active": {
+            "title": "Schools Active",
+            "type": "integer"
+          },
+          "schools_pending": {
+            "title": "Schools Pending",
+            "type": "integer"
+          },
+          "schools_suspended": {
+            "title": "Schools Suspended",
+            "type": "integer"
+          },
+          "signups_30_days": {
+            "title": "Signups 30 Days",
+            "type": "integer"
+          },
+          "subscription_billed_kobo": {
+            "title": "Subscription Billed Kobo",
+            "type": "integer"
+          },
+          "subscription_outstanding_kobo": {
+            "title": "Subscription Outstanding Kobo",
+            "type": "integer"
+          },
+          "subscription_overdue_kobo": {
+            "title": "Subscription Overdue Kobo",
+            "type": "integer"
+          },
+          "subscription_paid_kobo": {
+            "title": "Subscription Paid Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "schools_active",
+          "schools_pending",
+          "schools_suspended",
+          "signups_30_days",
+          "pupils",
+          "processed_this_month_kobo",
+          "processed_last_month_kobo",
+          "payments_this_month",
+          "subscription_billed_kobo",
+          "subscription_paid_kobo",
+          "subscription_outstanding_kobo",
+          "subscription_overdue_kobo"
+        ],
+        "title": "PlatformOverviewOut",
+        "type": "object"
+      },
+      "PlatformPlanIn": {
+        "properties": {
+          "annual_fee_kobo": {
+            "maximum": 1000000000000.0,
+            "minimum": 0.0,
+            "title": "Annual Fee Kobo",
+            "type": "integer"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Description",
+            "type": "string"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "per_pupil_year_kobo": {
+            "maximum": 1000000000000.0,
+            "minimum": 0.0,
+            "title": "Per Pupil Year Kobo",
+            "type": "integer"
+          },
+          "setup_fee_kobo": {
+            "maximum": 1000000000000.0,
+            "minimum": 0.0,
+            "title": "Setup Fee Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "setup_fee_kobo",
+          "annual_fee_kobo",
+          "per_pupil_year_kobo"
+        ],
+        "title": "PlatformPlanIn",
+        "type": "object"
+      },
+      "PlatformPlanOut": {
+        "properties": {
+          "annual_fee_kobo": {
+            "title": "Annual Fee Kobo",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "per_pupil_term_kobo": {
+            "title": "Per Pupil Term Kobo",
+            "type": "integer"
+          },
+          "per_pupil_year_kobo": {
+            "title": "Per Pupil Year Kobo",
+            "type": "integer"
+          },
+          "schools": {
+            "title": "Schools",
+            "type": "integer"
+          },
+          "setup_fee_kobo": {
+            "title": "Setup Fee Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "setup_fee_kobo",
+          "annual_fee_kobo",
+          "per_pupil_year_kobo",
+          "per_pupil_term_kobo",
+          "is_default",
+          "is_active",
+          "schools"
+        ],
+        "title": "PlatformPlanOut",
+        "type": "object"
+      },
+      "PlatformSchoolOut": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/SchoolOrigin"
+          },
+          "payments_connected": {
+            "title": "Payments Connected",
+            "type": "boolean"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "plan_name": {
+            "title": "Plan Name",
+            "type": "string"
+          },
+          "proprietor_email": {
+            "title": "Proprietor Email",
+            "type": "string"
+          },
+          "pupils": {
+            "title": "Pupils",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SchoolStatus"
+          },
+          "subscription_owed_kobo": {
+            "title": "Subscription Owed Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "status",
+          "address",
+          "phone",
+          "email",
+          "created_at",
+          "origin",
+          "plan_name",
+          "pupils",
+          "proprietor_email",
+          "payments_connected",
+          "subscription_owed_kobo",
+          "last_sign_in_at"
+        ],
+        "title": "PlatformSchoolOut",
+        "type": "object"
+      },
       "PreferenceIn": {
         "properties": {
           "reminders": {
@@ -4615,6 +4972,72 @@
         "title": "SchoolCreateIn",
         "type": "object"
       },
+      "SchoolDetailOut": {
+        "properties": {
+          "collected_30_days_kobo": {
+            "title": "Collected 30 Days Kobo",
+            "type": "integer"
+          },
+          "collected_this_term_kobo": {
+            "title": "Collected This Term Kobo",
+            "type": "integer"
+          },
+          "invoices_this_term": {
+            "title": "Invoices This Term",
+            "type": "integer"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "school": {
+            "$ref": "#/components/schemas/PlatformSchoolOut"
+          },
+          "staff": {
+            "items": {
+              "$ref": "#/components/schemas/SchoolStaffOut"
+            },
+            "title": "Staff",
+            "type": "array"
+          },
+          "students_active": {
+            "title": "Students Active",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "school",
+          "plan_id",
+          "staff",
+          "students_active",
+          "invoices_this_term",
+          "collected_this_term_kobo",
+          "collected_30_days_kobo",
+          "last_activity_at"
+        ],
+        "title": "SchoolDetailOut",
+        "type": "object"
+      },
       "SchoolOption": {
         "properties": {
           "children": {
@@ -4642,6 +5065,14 @@
         ],
         "title": "SchoolOption",
         "type": "object"
+      },
+      "SchoolOrigin": {
+        "enum": [
+          "platform",
+          "signup"
+        ],
+        "title": "SchoolOrigin",
+        "type": "string"
       },
       "SchoolOut": {
         "properties": {
@@ -4692,8 +5123,124 @@
         "title": "SchoolOut",
         "type": "object"
       },
+      "SchoolPlanIn": {
+        "properties": {
+          "plan_id": {
+            "format": "uuid",
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "title": "SchoolPlanIn",
+        "type": "object"
+      },
+      "SchoolSignupIn": {
+        "properties": {
+          "accept_terms": {
+            "title": "Accept Terms",
+            "type": "boolean"
+          },
+          "address": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Address",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "phone": {
+            "pattern": "^\\+?[0-9 ()-]{7,20}$",
+            "title": "Phone",
+            "type": "string"
+          },
+          "proprietor_name": {
+            "maxLength": 150,
+            "minLength": 2,
+            "title": "Proprietor Name",
+            "type": "string"
+          },
+          "school_name": {
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "School Name",
+            "type": "string"
+          },
+          "website": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Website",
+            "type": "string"
+          }
+        },
+        "required": [
+          "school_name",
+          "proprietor_name",
+          "email",
+          "phone",
+          "accept_terms"
+        ],
+        "title": "SchoolSignupIn",
+        "type": "object"
+      },
+      "SchoolStaffOut": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "invited": {
+            "title": "Invited",
+            "type": "boolean"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "mfa_enabled": {
+            "title": "Mfa Enabled",
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "full_name",
+          "email",
+          "role",
+          "is_active",
+          "mfa_enabled",
+          "invited",
+          "last_login_at"
+        ],
+        "title": "SchoolStaffOut",
+        "type": "object"
+      },
       "SchoolStatus": {
         "enum": [
+          "pending",
           "active",
           "suspended"
         ],
@@ -5394,6 +5941,448 @@
           }
         },
         "title": "StudentUpdateIn",
+        "type": "object"
+      },
+      "SubscriptionDraftBillOut": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionDraftLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "plan_name": {
+            "title": "Plan Name",
+            "type": "string"
+          },
+          "pupils": {
+            "title": "Pupils",
+            "type": "integer"
+          },
+          "school_id": {
+            "format": "uuid",
+            "title": "School Id",
+            "type": "string"
+          },
+          "school_name": {
+            "title": "School Name",
+            "type": "string"
+          },
+          "total_kobo": {
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "school_id",
+          "school_name",
+          "plan_name",
+          "period",
+          "pupils",
+          "total_kobo",
+          "lines"
+        ],
+        "title": "SubscriptionDraftBillOut",
+        "type": "object"
+      },
+      "SubscriptionDraftLineOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SubscriptionLineKind"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "unit_kobo": {
+            "title": "Unit Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "description",
+          "quantity",
+          "unit_kobo",
+          "amount_kobo"
+        ],
+        "title": "SubscriptionDraftLineOut",
+        "type": "object"
+      },
+      "SubscriptionGenerateIn": {
+        "properties": {
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "title": "SubscriptionGenerateIn",
+        "type": "object"
+      },
+      "SubscriptionInvoiceDetailOut": {
+        "properties": {
+          "invoice": {
+            "$ref": "#/components/schemas/SubscriptionInvoiceOut"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionPaymentOut"
+            },
+            "title": "Payments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "invoice",
+          "lines",
+          "payments"
+        ],
+        "title": "SubscriptionInvoiceDetailOut",
+        "type": "object"
+      },
+      "SubscriptionInvoiceOut": {
+        "properties": {
+          "balance_kobo": {
+            "title": "Balance Kobo",
+            "type": "integer"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "paid_kobo": {
+            "title": "Paid Kobo",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "plan_name": {
+            "title": "Plan Name",
+            "type": "string"
+          },
+          "pupils": {
+            "title": "Pupils",
+            "type": "integer"
+          },
+          "school_id": {
+            "format": "uuid",
+            "title": "School Id",
+            "type": "string"
+          },
+          "school_name": {
+            "title": "School Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "unpaid",
+              "overdue",
+              "paid",
+              "void"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total_kobo": {
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "school_id",
+          "school_name",
+          "plan_name",
+          "period",
+          "pupils",
+          "issued_at",
+          "due_date",
+          "total_kobo",
+          "paid_kobo",
+          "balance_kobo",
+          "status"
+        ],
+        "title": "SubscriptionInvoiceOut",
+        "type": "object"
+      },
+      "SubscriptionLineKind": {
+        "enum": [
+          "setup",
+          "licence",
+          "pupils"
+        ],
+        "title": "SubscriptionLineKind",
+        "type": "string"
+      },
+      "SubscriptionLineOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SubscriptionLineKind"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "unit_kobo": {
+            "title": "Unit Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "description",
+          "quantity",
+          "unit_kobo",
+          "amount_kobo"
+        ],
+        "title": "SubscriptionLineOut",
+        "type": "object"
+      },
+      "SubscriptionOut": {
+        "properties": {
+          "invoices": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionInvoiceOut"
+            },
+            "title": "Invoices",
+            "type": "array"
+          },
+          "next_term_estimate_kobo": {
+            "title": "Next Term Estimate Kobo",
+            "type": "integer"
+          },
+          "pay_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankDetailsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlatformPlanOut"
+          },
+          "pupils_this_term": {
+            "title": "Pupils This Term",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan",
+          "pupils_this_term",
+          "next_term_estimate_kobo",
+          "pay_to",
+          "invoices"
+        ],
+        "title": "SubscriptionOut",
+        "type": "object"
+      },
+      "SubscriptionPaymentIn": {
+        "properties": {
+          "amount_kobo": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000000000000.0,
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "received_on": {
+            "format": "date",
+            "title": "Received On",
+            "type": "string"
+          },
+          "reference": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_kobo",
+          "received_on"
+        ],
+        "title": "SubscriptionPaymentIn",
+        "type": "object"
+      },
+      "SubscriptionPaymentOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "received_on": {
+            "format": "date",
+            "title": "Received On",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_kobo",
+          "received_on",
+          "reference",
+          "created_at"
+        ],
+        "title": "SubscriptionPaymentOut",
+        "type": "object"
+      },
+      "SubscriptionRunOut": {
+        "properties": {
+          "already_billed": {
+            "title": "Already Billed",
+            "type": "integer"
+          },
+          "bills": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionDraftBillOut"
+            },
+            "title": "Bills",
+            "type": "array"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "no_current_term": {
+            "items": {
+              "type": "string"
+            },
+            "title": "No Current Term",
+            "type": "array"
+          },
+          "total_kobo": {
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dry_run",
+          "bills",
+          "total_kobo",
+          "already_billed",
+          "no_current_term"
+        ],
+        "title": "SubscriptionRunOut",
+        "type": "object"
+      },
+      "SubscriptionVoidIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "SubscriptionVoidIn",
+        "type": "object"
+      },
+      "SupportLookupHitOut": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "school",
+              "staff",
+              "payment",
+              "account_number",
+              "receipt"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "school_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Id"
+          },
+          "school_name": {
+            "title": "School Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "school_id",
+          "school_name",
+          "title",
+          "detail"
+        ],
+        "title": "SupportLookupHitOut",
         "type": "object"
       },
       "TemplateIn": {
@@ -13111,57 +14100,25 @@
         ]
       }
     },
-    "/api/v1/platform/schools": {
-      "get": {
-        "operationId": "platform_list_schools",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "search",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 100,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Search"
+    "/api/v1/platform/billing/generate": {
+      "post": {
+        "operationId": "platform_generate_bills",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionGenerateIn"
+              }
             }
           },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_SchoolOut_"
+                  "$ref": "#/components/schemas/SubscriptionRunOut"
                 }
               }
             },
@@ -13243,7 +14200,1300 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "All schools",
+        "summary": "Bill every active school for its current term (dry_run=true to preview); safe to re-run",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/billing/invoices": {
+      "get": {
+        "operationId": "platform_list_invoices",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "school_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "School Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "unpaid",
+                    "overdue",
+                    "paid",
+                    "void"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SubscriptionInvoiceOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subscription invoices, newest first",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/billing/invoices/{invoice_id}": {
+      "get": {
+        "operationId": "platform_get_invoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionInvoiceDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One subscription invoice",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/billing/invoices/{invoice_id}/payments": {
+      "post": {
+        "operationId": "platform_record_payment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionPaymentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionInvoiceDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record a school's bank transfer against its invoice",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/billing/invoices/{invoice_id}/pdf": {
+      "get": {
+        "operationId": "platform_invoice_pdf",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subscription invoice as PDF",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/billing/invoices/{invoice_id}/void": {
+      "post": {
+        "operationId": "platform_void_invoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionVoidIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionInvoiceDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel an unpaid bill",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/lookup": {
+      "get": {
+        "operationId": "platform_support_lookup",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 3,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SupportLookupHitOut"
+                  },
+                  "title": "Response Platform Support Lookup",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Find a school, staff member, payment or receipt",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/overview": {
+      "get": {
+        "operationId": "platform_get_overview",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformOverviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Totals across every school",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/plans": {
+      "get": {
+        "operationId": "platform_list_plans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlatformPlanOut"
+                  },
+                  "title": "Response Platform List Plans",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subscription plans",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "platform_create_plan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformPlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add a plan",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/plans/{plan_id}": {
+      "put": {
+        "operationId": "platform_update_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformPlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change a plan's prices (affects later bills only)",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/schools": {
+      "get": {
+        "operationId": "platform_list_schools",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchoolStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlatformSchoolOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Schools, newest first",
         "tags": [
           "platform"
         ]
@@ -13348,6 +15598,232 @@
           }
         ],
         "summary": "Create a school and invite its proprietor",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/schools/{school_id}": {
+      "get": {
+        "operationId": "platform_get_school",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "School Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One school, for support",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/schools/{school_id}/plan": {
+      "put": {
+        "operationId": "platform_put_school_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "School Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchoolPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Move a school to another plan",
         "tags": [
           "platform"
         ]
@@ -13687,6 +16163,111 @@
           }
         },
         "summary": "Check a receipt is genuine (no sign-in; shows no personal details beyond initials)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/signup": {
+      "post": {
+        "operationId": "public_school_signup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchoolSignupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Public School Signup",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "A school signs itself up; the proprietor confirms by email (same answer for any email)",
         "tags": [
           "public"
         ]
@@ -14941,6 +17522,106 @@
         "summary": "Update the school's profile",
         "tags": [
           "school"
+        ]
+      }
+    },
+    "/api/v1/school/onboarding": {
+      "get": {
+        "operationId": "subscription_school_onboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OnboardingStepOut"
+                  },
+                  "title": "Response Subscription School Onboarding",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Getting-started checklist",
+        "tags": [
+          "subscription"
         ]
       }
     },
@@ -18037,6 +20718,206 @@
         "summary": "Record that a student has left",
         "tags": [
           "students"
+        ]
+      }
+    },
+    "/api/v1/subscription": {
+      "get": {
+        "operationId": "subscription_my_subscription",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The school's plan and invoices",
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/invoices/{invoice_id}/pdf": {
+      "get": {
+        "operationId": "subscription_my_invoice_pdf",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One of the school's subscription invoices as PDF",
+        "tags": [
+          "subscription"
         ]
       }
     },
