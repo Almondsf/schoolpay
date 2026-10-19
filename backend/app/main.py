@@ -18,6 +18,7 @@ from app.core.db import engine
 from app.core.errors import install_error_handlers
 from app.core.http import BodyLimitMiddleware, SecurityHeadersMiddleware
 from app.core.logging import configure_logging
+from app.core.monitoring import init_monitoring
 from app.models import load_all_models
 from app.modules.accounts.router import auth_router, staff_router
 from app.modules.audit.router import audit_router, platform_audit_router
@@ -33,6 +34,8 @@ from app.modules.payments.router import router as payments_router
 from app.modules.platform.router import public_router as signup_router
 from app.modules.platform.router import router as platform_router
 from app.modules.platform.router import school_router as subscription_router
+from app.modules.privacy.router import parent_router as parent_privacy_router
+from app.modules.privacy.router import router as privacy_router
 from app.modules.receipts.router import public_router as public_receipts_router
 from app.modules.receipts.router import router as receipts_router
 from app.modules.reports.router import router as reports_router
@@ -63,15 +66,20 @@ def build_api_router() -> APIRouter:
         messaging_router,
         parent_messaging_router,
         reports_router,
+        privacy_router,
+        parent_privacy_router,
         platform_router,
         signup_router,
         subscription_router,
         public_receipts_router,
         webhook_router,
-        dev_router,
-        dev_sms_router,
     ):
         api.include_router(router)
+    # Development and browser-test helpers (simulated transfers, reading texted codes) don't exist in
+    # production at all; each also refuses on its own if its fake backend isn't configured
+    if not get_settings().is_production:
+        api.include_router(dev_router)
+        api.include_router(dev_sms_router)
     return api
 
 
@@ -91,6 +99,7 @@ def create_app() -> FastAPI:
     load_all_models()
     settings = get_settings()
     configure_logging(settings.log_level)
+    init_monitoring(settings, component="api")
     docs = not settings.is_production
     app = FastAPI(
         title=f"{settings.app_name} API",

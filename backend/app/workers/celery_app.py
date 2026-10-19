@@ -14,9 +14,11 @@ from celery.schedules import crontab
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.monitoring import init_monitoring
 
 settings = get_settings()
 configure_logging(settings.log_level)
+init_monitoring(settings, component="worker")
 
 celery_app = Celery("schoolpay", broker=settings.redis_url, backend=None, include=["app.workers.tasks"])
 celery_app.conf.update(
@@ -43,5 +45,7 @@ celery_app.conf.update(
         "retry-unsent-messages": {"task": "notifications.retry_unsent", "schedule": crontab(minute=30)},
         # Signed-up schools nobody confirmed are removed (they hold only the sign-up form's details)
         "prune-pending-schools": {"task": "platform.prune_pending_schools", "schedule": crontab(minute=15, hour=3)},
+        # NDPA retention: old message texts cleared, long-departed pupils and their parents anonymised
+        "apply-retention": {"task": "privacy.apply_retention", "schedule": crontab(minute=45, hour=3)},
     },
 )

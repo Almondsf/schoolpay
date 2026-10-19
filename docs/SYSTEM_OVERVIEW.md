@@ -23,13 +23,14 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 13. [Messages to parents](#13-messages-to-parents)
 14. [Reports and the dashboard](#14-reports-and-the-dashboard)
 15. [The platform: plans, subscription billing, sign-up](#15-the-platform-plans-subscription-billing-sign-up)
-16. [Backend layout and conventions](#16-backend-layout-and-conventions)
-17. [Background jobs and the outbox](#17-background-jobs-and-the-outbox)
-18. [API](#18-api)
-19. [Configuration](#19-configuration)
-20. [Frontend](#20-frontend)
-21. [Testing](#21-testing)
-22. [Known gaps](#22-known-gaps)
+16. [Data protection: export, erasure, retention, monitoring](#16-data-protection-export-erasure-retention-monitoring)
+17. [Backend layout and conventions](#17-backend-layout-and-conventions)
+18. [Background jobs and the outbox](#18-background-jobs-and-the-outbox)
+19. [API](#19-api)
+20. [Configuration](#20-configuration)
+21. [Frontend](#21-frontend)
+22. [Testing](#22-testing)
+23. [Known gaps](#23-known-gaps)
 
 ---
 
@@ -632,7 +633,59 @@ Students show only as initials and admission number. Every search is recorded
 in the platform audit trail (`platform.support_lookup`) and rate limited. The
 platform admin sees figures for every school, not pupils' or parents' details.
 
-## 16. Backend layout and conventions
+## 16. Data protection: export, erasure, retention, monitoring
+
+Module: `app/modules/privacy`. These are the NDPA 2023 duties the system carries
+out itself (consent is recorded on every guardian, see section 8).
+
+**A copy of your data** (`export_guardian`). Everything held about a parent and
+their children at one school, as JSON:
+
+- the parent's details, consent and reminder choice;
+- each child's details and class history;
+- bills with their lines, payments with receipt numbers, and messages sent.
+
+It takes a fixed number of queries. Parents download it from the portal
+(`GET /parent/my-data`, 5 an hour); staff who manage records can download it
+for a parent who asks in person (`GET /guardians/{id}/export`). Every export is
+audited (`privacy.exported`).
+
+**Erasure** (`erase_guardian`, `erase_student`; school admins and proprietors,
+with a reason). Financial records must be kept (six years), so erasure
+**anonymises**:
+
+- a parent: name becomes "Erased", phone and email are removed, the phone index
+  is replaced with an unusable value (that number can't sign in any more),
+  parent sessions end, and message texts are cleared;
+- a pupil: name becomes "Erased pupil", date of birth and gender are removed,
+  their account number is closed, and message texts are cleared.
+
+Bills, payments and allocations stay, so the school's books still add up.
+Issued receipts keep the name they were issued with: they're append-only
+financial records (see docs/PRIVACY.md). A parent can't be erased while any of
+their children is a current pupil, and a pupil only once they have left.
+`guardians.erased_at` and `students.erased_at` record when.
+
+**Retention** (task `privacy.apply_retention`, daily 03:45, across all
+schools, in bulk statements):
+
+- message texts older than `MESSAGE_BODY_RETENTION_DAYS` (365) are cleared;
+  who, when and how are kept;
+- pupils who left more than `RECORDS_RETENTION_YEARS` (6) ago are anonymised,
+  with their parents when those have no other child still on record.
+
+Each affected school gets an audit entry with the counts.
+
+**Error monitoring** (`app/core/monitoring.py`). Sentry is used only if
+`SENTRY_DSN` is set, for the API and the worker. Events are sent without
+request bodies, cookies, headers, query strings or user details. Every
+remaining string passes the same redaction as the logs (sensitive keys,
+bearer tokens, long digit runs).
+
+**Development routes** (`/dev/fake-gateway`, `/dev/sms`) aren't mounted at all
+in production.
+
+## 17. Backend layout and conventions
 
 ```
 backend/app/
@@ -676,7 +729,7 @@ Conventions:
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
 
-## 17. Background jobs and the outbox
+## 18. Background jobs and the outbox
 
 Celery runs webhook processing, reminders, bulk invoicing and message sending,
 so HTTP requests stay fast. Tasks take IDs, never ORM objects. Each task opens
@@ -709,6 +762,7 @@ All tasks are declared in `app/workers/tasks.py`. Scheduled tasks (Celery beat):
 | `parents.prune` | 6 h | Deletes sign-in codes after a day and ended parent sessions after 30 days |
 | `notifications.schedule_reminders` | hourly (:00) | Queues fee reminders for schools whose sending hour it is |
 | `notifications.retry_unsent` | hourly (:30) | Retries messages that failed on every channel (up to 3 attempts) |
+| `privacy.apply_retention` | daily 03:45 | Clears old message texts; anonymises pupils who left more than `RECORDS_RETENTION_YEARS` ago, and their parents |
 | `platform.prune_pending_schools` | daily 03:15 | Deletes signed-up schools nobody confirmed within `PENDING_SCHOOL_DAYS` |
 
 On-demand tasks: `accounts.send_password_link`, `payments.process_webhook`,
@@ -724,7 +778,7 @@ In development `CELERY_TASK_ALWAYS_EAGER=true` runs tasks in-process without Red
 **Email** (`app/core/email.py`): `EMAIL_BACKEND=console` logs only the subject
 and recipient domain; `smtp` sends via STARTTLS; `memory` is for tests.
 
-## 18. API
+## 19. API
 
 All routes are under `/api/v1`. Interactive docs are at `/api/docs` outside
 production.
@@ -756,6 +810,8 @@ production.
 | Messages | `GET /messages`; `GET /message-templates`, `PUT /message-templates/{kind}`, `POST /message-templates/preview`; `GET/PUT /reminder-settings`; `PUT /guardians/{id}/reminders`; `POST /students/{id}/remind`; parents: `GET/PUT /parent/preferences` |
 | Platform (platform admins) | `GET /platform/overview`; `GET /platform/schools` (search, status), `GET /platform/schools/{id}`, `PUT /platform/schools/{id}/plan`, `POST /platform/schools`, `/suspend`, `/reactivate`; `GET/POST /platform/plans`, `PUT /platform/plans/{id}`; `POST /platform/billing/generate`; `GET /platform/billing/invoices`, `GET /platform/billing/invoices/{id}`, `/pdf`, `POST .../payments`, `.../void`; `GET /platform/lookup` |
 | Subscription and sign-up | `GET /subscription`, `GET /subscription/invoices/{id}/pdf`; `GET /school/onboarding`; `POST /public/signup` (public, rate limited) |
+| Privacy | `GET /guardians/{id}/export`; `POST /guardians/{id}/erase`, `POST /students/{id}/erase`; parents: `GET /parent/my-data` |
+| Public website | `GET /public/info` (name, contact, the default plan's prices) |
 | Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export` (`format=xlsx|pdf`) |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
@@ -764,14 +820,14 @@ production.
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.
 
-## 19. Configuration
+## 20. Configuration
 
 All settings come from the environment (`backend/.env.example` documents every
 variable). The defaults are safe: `ENVIRONMENT=production`, `DEBUG=false`,
 secure cookies, and an empty CORS allowlist. In production the app refuses to
 start with `DEBUG`, eager tasks, wildcard CORS or in-memory rate limits.
 
-## 20. Frontend
+## 21. Frontend
 
 One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
@@ -818,6 +874,12 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   school's page (figures, staff, plan picker, bills, suspend), Billing (bill
   the term with a preview, record a transfer, void, PDF), Plans (prices, with
   the termly per-pupil amount worked out), and Support lookup.
+- **Public website** (`src/public/Landing.tsx` at `/`, `PrivacyNotice.tsx` at
+  `/privacy`): what SchoolPay does, how it works, the default plan's prices
+  (from `GET /public/info`, so they always match), and the plain-language
+  privacy notice. The parent portal has "Download my data"; a student's
+  page has "Export data" and "Erase" for parents, and "Erase personal
+  details" for a former pupil.
 - **Sign-up** (`src/public/Signup.tsx`, `/signup`, linked from the sign-in
   page): the school's details, consent, and a hidden honeypot field; then
   "check your email".
@@ -841,7 +903,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - Invite and reset links put the token in the URL **fragment**
   (`/console/set-password#token=...`), so it never reaches server or proxy logs.
 
-## 21. Testing
+## 22. Testing
 
 - **Backend:** pytest with httpx `AsyncClient` against the ASGI app. Tests run on
   a real PostgreSQL database (`TEST_DATABASE_URL`, local and named `*_test`, or the
@@ -880,8 +942,11 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   and generated-types freshness, dependency audit, and image builds. Backend and
   frontend run as separate jobs.
 
-## 22. Known gaps
+## 23. Known gaps
 
 - The product name "SchoolPay" is a placeholder.
-- Pricing model, gateway virtual-account KYC requirements and messaging-provider
-  accounts are still open decisions (see PLAN.md §3).
+- Gateway virtual-account KYC requirements and messaging-provider accounts
+  are still open (see OWNER_TODO.md). Plan prices are placeholders.
+- Schools pay subscriptions by bank transfer, recorded by a platform admin;
+  card payment of subscriptions isn't built.
+- There's no terms-of-service page yet (legal text from the owner).

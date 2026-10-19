@@ -142,3 +142,15 @@ def test_production_refuses_unsafe_settings(overrides):
 def test_whatsapp_templates_from_env_string():
     settings = _settings(whatsapp_templates="receipt=paid_v2, reminder=nudge")
     assert settings.whatsapp_templates == {"receipt": "paid_v2", "reminder": "nudge"}
+
+
+def test_development_routes_dont_exist_in_production(monkeypatch):
+    from app.core.config import get_settings
+    from app.main import build_api_router
+
+    def prefixes() -> set[str]:
+        return {getattr(r, "original_router", r).prefix for r in build_api_router().routes}
+
+    assert {"/dev/fake-gateway", "/dev/sms"} <= prefixes()  # tests run in "test": the helpers are there
+    monkeypatch.setattr(get_settings(), "environment", "production")
+    assert not any(p.startswith("/dev") for p in prefixes())

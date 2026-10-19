@@ -111,6 +111,28 @@ docker compose run --rm backend python -c "from app.core import outbox; print(ou
 Events that couldn't be matched (`needs_review`) or kept failing (`failed`) are
 in the `webhook_events` table for an operator to look at.
 
+## Backups
+
+Run `deploy/backup.sh` daily from the host running Compose (cron or a systemd timer). It dumps the database, encrypts it with [age](https://age-encryption.org) to `BACKUP_AGE_RECIPIENT` (a public key), writes a checksum, copies it off the server with `BACKUP_UPLOAD_CMD` (e.g. rclone to object storage) and keeps `BACKUP_KEEP_DAYS` locally. Keep the age **private** key and the `FIELD_ENCRYPTION_KEYS` off the server and apart from each other: a restore needs both.
+
+```bash
+BACKUP_DIR=/var/backups/schoolpay BACKUP_AGE_RECIPIENT=age1... \
+BACKUP_UPLOAD_CMD='rclone copy "$1" offsite:schoolpay-backups/' deploy/backup.sh
+```
+
+**Test a restore every month** into an empty database (`deploy/restore.sh` refuses a non-empty one), then start the API against it with production's `FIELD_ENCRYPTION_KEYS` and check `/api/v1/health/ready`, a school's billing summary and a receipt PDF.
+
+## Monitoring
+
+- Health: `/api/v1/health` (liveness) and `/api/v1/health/ready` (database) for the load balancer and an uptime checker.
+- Errors: set `SENTRY_DSN` (and `RELEASE` to the deployed commit) for the API and worker; events are scrubbed of personal data before they're sent. `SENTRY_TRACES_SAMPLE_RATE` turns on performance tracing.
+- Logs go to stdout as text with secrets redacted; ship them to your log service.
+- Watch the outbox: rows marked `failed` are logged at ERROR (see Background workers).
+
+## Data protection
+
+Beat runs the retention job daily (`RECORDS_RETENTION_YEARS`, `MESSAGE_BODY_RETENTION_DAYS`). Set `SUPPORT_EMAIL`: it's shown on the website and privacy notice.
+
 ## Database roles
 
 `deploy/postgres-init.sh` runs when the database volume is first created. It

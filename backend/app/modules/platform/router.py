@@ -12,6 +12,7 @@ from app.core.errors import ERROR_RESPONSES, NotFound, PermissionDenied
 from app.core.http import RequestMeta, request_meta
 from app.core.pagination import Page, PageParams, page_params, paginate_rows
 from app.core.ratelimit import get_limiter
+from app.core.tenancy import scope_platform_wide
 from app.modules.accounts.deps import Principal, StaffContext, require, require_platform_admin
 from app.modules.accounts.models import Role
 from app.modules.accounts.permissions import Capability
@@ -201,6 +202,15 @@ class SupportLookupHitOut(BaseModel):
     school_name: str
     title: str
     detail: str
+
+
+class PublicInfoOut(BaseModel):
+    app_name: str
+    support_email: str
+    signup_open: bool
+    setup_fee_kobo: int
+    annual_fee_kobo: int
+    per_pupil_term_kobo: int
 
 
 class SchoolSignupIn(BaseModel):
@@ -482,6 +492,23 @@ def support_lookup(
 
 
 # --- Public sign-up ------------------------------------------------------------------------------------
+
+
+@public_router.get(
+    "/info", response_model=PublicInfoOut, summary="Name, contact and the standard prices, for the website"
+)
+def public_info(db: Session = Depends(get_db)) -> PublicInfoOut:
+    settings = get_settings()
+    scope_platform_wide(db)  # plans are platform-wide; no school is involved
+    plan = billing.default_plan(db)
+    return PublicInfoOut(
+        app_name=settings.app_name,
+        support_email=settings.support_email,
+        signup_open=settings.signup_enabled,
+        setup_fee_kobo=plan.setup_fee_kobo,
+        annual_fee_kobo=plan.annual_fee_kobo,
+        per_pupil_term_kobo=billing.termly(plan.per_pupil_year_kobo),
+    )
 
 
 @public_router.post(

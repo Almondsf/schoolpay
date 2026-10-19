@@ -74,6 +74,25 @@ payments send the payer's email to the gateway. Gateways are processors under
 their own NDPA obligations. No BVNs are sent or stored, and card details never
 reach SchoolPay.
 
-## Still to build (tracked in the roadmap)
-- Guardian consent records, data export and erasure, retention rules (chunk 10).
+## Data subjects' rights
+- **Access:** parents download everything held about them and their children from the portal ("Download my data"); staff can export it for a parent who asks in person. Every export is recorded.
+- **Erasure:** a school admin or proprietor can erase a parent (once none of their children is a current pupil) or a former pupil. Personal details and message texts are removed; bills and payments stay, anonymised, because schools must keep financial records for six years. **Issued receipts keep the name they were issued with**: they are append-only financial records, the same as a paper receipt book.
+- **Objection to messages:** parents turn off bill notices and reminders in the portal.
+- **Consent:** recorded on every guardian (when and how), whether added one at a time or by import.
+
+## Retention
+| Data | Kept for |
+|---|---|
+| Parent sign-in codes | A day |
+| Ended staff and parent sessions | 30 days |
+| Unconfirmed school sign-ups | 14 days (`PENDING_SCHOOL_DAYS`) |
+| Text of messages to parents | 365 days (`MESSAGE_BODY_RETENTION_DAYS`); who, when and how is kept |
+| Pupils who left, and their parents (if no other child is on record) | 6 years after leaving (`RECORDS_RETENTION_YEARS`), then anonymised automatically |
+| Bills, payments, receipts, audit trail | Kept; anonymised as above |
+
+## Monitoring
+Error reports (Sentry, if enabled) carry no request bodies, cookies, headers, query strings or user details, and every string is redacted like the logs.
+
+## Still to do (the owner)
 - NDPC registration and a Data Processing Agreement template for schools.
+- Terms of service; the public privacy notice (`/privacy`) must stay in step with this document.

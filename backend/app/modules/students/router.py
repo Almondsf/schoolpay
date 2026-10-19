@@ -61,6 +61,7 @@ class GuardianOut(BaseModel):
     is_primary: bool
     consent_at: str | None
     reminders: bool = Field(description="Gets fee notices and reminders (receipts always go)")
+    erased: bool
 
 
 class EnrollmentOut(BaseModel):
@@ -87,6 +88,7 @@ class StudentOut(BaseModel):
 
 
 class StudentDetailOut(StudentOut):
+    erased: bool = Field(description="Personal details erased (erasure request or retention)")
     guardians: list[GuardianOut]
     enrollments: list[EnrollmentOut]
 
@@ -224,6 +226,7 @@ def _detail_out(detail: service.StudentDetail) -> StudentDetailOut:
     base = StudentOut.model_validate(detail.student).model_dump()
     return StudentDetailOut(
         **base,
+        erased=detail.student.erased_at is not None,
         guardians=[
             GuardianOut(
                 id=g.id,
@@ -234,6 +237,7 @@ def _detail_out(detail: service.StudentDetail) -> StudentDetailOut:
                 is_primary=link.is_primary,
                 consent_at=g.consent_at.isoformat() if g.consent_at else None,
                 reminders=g.reminders_opt_out_at is None,
+                erased=g.erased_at is not None,
             )
             for g, link in detail.guardians
         ],

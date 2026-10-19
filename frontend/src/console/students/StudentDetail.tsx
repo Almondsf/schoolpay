@@ -9,6 +9,7 @@ import { ErrorAlert, Field, Loading, Modal, Notice, PageHeader, StatusBadge, fie
 import { StudentAccount } from '../billing/StudentAccount';
 import { StudentPayIn } from '../payments/StudentPayIn';
 import { armOptions, useClassLevels } from '../hooks';
+import { saveBlob } from '../../lib/download';
 
 type Detail = Schemas['StudentDetailOut'];
 type Guardian = Schemas['GuardianOut'];
@@ -24,6 +25,17 @@ export function StudentDetail() {
   });
   const [dialog, setDialog] = useState<'edit' | 'class' | 'withdraw' | 'guardian' | null>(null);
   const [editingGuardian, setEditingGuardian] = useState<Guardian | null>(null);
+  const [erasing, setErasing] = useState<EraseTarget | null>(null);
+  const exportData = useMutation({
+    mutationFn: async (g: Guardian) => {
+      const { data, response } = await api.GET('/api/v1/guardians/{guardian_id}/export', {
+        params: { path: { guardian_id: g.id } },
+        parseAs: 'blob',
+      });
+      if (!response.ok || !data) throw new Error('Could not export the data.');
+      saveBlob(data as Blob, `parent-data-${g.full_name.replace(/\W+/g, '-').toLowerCase()}.json`);
+    },
+  });
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ['student', studentId] });
     void queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -92,16 +104,30 @@ export function StudentDetail() {
                   </button>
                 </>
               ) : (
-                <button className="secondary" onClick={() => reinstate.mutate()}>
-                  Reinstate
-                </button>
+                <>
+                  {!s.erased && (
+                    <button className="secondary" onClick={() => reinstate.mutate()}>
+                      Reinstate
+                    </button>
+                  )}
+                  {can('school.manage') && !s.erased && (
+                    <button className="secondary" onClick={() => setErasing({ kind: 'student', id: s.id, name: s.full_name })}>
+                      Erase personal details
+                    </button>
+                  )}
+                </>
               )}
             </>
           )
         }
       />
       {remind.isSuccess && <Notice>A reminder is on its way to {s.first_name}'s main parent. You can follow it under Messages.</Notice>}
-      <ErrorAlert error={reinstate.error ?? guardianAction.error ?? setReminders.error ?? remind.error} />
+      {s.erased && (
+        <div className="alert info" role="status">
+          This former pupil's personal details were erased. Their bills and payments are kept, anonymised, so the accounts still add up.
+        </div>
+      )}
+      <ErrorAlert error={reinstate.error ?? guardianAction.error ?? setReminders.error ?? remind.error ?? exportData.error} />
       <div className="grid-2">
         <div className="card">
           <h2>Details</h2>
@@ -146,17 +172,26 @@ export function StudentDetail() {
               <div>
                 <strong>{g.full_name}</strong> <span className="muted">({humanize(g.relationship)})</span>{' '}
                 {g.is_primary && <span className="badge ok">Gets fee notices</span>}{' '}
-                {!g.reminders && <span className="badge warn">Reminders off</span>}
+                {!g.reminders && !g.erased && <span className="badge warn">Reminders off</span>}
+                {g.erased && <span className="badge">Details erased</span>}
                 <div className="small">
                   {g.phone}
                   {g.email && ` · ${g.email}`}
                 </div>
               </div>
-              {manage && (
+              {manage && !g.erased && (
                 <div className="row wrap">
                   <button className="link small" onClick={() => setEditingGuardian(g)}>
                     Edit
                   </button>
+                  <button className="link small" onClick={() => exportData.mutate(g)} disabled={exportData.isPending}>
+                    Export data
+                  </button>
+                  {can('school.manage') && (
+                    <button className="link small" onClick={() => setErasing({ kind: 'guardian', id: g.id, name: g.full_name })}>
+                      Erase
+                    </button>
+                  )}
                   <button className="link small" onClick={() => setReminders.mutate({ guardianId: g.id, reminders: !g.reminders })}>
                     {g.reminders ? 'Stop reminders' : 'Restart reminders'}
                   </button>
@@ -184,6 +219,7 @@ export function StudentDetail() {
       {dialog === 'withdraw' && <Withdraw student={s} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === 'guardian' && <AddGuardian student={s} onClose={() => setDialog(null)} onDone={refresh} />}
       {editingGuardian && <EditGuardian guardian={editingGuardian} onClose={() => setEditingGuardian(null)} onDone={refresh} />}
+      {erasing && <Erase target={erasing} onClose={() => setErasing(null)} onDone={refresh} />}
     </>
   );
 }
@@ -445,6 +481,54 @@ function EditGuardian({ guardian, onClose, onDone }: { guardian: Guardian; onClo
           </button>
           <button type="submit" disabled={save.isPending}>
             Save
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+type EraseTarget = { kind: 'student' | 'guardian'; id: string; name: string };
+
+/** Anonymise a former pupil or a parent (NDPA erasure). Bills and payments stay, under "Erased". */
+function Erase({ target, onClose, onDone }: { target: EraseTarget; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState('');
+  const erase = useMutation({
+    mutationFn: async () =>
+      unwrap(
+        target.kind === 'student'
+          ? await api.POST('/api/v1/students/{student_id}/erase', { params: { path: { student_id: target.id } }, body: { reason } })
+          : await api.POST('/api/v1/guardians/{guardian_id}/erase', { params: { path: { guardian_id: target.id } }, body: { reason } }),
+      ),
+    onSuccess: () => {
+      onDone();
+      onClose();
+    },
+  });
+  return (
+    <Modal title={`Erase ${target.name}'s personal details`} onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          erase.mutate();
+        }}
+      >
+        <p>
+          {target.kind === 'student'
+            ? 'Their name, date of birth and gender are removed, their account number is closed, and message texts about them are deleted.'
+            : 'Their name, phone number and email are removed, they can no longer sign in to the parent portal, and message texts sent to them are deleted.'}{' '}
+          Bills, payments and issued receipts are kept as financial records. This can't be undone.
+        </p>
+        <ErrorAlert error={erase.error} />
+        <Field label="Reason (kept in the activity log)">
+          <input value={reason} onChange={(e) => setReason(e.target.value)} required minLength={3} placeholder="e.g. Parent's request of 12 Oct" />
+        </Field>
+        <div className="row end">
+          <button type="button" className="secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="danger" disabled={erase.isPending}>
+            Erase
           </button>
         </div>
       </form>

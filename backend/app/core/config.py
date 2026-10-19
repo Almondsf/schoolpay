@@ -109,11 +109,19 @@ class Settings(BaseSettings):
     platform_account_name: str = ""
     # Days a school has to pay a subscription invoice
     subscription_due_days: int = Field(default=30, ge=1, le=120)
+    # Shown on the public website and privacy notice for schools and parents to contact the platform
+    support_email: str = ""
     # Schools can sign themselves up at /signup; limits per IP address
     signup_enabled: bool = True
     signup_rate_per_ip: str = "5/hour"
     # Signed-up schools whose proprietor never confirms are removed after this many days
     pending_school_days: int = Field(default=14, ge=1, le=90)
+
+    # Retention (NDPA). Students who left this many years ago, and their parents if they have no other
+    # children at the school, have their personal details erased; money records stay (anonymised).
+    records_retention_years: int = Field(default=6, ge=1, le=20)
+    # The text of messages to parents is cleared after this many days (who, when and how is kept)
+    message_body_retention_days: int = Field(default=365, ge=30, le=3650)
 
     # Text messages (parent sign-in codes; reminders come later): console (log only), memory (tests) or termii
     sms_backend: Literal["console", "memory", "termii"] = "console"
@@ -144,6 +152,11 @@ class Settings(BaseSettings):
     otp_rate_per_ip: str = "20/hour"
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Error monitoring (Sentry). Off unless a DSN is set; events are scrubbed of personal data first.
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Shown in error reports, e.g. the git commit being deployed
+    release: str = ""
 
     @field_validator("whatsapp_templates", mode="before")
     @classmethod

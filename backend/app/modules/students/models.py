@@ -72,6 +72,8 @@ class Student(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
         enum_type(StudentStatus, "student_status"), default=StudentStatus.ACTIVE
     )
     left_on: Mapped[date | None] = mapped_column(Date)
+    # Personal details removed (erasure request or retention); invoices and payments stay, under the name "Erased"
+    erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     guardian_links: Mapped[list["GuardianStudent"]] = relationship(back_populates="student", lazy="raise")
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="student", lazy="raise")
@@ -128,6 +130,8 @@ class Guardian(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     # Set when the parent asked not to get fee notices and reminders (receipts still go out: they're
     # the record of their own payment)
     reminders_opt_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Contact details removed (erasure request or retention); the record stays so payment history still adds up
+    erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     student_links: Mapped[list["GuardianStudent"]] = relationship(back_populates="guardian", lazy="raise")
 

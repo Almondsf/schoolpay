@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
+import { saveBlob } from '../lib/download';
 import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
 import { ParentAuthProvider, useParentAuth } from './ParentAuth';
@@ -79,9 +80,16 @@ function MessagePreferences() {
     mutationFn: async (reminders: boolean) => unwrap(await api.PUT('/api/v1/parent/preferences', { body: { reminders } })),
     onSuccess: (data) => queryClient.setQueryData(['parent-preferences'], data),
   });
+  const download = useMutation({
+    mutationFn: async () => {
+      const { data, response } = await api.GET('/api/v1/parent/my-data', { parseAs: 'blob' });
+      if (!response.ok || !data) throw new Error('Could not download your data. Please try again later.');
+      saveBlob(data as Blob, 'my-data.json');
+    },
+  });
   if (!prefs.data) return null;
   return (
-    <section className="card section" aria-label="Messages from the school">
+    <section className="card section" aria-label="Messages and your data">
       <h2>Messages from the school</h2>
       <label className="checkbox">
         <input type="checkbox" checked={prefs.data.reminders} disabled={change.isPending} onChange={(e) => change.mutate(e.target.checked)} />
@@ -89,6 +97,14 @@ function MessagePreferences() {
       </label>
       <p className="muted small">You'll always get a receipt when a payment is received.</p>
       <ErrorAlert error={change.error} />
+      <h2>Your data</h2>
+      <p className="small">
+        Download everything the school holds about you and your children. <Link to="/privacy">How your data is used</Link>.
+      </p>
+      <button className="secondary small" onClick={() => download.mutate()} disabled={download.isPending}>
+        Download my data
+      </button>
+      <ErrorAlert error={download.error} />
     </section>
   );
 }

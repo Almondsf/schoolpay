@@ -45,6 +45,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Add a student by hand with their parent, change their class, withdraw or reinstate them.
 - ✅ Link parents to children; brothers and sisters share one parent record.
 - ✅ Stop reminders for a parent who asks.
+- ✅ Give a parent a copy of their data, and erase a former pupil's or parent's details when asked, without breaking the accounts.
 - ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
@@ -58,6 +59,8 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Get a receipt by WhatsApp (or text, or email) as soon as a payment is received.
 - ✅ Get a message when a new bill is ready, and a reminder if it's still owed, never at night.
 - ✅ Turn off bill messages and reminders (receipts still come); the school can also do this for me.
+- ✅ Download everything the school holds about me and my children, and read a plain privacy notice.
+- ✅ Have my details erased once my children have left.
 
 ## Anyone with a receipt
 - ✅ Check that a receipt is genuine on a public page (scan its QR code), without seeing the child's details. A reversed payment shows as reversed; a fake receipt doesn't match anything.
@@ -79,6 +82,9 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Change my password (my other devices are signed out).
 - ✅ Turn on two-factor sign-in with an authenticator app, and keep recovery codes for a lost phone.
 - ✅ Stay signed in across page reloads, and be signed out everywhere when my access is removed.
+
+## Anyone
+- ✅ Read what SchoolPay does, how it works and what it costs on the website, and start a sign-up.
 
 ## Platform (built)
 - ✅ The API reports liveness and readiness for monitoring.

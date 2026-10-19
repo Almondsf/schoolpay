@@ -185,8 +185,13 @@ It is updated with every change that affects security.
   its email, and a broker outage delays tasks instead of losing them.
   Outbox payloads hold IDs only; links and tokens are generated at send time.
 
+## Operations
+- Development helpers (`/dev/fake-gateway`, `/dev/sms`) aren't mounted in production.
+- Error monitoring (optional Sentry) scrubs every event: no bodies, cookies, headers, query strings or user details, and strings are redacted like the logs.
+- Backups (`deploy/backup.sh`) are encrypted with `age` before they touch the disk, checksummed, and copied off the server; the private key lives elsewhere. `deploy/restore.sh` refuses a non-empty database.
+
 ## Before go-live
-- Independent penetration test of the deployed system.
+- Independent penetration test of the deployed system, following [PENTEST_CHECKLIST.md](PENTEST_CHECKLIST.md).
 - Back up the encryption keys separately from database backups, and test a restore.
 - Create the first platform admin with `python -m app.cli create-platform-admin`
   and deliver the printed link privately. Never run `seed-demo` against

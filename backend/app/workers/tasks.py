@@ -18,6 +18,7 @@ from app.modules.payments import accounts as payment_accounts
 from app.modules.payments import webhooks
 from app.modules.platform import signup as platform_signup
 from app.modules.platform import tasks as platform_tasks
+from app.modules.privacy import service as privacy
 from app.workers.celery_app import celery_app
 
 
@@ -108,3 +109,8 @@ def signup_existing_account(user_id: str) -> None:
 @celery_app.task(name="platform.prune_pending_schools")
 def prune_pending_schools() -> int:
     return platform_signup.prune_pending()
+
+
+@celery_app.task(name="privacy.apply_retention")
+def apply_retention() -> dict[str, int]:
+    return privacy.apply_retention()

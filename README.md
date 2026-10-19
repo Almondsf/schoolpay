@@ -126,4 +126,6 @@ The web app and API are at http://localhost:8080 (`/api/v1/health`). See
 | [docs/USER_STORIES.md](docs/USER_STORIES.md) | What each kind of user needs |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security controls |
 | [docs/PRIVACY.md](docs/PRIVACY.md) | Children's data and the NDPA |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Running it in production |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Running it in production (backups, monitoring) |
+| [docs/PENTEST_CHECKLIST.md](docs/PENTEST_CHECKLIST.md) | What a penetration tester should try |
+| [OWNER_TODO.md](OWNER_TODO.md) | What's waiting on the owner (accounts, decisions, paperwork) |

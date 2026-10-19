@@ -4,7 +4,7 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-18 (onboarding and platform billing done)
+Last updated: 2026-10-19 (production hardening done)
 
 ## Decisions
 
@@ -27,6 +27,9 @@ Last updated: 2026-10-18 (onboarding and platform billing done)
 | **Termii** (SMS) | Open an account, register a sender ID (up to 11 characters, e.g. the product name), and enable the DND route. | Parent sign-in codes and SMS messages on a live system |
 | **Email sending** | Pick a provider (e.g. Postmark, Amazon SES, Zoho) and a sending domain. | Staff invites and password resets on a live system |
 | _(new)_ **Platform bank account** | A business account for SchoolPay itself (not a school's). Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` so subscription invoices tell schools where to pay. | Schools paying their subscription |
+| _(new)_ **Backups** | Off-site storage (any S3-compatible bucket or similar) and an [age](https://age-encryption.org) key pair. The private key and the `FIELD_ENCRYPTION_KEYS` are kept by you, off the server, apart from each other. See `docs/DEPLOYMENT.md` → Backups. | Recovering from a lost server |
+| _(new)_ **Error monitoring** (optional) | A Sentry project; set `SENTRY_DSN`. | Hearing about errors before schools do |
+| _(new)_ **Support email** | A mailbox schools and parents can write to; set `SUPPORT_EMAIL` (shown on the website and privacy notice). | Parents' data requests |
 | **Hosting and domain** | Where the app will run (a VPS or a managed platform), plus the domain. | Going live |
 
 ## Validate with schools (PLAN.md §7)
@@ -46,7 +49,8 @@ Last updated: 2026-10-18 (onboarding and platform billing done)
 
 ## Before going live
 
-- [ ] An independent penetration test of the deployed system.
+- [ ] An independent penetration test of the deployed system: give the tester `docs/PENTEST_CHECKLIST.md`.
+- [ ] _(new)_ Do one practice restore from a backup (`deploy/restore.sh`) before the first school goes live, then monthly.
 - [ ] Decide who holds the encryption keys and where their backup lives
       (separately from database backups).
 - [ ] Create the first platform admin on the live system
