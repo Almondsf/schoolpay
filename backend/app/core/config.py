@@ -103,6 +103,8 @@ class Settings(BaseSettings):
     platform_fee_bp: int = Field(default=100, ge=0, le=2000)
     # Where the gateway sends parents after a card payment (the web app verifies and shows the result)
     payment_callback_path: str = "/pay/complete"
+    # A parent's family payment link (in bills and reminders) works this long, then a fresh one is made
+    family_link_days: int = Field(default=120, ge=7, le=400)
 
     # The platform's own bank account, printed on subscription invoices so schools can pay by transfer
     platform_bank_name: str = ""

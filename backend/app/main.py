@@ -29,6 +29,8 @@ from app.modules.notifications.router import parent_router as parent_messaging_r
 from app.modules.notifications.router import router as messaging_router
 from app.modules.parents.router import auth_router as parent_auth_router
 from app.modules.parents.router import router as parent_router
+from app.modules.payments.family_router import public_router as public_family_router
+from app.modules.payments.family_router import router as family_router
 from app.modules.payments.router import dev_router, webhook_router
 from app.modules.payments.router import router as payments_router
 from app.modules.platform.router import public_router as signup_router
@@ -72,6 +74,8 @@ def build_api_router() -> APIRouter:
         signup_router,
         subscription_router,
         public_receipts_router,
+        family_router,
+        public_family_router,
         webhook_router,
     ):
         api.include_router(router)

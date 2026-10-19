@@ -6,6 +6,10 @@ Card payments through the gateway's hosted checkout (no card data touches us).
 3. The browser comes back with the reference (`confirm()` via /payments/verify)
    and the gateway sends a webhook. Both end up in `confirm()`, which asks the
    gateway what really happened and records the payment exactly once.
+
+A family checkout (`family.py`) pays for several children at once: `confirm()`
+records one payment per child, for the amounts the parent chose, each with its own
+gateway reference (`<reference>-1`, `-2`, ...) so it's still recorded only once.
 """
 
 import logging
@@ -25,19 +29,25 @@ from app.modules.audit.models import AuditAction
 from app.modules.audit.service import Actor, record
 from app.modules.fees.invoicing import account_summaries
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
-from app.modules.students.models import Student
+from app.modules.schools.models import School
+from app.modules.students.models import Guardian, Student
 
 from .accounts import require_payment_account
 from .gateways import TransactionStatus, get_gateway
 from .gateways.base import parse_paid_at
-from .models import IntentStatus, PaymentIntent, PaymentMethod
-from .service import record_payment
+from .models import IntentStatus, PaymentIntent, PaymentIntentItem, PaymentMethod
+from .service import NewPayment, record_payments
 
 logger = logging.getLogger(__name__)
 
 
 def new_reference() -> str:
     return "SP" + secrets.token_hex(10).upper()
+
+
+def checkout_email(guardian: Guardian, school: School) -> str:
+    """The gateway needs an email: the parent's, or a routing address if the school has none on file."""
+    return guardian.email or f"guardian-{guardian.id}@{school.slug}.schoolpay.ng"
 
 
 def start_checkout(
@@ -116,9 +126,19 @@ def confirm(reference: str) -> PaymentIntent | None:
             intent.status = IntentStatus.FAILED
             session.commit()
             return intent
-        if verification.currency != "NGN" or verification.amount_kobo <= 0:
+        items = list(
+            session.scalars(
+                select(PaymentIntentItem)
+                .where(PaymentIntentItem.intent_id == intent.id)
+                .order_by(PaymentIntentItem.position)
+            )
+        )
+        wrong_total = bool(items) and verification.amount_kobo != intent.amount_kobo
+        if verification.currency != "NGN" or verification.amount_kobo <= 0 or wrong_total:
             intent.status = IntentStatus.NEEDS_REVIEW
-            intent.review_reason = f"Paid {verification.amount_kobo} kobo in {verification.currency or '?'}"
+            intent.review_reason = f"Paid {verification.amount_kobo} kobo in {verification.currency or '?'}" + (
+                f", expected {intent.amount_kobo} to split between children" if wrong_total else ""
+            )
             record(
                 session,
                 AuditAction.PAYMENT_NEEDS_REVIEW,
@@ -130,17 +150,28 @@ def confirm(reference: str) -> PaymentIntent | None:
             session.commit()
             logger.warning("Checkout %s needs review: %s", reference, intent.review_reason)
             return intent
-        # The verified amount is what reached the school's account, so that's what's recorded
-        record_payment(
+        received_at = parse_paid_at(verification.paid_at)
+        if items:  # a family checkout: each child's share, as the parent chose it
+            parts = [(item.student_id, item.amount_kobo, f"{reference}-{item.position}") for item in items]
+        elif intent.student_id is not None:  # the verified amount is what reached the school's account
+            parts = [(intent.student_id, verification.amount_kobo, reference)]
+        else:
+            raise RuntimeError(f"Checkout {reference} has no child to pay for.")
+        record_payments(
             session,
             school_id=school_id,
-            student_id=intent.student_id,
-            amount_kobo=verification.amount_kobo,
-            method=PaymentMethod.CARD,
-            received_at=parse_paid_at(verification.paid_at),
-            gateway=intent.gateway,
-            gateway_reference=reference,
-            reference=reference,
+            payments=[
+                NewPayment(
+                    student_id=student_id,
+                    amount_kobo=amount,
+                    method=PaymentMethod.CARD,
+                    received_at=received_at,
+                    gateway=intent.gateway,
+                    gateway_reference=gateway_reference,
+                    reference=reference,
+                )
+                for student_id, amount, gateway_reference in parts
+            ],
         )
         intent.status = IntentStatus.SUCCEEDED
         session.commit()

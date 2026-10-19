@@ -5,6 +5,7 @@ import { ConsoleApp } from './console/ConsoleApp';
 import { ParentApp } from './parent/ParentApp';
 import { Landing } from './public/Landing';
 import { NotFound } from './public/NotFound';
+import { FamilyPay } from './public/FamilyPay';
 import { PayComplete } from './public/PayComplete';
 import { PrivacyNotice } from './public/PrivacyNotice';
 import { Signup } from './public/Signup';
@@ -34,6 +35,7 @@ export function App() {
       <Route path="/parent/*" element={<ParentApp />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/pay/complete" element={<PayComplete />} />
+      <Route path="/pay/f/:token" element={<FamilyPay />} />
       <Route path="/verify/:code" element={<VerifyReceipt />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

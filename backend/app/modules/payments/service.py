@@ -2,7 +2,7 @@
 Recording, reading and reversing payments.
 
 Every way money arrives (virtual account transfer, card, approved cash/teller)
-ends in `record_payment()`. It writes the payment once (a gateway reference can
+ends in `record_payments()`. It writes the payment once (a gateway reference can
 only ever be recorded once, however many times the webhook arrives), applies
 it to invoices oldest first, and audits it, all in the caller's transaction.
 """
@@ -22,9 +22,9 @@ from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import Actor, record
 from app.modules.fees.models import Invoice
-from app.modules.notifications.service import queue_receipt
+from app.modules.notifications.service import queue_receipts
 from app.modules.receipts.models import Receipt
-from app.modules.receipts.service import issue_receipt
+from app.modules.receipts.service import issue_receipts
 from app.modules.students.models import Student
 
 from .allocation import NewAllocation, allocate
@@ -41,73 +41,104 @@ class Recorded:
     receipt: "Receipt"
 
 
+@dataclass(frozen=True)
+class NewPayment:
+    """Money received for one student, before it's recorded."""
+
+    student_id: uuid.UUID
+    amount_kobo: int
+    method: PaymentMethod
+    received_at: datetime
+    gateway: GatewayCode | None = None
+    gateway_reference: str | None = None
+    reference: str = ""
+    note: str = ""
+    recorded_by: uuid.UUID | None = None
+    approved_by: uuid.UUID | None = None
+
+
+def record_payments(
+    session: Session,
+    *,
+    school_id: uuid.UUID,
+    payments: list[NewPayment],
+    actor: Actor = AUTOMATIC,
+    meta: RequestMeta | None = None,
+) -> list[Recorded]:
+    """
+    Record receipts, apply them oldest bill first, issue their receipts and queue the
+    parents' messages, in a fixed number of statements however many there are. A
+    gateway transaction already recorded (a repeated webhook, or the redirect racing
+    the webhook) is skipped, so the result can be shorter than the input. The caller commits.
+    """
+    if any(p.amount_kobo <= 0 for p in payments):
+        raise DomainError("A payment must be more than ₦0.", field="amount_kobo")
+    if not payments:
+        return []
+    ids = [uuid.uuid4() for _ in payments]
+    rows = [
+        {
+            "id": payment_id,
+            "school_id": school_id,
+            "student_id": p.student_id,
+            "kind": PaymentKind.RECEIPT,
+            "amount_kobo": p.amount_kobo,
+            "method": p.method,
+            "gateway": p.gateway,
+            "gateway_reference": p.gateway_reference,
+            "received_at": p.received_at,
+            "reference": p.reference[:100],
+            "note": p.note[:300],
+            "recorded_by": p.recorded_by,
+            "approved_by": p.approved_by,
+        }
+        for payment_id, p in zip(ids, payments, strict=True)
+    ]
+    stmt = insert(Payment).values(rows).on_conflict_do_nothing(index_elements=["gateway", "gateway_reference"])
+    inserted = set(session.scalars(stmt.returning(Payment.id)))
+    if not inserted:
+        return []
+    by_id = {p.id: p for p in session.scalars(select(Payment).where(Payment.id.in_(inserted)))}
+    if len(by_id) != len(inserted):  # inserted a moment ago in this transaction, so only a scoping bug lands here
+        raise RuntimeError("Recorded payment not visible in this session's school scope.")
+    recorded = [by_id[i] for i in ids if i in inserted]  # in the order given
+    allocations = allocate(session, list({p.student_id for p in recorded}))
+    receipts = issue_receipts(session, school_id=school_id, payments=recorded, allocations=allocations)
+    queue_receipts(session, school_id, recorded)  # parents get them on WhatsApp/SMS once this commits
+    results = []
+    for payment, receipt in zip(recorded, receipts, strict=True):
+        mine = [a for a in allocations if a.payment_id == payment.id]
+        record(
+            session,
+            AuditAction.PAYMENT_RECORDED,
+            school_id=school_id,
+            actor=actor,
+            meta=meta,
+            target=payment,
+            changes={
+                "student": payment.student_id,
+                "amount_kobo": payment.amount_kobo,
+                "method": payment.method,
+                "gateway_reference": payment.gateway_reference,
+                "applied_kobo": sum(a.amount_kobo for a in mine),
+                "receipt_number": receipt.number,
+            },
+        )
+        results.append(Recorded(payment, mine, receipt))
+    return results
+
+
 def record_payment(
     session: Session,
     *,
     school_id: uuid.UUID,
-    student_id: uuid.UUID,
-    amount_kobo: int,
-    method: PaymentMethod,
-    received_at: datetime,
-    gateway: GatewayCode | None = None,
-    gateway_reference: str | None = None,
-    reference: str = "",
-    note: str = "",
-    recorded_by: uuid.UUID | None = None,
-    approved_by: uuid.UUID | None = None,
+    payment: NewPayment,
     actor: Actor = AUTOMATIC,
     meta: RequestMeta | None = None,
 ) -> Recorded | None:
-    """
-    Record a receipt and apply it. Returns None if this gateway transaction was
-    already recorded (a repeated webhook or a redirect racing the webhook).
-    The caller commits.
-    """
-    if amount_kobo <= 0:
-        raise DomainError("A payment must be more than ₦0.", field="amount_kobo")
-    payment_id = uuid.uuid4()
-    stmt = insert(Payment).values(
-        id=payment_id,
-        school_id=school_id,
-        student_id=student_id,
-        kind=PaymentKind.RECEIPT,
-        amount_kobo=amount_kobo,
-        method=method,
-        gateway=gateway,
-        gateway_reference=gateway_reference,
-        received_at=received_at,
-        reference=reference[:100],
-        note=note[:300],
-        recorded_by=recorded_by,
-        approved_by=approved_by,
-    )
-    if gateway_reference is not None:
-        stmt = stmt.on_conflict_do_nothing(index_elements=["gateway", "gateway_reference"])
-    if session.execute(stmt.returning(Payment.id)).scalar_one_or_none() is None:
-        return None
-    payment = session.get(Payment, payment_id)
-    if payment is None:  # inserted a moment ago in this transaction, so only a scoping bug lands here
-        raise RuntimeError("Recorded payment not visible in this session's school scope.")
-    allocations = allocate(session, [student_id])
-    receipt = issue_receipt(session, school_id=school_id, payment=payment, allocations=allocations)
-    queue_receipt(session, school_id, payment)  # the parent gets it on WhatsApp/SMS once this commits
-    record(
-        session,
-        AuditAction.PAYMENT_RECORDED,
-        school_id=school_id,
-        actor=actor,
-        meta=meta,
-        target=payment,
-        changes={
-            "student": student_id,
-            "amount_kobo": amount_kobo,
-            "method": method,
-            "gateway_reference": gateway_reference,
-            "applied_kobo": sum(a.amount_kobo for a in allocations),
-            "receipt_number": receipt.number,
-        },
-    )
-    return Recorded(payment, allocations, receipt)
+    """One payment (see `record_payments`). None if this gateway transaction was already recorded."""
+    recorded = record_payments(session, school_id=school_id, payments=[payment], actor=actor, meta=meta)
+    return recorded[0] if recorded else None
 
 
 def reverse_payment(

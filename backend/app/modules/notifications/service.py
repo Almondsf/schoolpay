@@ -36,6 +36,7 @@ from app.core.tenancy import scope_platform_wide, scope_to_school
 from app.modules.fees.invoicing import account_summaries, amounts_for
 from app.modules.fees.models import Invoice, InvoiceKind
 from app.modules.fees.plans import plan_phrase, plan_views, progress_cte
+from app.modules.payments.family_links import link_url, live_link
 from app.modules.payments.models import Payment, VirtualAccount, VirtualAccountStatus
 from app.modules.receipts.models import Receipt
 from app.modules.receipts.service import verification_url
@@ -140,14 +141,17 @@ def _primary_guardians(session: Session, student_ids: list[uuid.UUID]) -> dict[u
     )
 
 
-def queue_receipt(session: Session, school_id: uuid.UUID, payment: Payment) -> int:
-    guardian = _primary_guardians(session, [payment.student_id]).get(payment.student_id)
-    if guardian is None:
-        return 0
+def queue_receipts(session: Session, school_id: uuid.UUID, payments: list[Payment]) -> int:
+    """A receipt message to each payment's primary parent. Two statements for any number of payments."""
+    guardians = _primary_guardians(session, list({p.student_id for p in payments}))
     return queue(
         session,
         school_id,
-        [NewMessage(guardian, payment.student_id, MessageKind.RECEIPT, f"receipt:{payment.id}", payment_id=payment.id)],
+        [
+            NewMessage(guardians[p.student_id], p.student_id, MessageKind.RECEIPT, f"receipt:{p.id}", payment_id=p.id)
+            for p in payments
+            if p.student_id in guardians
+        ],
     )
 
 
@@ -283,6 +287,10 @@ def _values(session: Session, message: MessageLog, guardian: Guardian, student: 
         "school_name": school.name if school else "",
         "balance": format_naira(owed),
         "portal_url": f"{settings.frontend_url}/parent",
+        # Made on first use, then the same link in every message until it expires (committed with the send)
+        "pay_link": link_url(live_link(session, guardian).token)
+        if message.kind in (MessageKind.FEE_NOTICE, MessageKind.REMINDER)
+        else "",
         "pay_to": f"Pay by transfer to {account.account_number} ({account.bank_name}), {student.first_name}'s own "
         "account number."
         if account

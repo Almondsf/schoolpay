@@ -47,6 +47,13 @@ hash of each sign-in code for at most a day, and their portal sessions for 30
 days after they end. A parent sees only their own children. Sign-in codes are
 sent by SMS through Termii (a processor).
 
+## Family payment links
+Bills and reminders carry a link that opens a payment page without signing in.
+Anyone the parent forwards it to sees the school, each child's **first name**,
+class, what's owed and the account number, nothing else (no surnames, no
+admission numbers, no parent details). It expires after about a term, the school
+can replace it at once, and erasing the parent ends it.
+
 ## Messages to parents
 Receipts, bill notices and reminders go to the child's main parent only. Each
 message's text is kept in the school's message log so staff can see what was

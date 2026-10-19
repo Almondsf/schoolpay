@@ -402,6 +402,7 @@ payments only. See PLAN §3.2.)
 |---|---|
 | Transfer into a student's account number | The gateway sends a webhook. We verify its signature, store it in the `webhook_events` inbox (a unique key ignores repeats), and enqueue processing via the outbox. The worker asks the gateway to verify the transaction, finds the `VirtualAccount` it was paid into, and records the payment. |
 | Card (payment link) | Staff create a link (`POST /students/{id}/payment-link`); a `PaymentIntent` holds our reference. The parent pays on the gateway's page and comes back to `/pay/complete`, which calls `POST /payments/verify`. The webhook arrives too. Both end in `checkout.confirm()`, which locks the intent, verifies with the gateway, and records the payment once. |
+| Card (family link) | Each parent has one link (`/pay/f/<token>`) for all their children, no sign-in: see below. The parent sets an amount per child; one card charge becomes one payment per child. |
 | Cash, teller, POS, direct transfer | Staff record a `ManualPayment`; **a different person** approves it (maker-checker, also a database constraint), and only then is it a payment. Rejections keep a reason. |
 
 **The ledger.** `Payment` rows are receipts (positive) or reversals (negative,
@@ -429,6 +430,31 @@ call per student, one insert per batch). The gateway needs an email per
 customer, so a student without a parent email gets a routing address
 (`student-<id>@<school>.schoolpay.ng`). Each student's number is shown on
 their page and, later, in the parent portal.
+
+**Family payment links** (`family_links.py` for the link, `family.py` for the
+page and checkout). One link per parent (`FamilyPayLink`: one live link per
+guardian by a partial unique index), made the first time a bill notice or
+reminder needs it (`{pay_link}`) or when staff open it
+(`GET /guardians/{id}/pay-link`, `payments.record`). It's a bearer token: the
+public page (`GET /public/pay/{token}`) shows only the school, each current
+child's **first name**, class, what's owed, what's due now (on a payment plan,
+up to the next instalment) and their account number, never surnames. The token
+is stored as a keyed hash for lookup plus an encrypted copy so every message
+carries the same link until it expires (`FAMILY_LINK_DAYS`, default 120; a new
+one is made on the next message). Staff can replace it
+(`POST /guardians/{id}/pay-link/replace`, audited), and erasing the parent ends
+it. Unknown, expired and replaced links get the same answer.
+
+Paying by card from the link (`POST /public/pay/{token}/checkout`): the parent
+chooses the amount per child (zero skips a child). Each share must be at least
+₦1,000 (or everything that child owes) and at most what that child owes: paying
+ahead is by transfer. The intent holds one `PaymentIntentItem` per child. When the
+gateway confirms, `confirm()` records one card payment per child with gateway
+reference `<reference>-<n>` (so repeats are still ignored), each applied oldest
+bill first with its own receipt. If the gateway's total isn't what was asked, the
+intent is parked as `needs_review`; nothing is split by guesswork. All recording
+goes through `service.record_payments()`, which handles any number of payments
+in a fixed number of statements (`record_payment()` is the one-payment wrapper).
 
 **Failures.** If the gateway is down while processing, the event stays
 `received`. The `payments.requeue_webhooks` beat task retries every 5 minutes,
@@ -865,6 +891,7 @@ production.
 | Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
 | Payment setup | `GET/PUT /payment-settings`; `GET /payment-settings/banks`; `POST /virtual-accounts/provision`; `GET /students/{id}/virtual-account` |
 | Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
+| Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
 | Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |
@@ -962,7 +989,11 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 - **Public pages:** `/verify/:code` checks a receipt (genuine, reversed or not
   genuine) from its QR code. `/pay/complete` is where the gateway returns parents after a
   card payment. It shows the outcome from `POST /payments/verify` (never from
-  the URL) and polls while the payment is pending.
+  the URL) and polls while the payment is pending. `/pay/f/:token`
+  (`src/public/FamilyPay.tsx`) is a parent's family payment page: each child's
+  account number with a copy button and an amount box per child (prefilled with
+  what's due now) for one card payment. Staff open a parent's link from the
+  student page ("Payment link": copy or replace, `console/students/FamilyLink.tsx`).
   Navigation and routes are filtered by the user's capabilities. Users who
   must enrol in MFA can only reach their account page until they do.
 - Invite and reset links put the token in the URL **fragment**

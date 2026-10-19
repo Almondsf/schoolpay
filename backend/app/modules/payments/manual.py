@@ -23,7 +23,7 @@ from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.students.models import Student
 
 from .models import MANUAL_METHODS, ManualPayment, ManualPaymentStatus, PaymentMethod
-from .service import record_payment
+from .service import NewPayment, record_payment
 
 LAGOS = ZoneInfo("Africa/Lagos")
 
@@ -97,14 +97,16 @@ def approve(session: Session, ctx: StaffContext, entry_id: uuid.UUID) -> ManualP
     recorded = record_payment(
         session,
         school_id=ctx.school_id,
-        student_id=entry.student_id,
-        amount_kobo=entry.amount_kobo,
-        method=entry.method,
-        received_at=received_at,
-        reference=entry.reference,
-        note=entry.note,
-        recorded_by=entry.recorded_by,
-        approved_by=ctx.user.id,
+        payment=NewPayment(
+            student_id=entry.student_id,
+            amount_kobo=entry.amount_kobo,
+            method=entry.method,
+            received_at=received_at,
+            reference=entry.reference,
+            note=entry.note,
+            recorded_by=entry.recorded_by,
+            approved_by=ctx.user.id,
+        ),
         actor=ctx.actor,
         meta=ctx.meta,
     )

@@ -14,6 +14,7 @@ from app.core.errors import NotFound
 from app.modules.fees.invoicing import AccountSummary, account_summaries
 from app.modules.fees.models import Invoice
 from app.modules.payments.allocation import credit_by_student
+from app.modules.payments.checkout import checkout_email
 from app.modules.payments.models import VirtualAccount, VirtualAccountStatus
 from app.modules.receipts.models import Receipt
 from app.modules.schools.models import Arm, ClassLevel, School, Term
@@ -123,6 +124,6 @@ def parent_email(session: Session, ctx: ParentContext) -> str:
     """For card checkout: the parent's email, or a routing address if the school has none on file."""
     guardian = session.get(Guardian, ctx.guardian_id)
     school = session.get(School, ctx.school_id)
-    if guardian is not None and guardian.email:
-        return guardian.email
-    return f"guardian-{ctx.guardian_id}@{school.slug if school else 'school'}.schoolpay.ng"
+    if guardian is None or school is None:
+        raise NotFound("Not found.")
+    return checkout_email(guardian, school)

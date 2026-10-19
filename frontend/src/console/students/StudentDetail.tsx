@@ -9,6 +9,7 @@ import { ErrorAlert, Field, Loading, Modal, Notice, PageHeader, StatusBadge, fie
 import { StudentAccount } from '../billing/StudentAccount';
 import { StudentPayIn } from '../payments/StudentPayIn';
 import { armOptions, useClassLevels } from '../hooks';
+import { FamilyLinkDialog } from './FamilyLink';
 import { saveBlob } from '../../lib/download';
 
 type Detail = Schemas['StudentDetailOut'];
@@ -26,6 +27,7 @@ export function StudentDetail() {
   const [dialog, setDialog] = useState<'edit' | 'class' | 'withdraw' | 'guardian' | null>(null);
   const [editingGuardian, setEditingGuardian] = useState<Guardian | null>(null);
   const [erasing, setErasing] = useState<EraseTarget | null>(null);
+  const [payLink, setPayLink] = useState<Guardian | null>(null);
   const exportData = useMutation({
     mutationFn: async (g: Guardian) => {
       const { data, response } = await api.GET('/api/v1/guardians/{guardian_id}/export', {
@@ -179,6 +181,11 @@ export function StudentDetail() {
                   {g.email && ` · ${g.email}`}
                 </div>
               </div>
+              {!g.erased && can('payments.record') && (
+                <button className="link small" onClick={() => setPayLink(g)}>
+                  Payment link
+                </button>
+              )}
               {manage && !g.erased && (
                 <div className="row wrap">
                   <button className="link small" onClick={() => setEditingGuardian(g)}>
@@ -220,6 +227,7 @@ export function StudentDetail() {
       {dialog === 'guardian' && <AddGuardian student={s} onClose={() => setDialog(null)} onDone={refresh} />}
       {editingGuardian && <EditGuardian guardian={editingGuardian} onClose={() => setEditingGuardian(null)} onDone={refresh} />}
       {erasing && <Erase target={erasing} onClose={() => setErasing(null)} onDone={refresh} />}
+      {payLink && <FamilyLinkDialog guardianId={payLink.id} name={payLink.full_name} onClose={() => setPayLink(null)} />}
     </>
   );
 }

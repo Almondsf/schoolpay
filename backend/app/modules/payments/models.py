@@ -5,7 +5,9 @@ Payments.
   account), through which every payment settles. We never hold school money.
 - `VirtualAccount`: a student's dedicated bank account number. Any transfer
   into it belongs to that student.
-- `PaymentIntent`: a card checkout we started (staff payment link or parent portal).
+- `PaymentIntent`: a card checkout we started (staff payment link, parent portal, or a
+  family link paying for several children: one `PaymentIntentItem` per child).
+- `FamilyPayLink`: a link a parent keeps to pay for all their children without signing in.
 - `ManualPayment`: cash, teller or POS money recorded by staff. It becomes a
   `Payment` only when a second person approves it.
 - `Payment` and `Allocation` are the ledger, and both are **append-only**
@@ -41,7 +43,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.base import Base, Timestamped, UUIDPrimaryKey, enum_type
-from app.core.crypto import EncryptedString
+from app.core.crypto import BLIND_INDEX_TYPE, EncryptedString
 from app.core.tenancy import TenantMixin
 
 from .gateways import GatewayCode
@@ -109,10 +111,13 @@ class PaymentIntent(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     __table_args__ = (
         UniqueConstraint("reference"),
         CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        # One child, or a family link whose children are the intent's items
+        CheckConstraint("(student_id IS NULL) <> (family_link_id IS NULL)", name="one_child_or_family"),
     )
 
     reference: Mapped[str] = mapped_column(String(40))
-    student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), index=True)
+    student_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), index=True)
+    family_link_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("family_pay_links.id", ondelete="RESTRICT"))
     gateway: Mapped[GatewayCode] = mapped_column(GATEWAY_ENUM)
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
     email: Mapped[str] = mapped_column(EncryptedString)
@@ -122,6 +127,50 @@ class PaymentIntent(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     authorization_url: Mapped[str] = mapped_column(String(500), default="")
     review_reason: Mapped[str] = mapped_column(String(300), default="")
     created_by: Mapped[uuid.UUID | None] = mapped_column()  # staff user (payment link) or None (parent)
+
+
+class PaymentIntentItem(TenantMixin, Base):
+    """One child's share of a family checkout, as the parent chose it. Each becomes its own payment."""
+
+    __tablename__ = "payment_intent_items"
+    __table_args__ = (
+        CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        UniqueConstraint("intent_id", "position"),
+    )
+
+    intent_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_intents.id", ondelete="CASCADE"), primary_key=True)
+    student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), primary_key=True)
+    position: Mapped[int] = mapped_column(SmallInteger)  # 1, 2, ...: the payment's gateway reference suffix
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)
+
+
+class FamilyPayLink(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    A link a parent keeps and opens any time to pay for all their children, with no
+    sign-in (it goes in bills and reminders). Whoever has it can see the children's
+    first names, classes and balances and pay, so it expires, staff can replace it,
+    and erasing the parent ends it. The token is looked up by its keyed hash and kept
+    encrypted so the same link can be sent again.
+    """
+
+    __tablename__ = "family_pay_links"
+    __table_args__ = (
+        UniqueConstraint("token_index"),
+        Index(
+            "uq_family_pay_links_one_live_per_guardian",
+            "guardian_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+    )
+
+    guardian_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("guardians.id", ondelete="CASCADE"))
+    token_index: Mapped[str] = mapped_column(BLIND_INDEX_TYPE)
+    token: Mapped[str] = mapped_column(EncryptedString)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[uuid.UUID | None] = mapped_column()  # staff user, or None (made for a message)
+    last_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class PaymentMethod(enum.StrEnum):

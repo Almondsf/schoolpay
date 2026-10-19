@@ -42,6 +42,7 @@ from app.modules.audit.service import Acting, Actor, record
 from app.modules.fees.models import Invoice, InvoiceLine
 from app.modules.notifications.models import MessageLog
 from app.modules.parents.models import ParentSession
+from app.modules.payments import family_links
 from app.modules.payments.models import Payment, VirtualAccount, VirtualAccountStatus
 from app.modules.receipts.models import Receipt
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, School, Term
@@ -206,6 +207,7 @@ def erase_guardian(session: Session, actor: Acting, guardian_id: uuid.UUID, reas
         .where(ParentSession.guardian_id == guardian.id, ParentSession.revoked_at.is_(None))
         .values(revoked_at=now)
     )
+    family_links.revoke_for(session, [guardian.id])
     record(
         session,
         AuditAction.PRIVACY_ERASED,
@@ -324,6 +326,7 @@ def apply_retention(today: date | None = None) -> dict[str, int]:
             session.execute(
                 update(MessageLog).where(MessageLog.guardian_id.in_([g for g, _ in parents])).values(body="")
             )
+            family_links.revoke_for(session, [g for g, _ in parents])
         per_school: dict[uuid.UUID, dict[str, int]] = defaultdict(lambda: {"pupils": 0, "parents": 0})
         for _, school_id in expired:
             per_school[school_id]["pupils"] += 1

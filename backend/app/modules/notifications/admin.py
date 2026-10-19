@@ -31,6 +31,7 @@ SAMPLE = {
     "receipt_number": "1024",
     "verify_url": "https://app.example/verify/AbC123",
     "portal_url": "https://app.example/parent",
+    "pay_link": "https://app.example/pay/f/Xy7…",
     "pay_to": "Pay by transfer to 9930000001 (Wema Bank), Chiamaka's own account number.",
 }
 

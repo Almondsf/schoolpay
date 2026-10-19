@@ -32,6 +32,7 @@ PLACEHOLDERS: Final = {
     "verify_url": "Link to check the receipt is genuine",
     "pay_to": "How to pay: the child's account number and bank, when they have one",
     "portal_url": "Link to the parent portal",
+    "pay_link": "The parent's own link to pay for all their children, no sign-in needed",
 }
 
 DEFAULTS: Final = {
@@ -41,11 +42,12 @@ DEFAULTS: Final = {
     ),
     MessageKind.FEE_NOTICE: (
         "Dear {parent_name}, {student_name}'s {term} fees at {school_name} are {amount}{due_phrase}. "
-        "{pay_to} You can also pay and see details at {portal_url}. Thank you."
+        "{pay_to} Or pay online for all your children: {pay_link}. Thank you."
     ),
     MessageKind.REMINDER: (
         "Dear {parent_name}, a gentle reminder from {school_name}: {balance} is outstanding for {student_name}"
-        "{due_phrase}. {pay_to} If you have already paid, thank you, and please ignore this message."
+        "{due_phrase}. {pay_to} Pay online: {pay_link}. If you have already paid, thank you, and please "
+        "ignore this message."
     ),
 }
 
@@ -59,8 +61,8 @@ WHATSAPP_PARAMETERS: Final = {
         "balance",
         "verify_url",
     ],
-    MessageKind.FEE_NOTICE: ["parent_name", "student_name", "term", "school_name", "amount", "pay_to", "portal_url"],
-    MessageKind.REMINDER: ["parent_name", "school_name", "balance", "student_name", "pay_to", "portal_url"],
+    MessageKind.FEE_NOTICE: ["parent_name", "student_name", "term", "school_name", "amount", "pay_to", "pay_link"],
+    MessageKind.REMINDER: ["parent_name", "school_name", "balance", "student_name", "pay_to", "pay_link"],
 }
 
 MAX_LENGTH = 640  # four SMS segments

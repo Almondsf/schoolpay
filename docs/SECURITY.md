@@ -114,6 +114,14 @@ It is updated with every change that affects security.
   the bank, audited, and blocked once students have account numbers (support
   must handle it).
 - The fake gateway and its development endpoint can't be enabled in production.
+- **Family payment links** are bearer tokens (192 bits). They're stored as a keyed
+  hash (lookup) and encrypted (to resend), expire after `FAMILY_LINK_DAYS`, can be
+  replaced by staff (audited) and end when the parent is erased or the school is
+  suspended. The page shows first names, classes, amounts and account numbers only;
+  unknown, expired and replaced links get the same 404; lookups are rate limited per
+  IP and checkouts per link. Card shares are checked server-side (only this parent's
+  current children, at most what each owes) and a gateway total that doesn't match
+  is parked for review. Responses are `no-store` and `no-referrer`.
 
 ## Receipts
 - Receipts are numbered per school with no gaps, issued in the payment's own

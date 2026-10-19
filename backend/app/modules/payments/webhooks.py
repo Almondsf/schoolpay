@@ -29,7 +29,7 @@ from . import checkout
 from .gateways import GatewayCode, TransactionStatus, WebhookKind, get_gateway
 from .gateways.base import parse_paid_at
 from .models import IntentStatus, PaymentIntent, PaymentMethod, VirtualAccount, WebhookEvent, WebhookStatus
-from .service import record_payment
+from .service import NewPayment, record_payment
 
 logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 10
@@ -152,13 +152,15 @@ def process_event(event_id: uuid.UUID) -> WebhookStatus:
         recorded = record_payment(
             session,
             school_id=school_id,
-            student_id=student_id,
-            amount_kobo=verification.amount_kobo,
-            method=PaymentMethod.VIRTUAL_ACCOUNT,
-            received_at=parse_paid_at(verification.paid_at),
-            gateway=gateway,
-            gateway_reference=reference,
-            reference=reference,
+            payment=NewPayment(
+                student_id=student_id,
+                amount_kobo=verification.amount_kobo,
+                method=PaymentMethod.VIRTUAL_ACCOUNT,
+                received_at=parse_paid_at(verification.paid_at),
+                gateway=gateway,
+                gateway_reference=reference,
+                reference=reference,
+            ),
         )
         session.commit()
     if recorded is None:
