@@ -662,6 +662,42 @@ def add_line(
     return _invoice_out(db, invoice_id)
 
 
+class BillSyncIn(BaseModel):
+    dry_run: bool = True
+
+
+class MissingFeeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    item_name: str
+    class_names: list[str]
+    bills: int
+    total_kobo: int
+
+
+class BillSyncOut(BaseModel):
+    dry_run: bool
+    fees: list[MissingFeeOut]
+    bills_changed: int
+    total_kobo: int
+
+
+@router.post(
+    "/terms/{term_id}/bills/sync",
+    response_model=BillSyncOut,
+    summary="Add fees on the term's fee list that its bills are missing (dry_run to preview)",
+)
+def sync_bills(
+    term_id: uuid.UUID, body: BillSyncIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
+) -> BillSyncOut:
+    report = charges.sync_bills(db, ctx, term_id=term_id, dry_run=body.dry_run)
+    return BillSyncOut(
+        dry_run=report.dry_run,
+        fees=[MissingFeeOut.model_validate(f) for f in report.fees],
+        bills_changed=report.bills_changed,
+        total_kobo=report.total_kobo,
+    )
+
+
 @router.post(
     "/terms/{term_id}/class-charges",
     response_model=ClassChargeOut,

@@ -104,7 +104,27 @@ function Schedule() {
       });
       return unwrap(await api.PUT('/api/v1/terms/{term_id}/fee-schedule', { params: { path: { term_id: term } }, body: { entries } }));
     },
-    onSuccess: (data) => queryClient.setQueryData(['fee-schedule', term], data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['fee-schedule', term], data);
+      void queryClient.invalidateQueries({ queryKey: ['bill-sync', term] });
+    },
+  });
+  // Fees on the list that the term's bills (already sent) don't have yet
+  const missing = useQuery({
+    queryKey: ['bill-sync', term],
+    enabled: !!term && can('invoices.issue'),
+    staleTime: 0,
+    queryFn: async () =>
+      unwrap(await api.POST('/api/v1/terms/{term_id}/bills/sync', { params: { path: { term_id: term } }, body: { dry_run: true } })),
+  });
+  const addToBills = useMutation({
+    mutationFn: async () =>
+      unwrap(await api.POST('/api/v1/terms/{term_id}/bills/sync', { params: { path: { term_id: term } }, body: { dry_run: false } })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bill-sync', term] });
+      void queryClient.invalidateQueries({ queryKey: ['account'] });
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
   });
   const copy = useMutation({
     mutationFn: async () =>
@@ -144,7 +164,30 @@ function Schedule() {
         )}
       </div>
       {copy.data && <Notice>{copy.data.copied} amounts copied (amounts already set were kept).</Notice>}
-      <ErrorAlert error={save.error ?? copy.error} />
+      {missing.data && missing.data.bills_changed > 0 && (
+        <section className="alert info" aria-label="Fees not on the bills yet">
+          <p>
+            <strong>This term’s bills have already gone out</strong>, and these fees aren’t on them yet:
+          </p>
+          <ul>
+            {missing.data.fees.map((f) => (
+              <li key={f.item_name}>
+                {f.item_name} for {f.class_names.join(', ')}: {f.bills} {f.bills === 1 ? 'pupil' : 'pupils'}, {formatKobo(f.total_kobo)}
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => addToBills.mutate()} disabled={addToBills.isPending}>
+            {addToBills.isPending ? 'Adding…' : `Add them to ${missing.data.bills_changed} ${missing.data.bills_changed === 1 ? 'bill' : 'bills'}`}
+          </button>{' '}
+          <span className="hint">Pupils exempted from a fee, and optional fees a pupil hasn’t taken, are left out.</span>
+        </section>
+      )}
+      {addToBills.data && (
+        <Notice>
+          Added to {addToBills.data.bills_changed} bills ({formatKobo(addToBills.data.total_kobo)}).
+        </Notice>
+      )}
+      <ErrorAlert error={save.error ?? copy.error ?? addToBills.error} />
       <p className="hint">Amounts in naira. Leave a box empty if the class doesn't pay that fee. Tick "optional" for fees only some students pay (e.g. bus).</p>
       <div className="table-scroll">
         <table className="grid">

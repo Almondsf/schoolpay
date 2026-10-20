@@ -2333,6 +2333,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/terms/{term_id}/bills/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add fees on the term's fee list that its bills are missing (dry_run to preview) */
+        post: operations["fees_sync_bills"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/terms/{term_id}/class-charges": {
         parameters: {
             query?: never;
@@ -2688,6 +2705,25 @@ export interface components {
             code: string;
             /** Name */
             name: string;
+        };
+        /** BillSyncIn */
+        BillSyncIn: {
+            /**
+             * Dry Run
+             * @default true
+             */
+            dry_run?: boolean;
+        };
+        /** BillSyncOut */
+        BillSyncOut: {
+            /** Bills Changed */
+            bills_changed: number;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Fees */
+            fees: components["schemas"]["MissingFeeOut"][];
+            /** Total Kobo */
+            total_kobo: number;
         };
         /** Body_students_import_students */
         Body_students_import_students: {
@@ -4032,6 +4068,17 @@ export interface components {
          * @enum {string}
          */
         Missing: "parent" | "consent" | "account_number";
+        /** MissingFeeOut */
+        MissingFeeOut: {
+            /** Bills */
+            bills: number;
+            /** Class Names */
+            class_names: string[];
+            /** Item Name */
+            item_name: string;
+            /** Total Kobo */
+            total_kobo: number;
+        };
         /** NewInvoiceIn */
         NewInvoiceIn: {
             /** Due Date */
@@ -18768,6 +18815,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TermSummaryOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fees_sync_bills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                term_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillSyncIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillSyncOut"];
                 };
             };
             /** @description Bad Request */

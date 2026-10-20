@@ -511,6 +511,48 @@
         "title": "BankOut",
         "type": "object"
       },
+      "BillSyncIn": {
+        "properties": {
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "title": "BillSyncIn",
+        "type": "object"
+      },
+      "BillSyncOut": {
+        "properties": {
+          "bills_changed": {
+            "title": "Bills Changed",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "fees": {
+            "items": {
+              "$ref": "#/components/schemas/MissingFeeOut"
+            },
+            "title": "Fees",
+            "type": "array"
+          },
+          "total_kobo": {
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dry_run",
+          "fees",
+          "bills_changed",
+          "total_kobo"
+        ],
+        "title": "BillSyncOut",
+        "type": "object"
+      },
       "Body_students_import_students": {
         "properties": {
           "consent_confirmed": {
@@ -3799,6 +3841,37 @@
         ],
         "title": "Missing",
         "type": "string"
+      },
+      "MissingFeeOut": {
+        "properties": {
+          "bills": {
+            "title": "Bills",
+            "type": "integer"
+          },
+          "class_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Class Names",
+            "type": "array"
+          },
+          "item_name": {
+            "title": "Item Name",
+            "type": "string"
+          },
+          "total_kobo": {
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item_name",
+          "class_names",
+          "bills",
+          "total_kobo"
+        ],
+        "title": "MissingFeeOut",
+        "type": "object"
       },
       "NewInvoiceIn": {
         "properties": {
@@ -25198,6 +25271,124 @@
           }
         ],
         "summary": "Billed, paid and owed",
+        "tags": [
+          "fees"
+        ]
+      }
+    },
+    "/api/v1/terms/{term_id}/bills/sync": {
+      "post": {
+        "operationId": "fees_sync_bills",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "term_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Term Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillSyncIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillSyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add fees on the term's fee list that its bills are missing (dry_run to preview)",
         "tags": [
           "fees"
         ]

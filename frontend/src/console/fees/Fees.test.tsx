@@ -65,6 +65,29 @@ describe('fees and billing', () => {
     expect(within(card).queryByText(/Only the bursar or the proprietor/)).not.toBeInTheDocument();
   });
 
+  it('offers to add fees set after billing to the bills already sent', async () => {
+    let missing = { dry_run: true, fees: [{ item_name: 'WAEC', class_names: ['SSS 3'], bills: 30, total_kobo: 300_000_000 }], bills_changed: 30, total_kobo: 300_000_000 };
+    const calls = mockApi({
+      ...base,
+      'GET /api/v1/terms/t1/fee-schedule': () => json([]),
+      'POST /api/v1/terms/t1/bills/sync': async (request) => {
+        const { dry_run } = await request.json();
+        if (dry_run) return json(missing);
+        const done = { ...missing, dry_run: false };
+        missing = { dry_run: true, fees: [], bills_changed: 0, total_kobo: 0 };
+        return json(done);
+      },
+    });
+    renderAt('/console/fees');
+    const notice = await screen.findByRole('region', { name: 'Fees not on the bills yet' });
+    expect(within(notice).getByText(/WAEC for SSS 3: 30 pupils/)).toBeInTheDocument();
+    await userEvent.click(within(notice).getByRole('button', { name: 'Add them to 30 bills' }));
+    expect(await screen.findByText(/Added to 30 bills/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Fees not on the bills yet' })).not.toBeInTheDocument());
+    const applied = calls.filter((c) => c.method === 'POST');
+    expect(await applied[applied.length - 2]!.json()).toEqual({ dry_run: false });
+  });
+
   it('blocks saving an invalid amount', async () => {
     mockApi({ ...base, 'GET /api/v1/terms/t1/fee-schedule': () => json([]) });
     renderAt('/console/fees');

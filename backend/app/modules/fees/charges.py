@@ -11,6 +11,10 @@ they get an exemption, so regenerating can't add it back.
 term. If they've already been billed for it, a correcting line takes it off
 (lines are never edited). Undoing the exemption charges it again.
 
+**Catching bills up with the fee list** (`sync_bills`). A fee set for a class in the
+fee grid after the term's bills went out is added to the bills missing it (the Fees
+page offers this as soon as it notices the gap).
+
 **Individual extras** (`charge_pupil`). An item for one pupil, such as a uniform
 or textbooks, priced from the school's price list (`FeeItem.default_amount_kobo`)
 or typed in, with a quantity. It goes on the pupil's bill for the current term,
@@ -45,6 +49,7 @@ from .models import (
     InvoiceKind,
     InvoiceLine,
     LineKind,
+    StudentFeeChoice,
     StudentFeeExemption,
 )
 from .setup_service import MAX_AMOUNT_KOBO
@@ -229,6 +234,137 @@ def charge_classes(
             "classes": sorted(levels.values()),
             "charged_now": len(to_charge),
             "excluded": len(excluded_student_ids),
+        },
+    )
+    session.commit()
+    return report
+
+
+@dataclass(frozen=True)
+class MissingFee:
+    item_name: str
+    class_names: list[str]
+    bills: int
+    total_kobo: int
+
+
+@dataclass(frozen=True)
+class BillSyncReport:
+    dry_run: bool
+    fees: list[MissingFee]
+    bills_changed: int = 0  # distinct bills (one can be missing several fees)
+
+    @property
+    def total_kobo(self) -> int:
+        return sum(f.total_kobo for f in self.fees)
+
+
+def sync_bills(session: Session, ctx: StaffContext, *, term_id: uuid.UUID, dry_run: bool) -> BillSyncReport:
+    """
+    Bring the term's bills up to date with its fee list: a fee set for a class after the bills
+    went out (e.g. WAEC added to SSS 3 in the fee grid) is added to the bills that don't have it.
+    Pupils exempted from it, and optional fees a pupil hasn't taken, are skipped. Fees already on a
+    bill are left as they are (a changed price isn't re-billed). Fixed number of statements.
+    """
+    term = get_or_404(session, Term, term_id, label="Term")
+    schedule = session.execute(
+        select(
+            FeeSchedule.class_level_id, FeeSchedule.fee_item_id, FeeSchedule.amount_kobo, FeeSchedule.is_optional
+        ).where(FeeSchedule.term_id == term.id)
+    ).all()
+    bills = session.execute(
+        select(Invoice.id, Invoice.student_id, Enrollment.class_level_id)
+        .join(Enrollment, and_(Enrollment.student_id == Invoice.student_id, Enrollment.term_id == term.id))
+        .where(Invoice.term_id == term.id, Invoice.kind == InvoiceKind.TERM, Invoice.voided_at.is_(None))
+    ).all()
+    if not schedule or not bills:
+        return BillSyncReport(dry_run, [])
+    bill_ids = [b[0] for b in bills]
+    on_bill = {
+        (iid, item)
+        for iid, item in session.execute(
+            select(InvoiceLine.invoice_id, InvoiceLine.fee_item_id).where(
+                InvoiceLine.invoice_id.in_(bill_ids), InvoiceLine.fee_item_id.is_not(None)
+            )
+        )
+    }
+    student_ids = [b[1] for b in bills]
+    exempt = set(
+        session.execute(
+            select(StudentFeeExemption.student_id, StudentFeeExemption.fee_item_id).where(
+                StudentFeeExemption.term_id == term.id, StudentFeeExemption.student_id.in_(student_ids)
+            )
+        ).all()
+    )
+    chosen = set(
+        session.execute(
+            select(StudentFeeChoice.student_id, StudentFeeChoice.fee_item_id).where(
+                StudentFeeChoice.term_id == term.id, StudentFeeChoice.student_id.in_(student_ids)
+            )
+        ).all()
+    )
+    by_class: dict[uuid.UUID, list[tuple[uuid.UUID, int, bool]]] = {}
+    for level_id, item_id, amount, optional in schedule:
+        by_class.setdefault(level_id, []).append((item_id, amount, optional))
+    missing: list[tuple[uuid.UUID, uuid.UUID, uuid.UUID, int, uuid.UUID]] = []  # bill, student, item, amount, class
+    for iid, sid, level_id in bills:
+        for item_id, amount, optional in by_class.get(level_id, []):
+            if (iid, item_id) in on_bill or (sid, item_id) in exempt or (optional and (sid, item_id) not in chosen):
+                continue
+            missing.append((iid, sid, item_id, amount, level_id))
+    if not missing:
+        return BillSyncReport(dry_run, [])
+    names = dict(session.execute(select(FeeItem.id, FeeItem.name).where(FeeItem.id.in_({m[2] for m in missing}))).all())
+    levels = dict(
+        session.execute(select(ClassLevel.id, ClassLevel.name).where(ClassLevel.id.in_({m[4] for m in missing}))).all()
+    )
+    grouped: dict[uuid.UUID, list[tuple[uuid.UUID, uuid.UUID, uuid.UUID, int, uuid.UUID]]] = {}
+    for m in missing:
+        grouped.setdefault(m[2], []).append(m)
+    fees = [
+        MissingFee(
+            item_name=names[item_id],
+            class_names=sorted({levels[m[4]] for m in rows}),
+            bills=len(rows),
+            total_kobo=sum(m[3] for m in rows),
+        )
+        for item_id, rows in sorted(grouped.items(), key=lambda kv: names[kv[0]])
+    ]
+    report = BillSyncReport(dry_run, fees, len({m[0] for m in missing}))
+    if dry_run:
+        return report
+
+    positions = _next_positions(session, list({m[0] for m in missing}))
+    lines = []
+    for iid, _, item_id, amount, _ in missing:
+        lines.append(
+            InvoiceLine(
+                invoice_id=iid,
+                position=positions[iid],
+                kind=LineKind.FEE,
+                description=names[item_id],
+                amount_kobo=amount,
+                fee_item_id=item_id,
+                created_by=ctx.user.id,
+                reason="Added to the fee list after billing",
+            )
+        )
+        positions[iid] += 1
+    session.add_all(lines)
+    session.flush()
+    _apply_credit(session, list({m[1] for m in missing}))  # money already paid ahead covers the new lines
+    record(
+        session,
+        AuditAction.CLASS_CHARGE_ADDED,
+        school_id=ctx.school_id,
+        actor=ctx.actor,
+        meta=ctx.meta,
+        target=term,
+        changes={
+            "synced_from_fee_list": [
+                {"item": f.item_name, "classes": f.class_names, "bills": f.bills, "total_kobo": f.total_kobo}
+                for f in fees
+            ]
         },
     )
     session.commit()

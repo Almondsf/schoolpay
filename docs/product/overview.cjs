@@ -183,6 +183,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['20 Oct 2026', 'Fees added to the fee grid after billing can be added to the bills already sent, in one click'],
   ['20 Oct 2026', 'Fee breakdowns everywhere: each fee charged, paid and left, for staff, in the portal and on the payment page'],
   ['20 Oct 2026', 'School admins can now do everything the bursar does, with two-factor sign-in'],
   ['20 Oct 2026', 'Payment provider switchable at any time (Paystack or Bachs), with Bachs checkout and onboarding'],
