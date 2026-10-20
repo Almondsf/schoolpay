@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -54,6 +54,15 @@ describe('fees and billing', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save 1 change' }));
     const put = calls.find((c) => c.method === 'PUT')!;
     expect((await put.json()).entries).toEqual([{ fee_item_id: 'f1', class_level_id: 'l2', amount_kobo: 17_500_050, is_optional: false }]);
+  });
+
+  it('points to where extra fees for classes and pupils are added', async () => {
+    mockApi({ ...base, 'GET /api/v1/terms/t1/fee-schedule': () => json([]) });
+    renderAt('/console/fees');
+    const card = await screen.findByRole('region', { name: 'Extra fees after billing' });
+    expect(within(card).getByRole('link', { name: 'Billing → Add a fee to classes' })).toHaveAttribute('href', '/console/billing');
+    expect(within(card).getByText(/Add a charge/)).toBeInTheDocument();
+    expect(within(card).queryByText(/Only the bursar or the proprietor/)).not.toBeInTheDocument();
   });
 
   it('blocks saving an invalid amount', async () => {

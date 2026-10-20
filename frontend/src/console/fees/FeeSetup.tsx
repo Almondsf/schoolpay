@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
@@ -12,10 +13,29 @@ type Discount = Schemas['DiscountOut'];
 const CATEGORIES: Schemas['FeeCategory'][] = ['tuition', 'levy', 'service', 'materials', 'other'];
 
 export function FeeSetup() {
+  const { can } = useAuth();
   const [tab, setTab] = useState<'schedule' | 'items' | 'discounts'>('schedule');
   return (
     <>
       <PageHeader title="Fees" subtitle="What the school charges, per class and term. Changes apply to invoices generated afterwards." />
+      <section className="card section" aria-label="Extra fees after billing">
+        <h2>Extra fees after the bills have gone out</h2>
+        <ul className="small">
+          <li>
+            <strong>For whole classes</strong> (WAEC, NECO, JAMB, an end-of-year party):{' '}
+            {can('invoices.issue') ? <Link to="/console/billing">Billing → Add a fee to classes</Link> : 'Billing → Add a fee to classes'}. Untick
+            pupils not taking part.
+          </li>
+          <li>
+            <strong>For one pupil</strong> (uniform, textbooks): open the pupil from{' '}
+            <Link to="/console/students">Students</Link> → Fees → Add a charge. Set prices under Fee items so they fill in.
+          </li>
+          <li>
+            <strong>Leaving a pupil out</strong> of a class fee: on the pupil’s page, Exempt from a fee.
+          </li>
+        </ul>
+        {!can('invoices.issue') && <p className="hint">Only the bursar or the proprietor can add fees to bills.</p>}
+      </section>
       <div className="tabs" role="tablist">
         {(['schedule', 'items', 'discounts'] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
