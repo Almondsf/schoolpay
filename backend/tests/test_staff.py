@@ -227,7 +227,8 @@ async def test_audit_trail_is_per_school_and_permissioned(client, db, two_school
     filtered = await client.get(f"/api/v1/audit?target_id={people['b_admin'].id}", headers=a_headers)
     assert filtered.json()["items"] == []
     assert (await client.get("/api/v1/audit", headers=headers_for(db, people["a_bursar"]))).status_code == 200
-    assert (await client.get("/api/v1/audit", headers=headers_for(db, people["a_admin"]))).status_code == 403
+    assert (await client.get("/api/v1/audit", headers=headers_for(db, people["a_admin"]))).status_code == 200
+    assert (await client.get("/api/v1/audit")).status_code == 401
 
 
 async def test_audit_rows_cannot_be_changed_in_the_database(db, two_schools):

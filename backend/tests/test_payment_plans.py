@@ -126,10 +126,9 @@ async def test_instalments_cant_be_edited(client, world, db):
         db.rollback()
 
 
-async def test_only_billing_staff_and_only_their_school(client, world, db):
-    plan = {"instalments": schedule((0, 55_000), (30, 100_000))}
+async def test_only_signed_in_staff_and_only_their_school(client, world, db):
     url = f"/api/v1/invoices/{world['invoice_id']}/plan"
-    assert (await client.post(url, headers=world["admin"], json=plan)).status_code == 403  # admins don't bill
+    assert (await client.post(url)).status_code == 401
     other = make_school(db, "Beta Academy")
     theirs = headers_for(db, make_user(db, other, Role.BURSAR))
     db.commit()

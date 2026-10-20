@@ -34,5 +34,5 @@ test('the proprietor sees the term at a glance and downloads the debtors list', 
 
   // Set-up pages live under the Setup menu
   await navigate(page, 'Fees');
-  await expect(page.getByRole('heading', { name: 'Fees' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fees', exact: true })).toBeVisible();
 });

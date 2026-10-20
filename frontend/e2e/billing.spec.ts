@@ -34,7 +34,7 @@ test('bursar generates the term invoices in one click and corrects one', async (
   await expect(page.getByText('Agreed with the mother at the bursary')).toBeVisible();
 
   await page.getByRole('link', { name: student }).click();
-  await expect(page.getByRole('heading', { name: 'Fees' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fees', exact: true })).toBeVisible();
   await expect(page.getByText('Owed')).toBeVisible();
 });
 

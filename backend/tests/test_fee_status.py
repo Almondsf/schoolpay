@@ -74,7 +74,8 @@ async def test_pdf_for_one_class(client, world):
 
 
 async def test_only_staff_who_see_money_and_only_their_school(client, world, db):
-    assert (await client.get(URL, headers=world["admin"])).status_code == 403
+    assert (await client.get(URL, headers=world["admin"])).status_code == 200  # school admins see money too
+    assert (await client.get(URL)).status_code == 401
     other = make_user(db, make_school(db), Role.BURSAR)
     db.commit()
     stranger = await client.get(URL, headers=headers_for(db, other), params={"term_id": str(world["terms"][0].id)})

@@ -230,8 +230,9 @@ async def test_a_pupil_not_billed_this_term_gets_a_one_off_bill(client, world, d
 
 async def test_only_billing_staff_and_only_their_school(client, world, db):
     pupil = world["jss1"]
-    assert (await client.post(f"/api/v1/students/{pupil.id}/charges", headers=world["admin"],
-                              json={"description": "Books", "unit_kobo": 100})).status_code == 403  # fmt: skip
+    admin = await client.post(f"/api/v1/students/{pupil.id}/charges", headers=world["admin"],
+                              json={"description": "Books", "unit_kobo": 100_000})  # fmt: skip
+    assert admin.status_code in (200, 201), admin.text  # school admins bill too (owner, 2026-10-20)
     other = make_school(db, "Beta Academy")
     theirs = headers_for(db, make_user(db, other, Role.BURSAR))
     db.commit()

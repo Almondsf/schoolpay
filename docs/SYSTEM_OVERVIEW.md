@@ -166,14 +166,20 @@ check capabilities, never role names:
 | school.view / staff.view | ✓ | ✓ | ✓ |
 | school.manage (profile, sessions, classes) | ✓ | | ✓ |
 | staff.manage | ✓ | | |
-| audit.view | ✓ | ✓ | |
+| audit.view | ✓ | ✓ | ✓ |
 | students.view | ✓ | ✓ | ✓ |
 | students.manage | ✓ | | ✓ |
 | fees.view | ✓ | ✓ | ✓ |
-| fees.manage, invoices.issue | ✓ | ✓ | |
+| fees.manage, invoices.issue | ✓ | ✓ | ✓ |
 | payments.view, payments.record | ✓ | ✓ | ✓ |
-| payments.approve, payments.reverse | ✓ | ✓ | |
-| reports.view, messaging.manage | ✓ | ✓ | |
+| payments.approve, payments.reverse | ✓ | ✓ | ✓ |
+| reports.view, messaging.manage | ✓ | ✓ | ✓ |
+| payments.setup (where money settles) | ✓ | | |
+
+School admins can do everything a bursar can as well as school setup (owner's decision,
+2026-10-20), so like proprietors and bursars they must use two-factor sign-in. Only the
+proprietor manages staff and where the money settles. Cash still needs a second person
+to approve it (maker-checker), whatever the roles.
 
 Platform admins hold only `platform.manage`: they manage schools but can't
 read a school's data through the school endpoints.
@@ -256,7 +262,7 @@ level graduate, and anyone who can't be placed is listed. Already-enrolled
 students are left alone, so it's safe to re-run. `dry_run` previews it.
 
 **The school at a glance** (`students/summary.py`, `GET /school/roll`,
-`students.view`). The dashboard for staff who don't see money (school admins):
+`students.view`). On the dashboard under the money figures (and on its own for staff without `reports.view`):
 pupils on roll, placed this term, joined this term (first class is this
 term's), left since the term started, parents, pupils per class and arm (with
 boys/girls) in promotion order, and **records needing attention**: pupils with
@@ -1010,8 +1016,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   recent payments). Receipt numbers on payments download the PDF.
   **Overview** (the dashboard: term figures, a progress bar per class, money
   received per day as a plain SVG chart, payment methods, how late the debts
-  are; a term picker; school admins get pupils, classes and a "Needs attention"
-  list instead) and **Reports** (debtors with filters, phone links and
+  are; a term picker; then pupils, classes and a "Needs attention" list) and **Reports** (debtors with filters, phone links and
   paging; money received over a date range; Excel and PDF downloads through
   `src/lib/download.ts`). Money queries are re-read every time the page is
   shown (`staleTime: 0`), so the figures are never 30 seconds stale.

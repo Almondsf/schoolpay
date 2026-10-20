@@ -53,7 +53,9 @@ ROLE_CAPABILITIES: dict[Role, frozenset[Capability]] = {
             C.AUDIT_VIEW,
         }
     ),
-    # Records: school structure and students. Sees fees and payments, can't move money.
+    # Runs the school day to day (owner's decision, 2026-10-20): records, school setup and everything the
+    # bursar does. Only the proprietor manages staff and where the money settles. Cash still needs a
+    # second person to approve it, so an admin can't approve their own entry.
     Role.SCHOOL_ADMIN: frozenset(
         {
             C.SCHOOL_VIEW,
@@ -62,16 +64,24 @@ ROLE_CAPABILITIES: dict[Role, frozenset[Capability]] = {
             C.STUDENTS_VIEW,
             C.STUDENTS_MANAGE,
             C.FEES_VIEW,
+            C.FEES_MANAGE,
+            C.INVOICES_ISSUE,
             C.PAYMENTS_VIEW,
             C.PAYMENTS_RECORD,
+            C.PAYMENTS_APPROVE,
+            C.PAYMENTS_REVERSE,
+            C.REPORTS_VIEW,
+            C.MESSAGING_MANAGE,
+            C.AUDIT_VIEW,
         }
     ),
     Role.PLATFORM_ADMIN: frozenset({C.PLATFORM_MANAGE}),
     Role.PARENT: frozenset(),
 }
 
-# Roles that must enrol in two-factor sign-in before using anything (when ENFORCE_MFA is on)
-MFA_REQUIRED_ROLES = frozenset({Role.PLATFORM_ADMIN, Role.PROPRIETOR, Role.BURSAR})
+# Roles that must enrol in two-factor sign-in before using anything (when ENFORCE_MFA is on): everyone who
+# can move money or change who can
+MFA_REQUIRED_ROLES = frozenset({Role.PLATFORM_ADMIN, Role.PROPRIETOR, Role.BURSAR, Role.SCHOOL_ADMIN})
 
 
 def role_has(role: Role, capability: Capability) -> bool:

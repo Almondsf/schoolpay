@@ -120,12 +120,10 @@ async def test_school_wording_preview_and_reset(client, world):
     assert reset.json()["is_custom"] is False and reset.json()["body"] == reset.json()["default_body"]
 
 
-async def test_only_staff_with_messaging_rights(client, world):
+async def test_only_signed_in_staff_manage_messaging(client, world):
     for path in ("/api/v1/messages", "/api/v1/message-templates", "/api/v1/reminder-settings"):
-        assert (await client.get(path, headers=world["admin"])).status_code == 403
-    assert (
-        await client.post(f"/api/v1/students/{world['student'].id}/remind", headers=world["admin"])
-    ).status_code == 403
+        assert (await client.get(path, headers=world["admin"])).status_code == 200  # admins too (2026-10-20)
+        assert (await client.get(path)).status_code == 401
 
 
 # --- Receipts and fee notices ----------------------------------------------------------------------

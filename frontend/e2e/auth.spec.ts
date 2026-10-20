@@ -11,6 +11,8 @@ async function signIn(page: Page, email: string) {
 
 test('school admin signs in, sees staff, and the session survives a reload', async ({ page }) => {
   await signIn(page, 'admin@demo.schoolpay.ng');
+  await page.getByLabel('Code').fill(totp(E2E_MFA_SECRET)); // admins can move money: two-factor, like the bursar
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: /Welcome, Ada/ })).toBeVisible();
   await navigate(page, 'Staff');
   await expect(page.getByText('musa bello', { exact: false })).toBeVisible();

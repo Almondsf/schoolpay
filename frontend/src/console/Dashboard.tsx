@@ -56,6 +56,7 @@ export function Dashboard() {
 }
 
 function MoneyDashboard({ first, schoolName }: { first: string; schoolName: string }) {
+  const { can } = useAuth();
   const [termId, setTermId] = useState('');
   const sessions = useSessions();
   const overview = useQuery({
@@ -96,6 +97,12 @@ function MoneyDashboard({ first, schoolName }: { first: string; schoolName: stri
       />
       <GettingStarted />
       {overview.isPending ? <Loading /> : overview.isError ? <ErrorAlert error={overview.error} /> : <Figures data={overview.data} />}
+      {can('students.view') && (
+        <>
+          <h2 className="section-title">Pupils</h2>
+          <SchoolAtAGlance withTerm={false} />
+        </>
+      )}
     </>
   );
 }
@@ -245,7 +252,7 @@ function Figures({ data }: { data: Overview }) {
   );
 }
 
-function SchoolAtAGlance() {
+function SchoolAtAGlance({ withTerm = true }: { withTerm?: boolean }) {
   const roll = useQuery({
     queryKey: ['school-roll'],
     staleTime: 0,
@@ -253,10 +260,10 @@ function SchoolAtAGlance() {
   });
   if (roll.isPending) return <Loading />;
   if (roll.isError) return <ErrorAlert error={roll.error} />;
-  return <RollFigures data={roll.data} />;
+  return <RollFigures data={roll.data} withTerm={withTerm} />;
 }
 
-function RollFigures({ data }: { data: Roll }) {
+function RollFigures({ data, withTerm }: { data: Roll; withTerm: boolean }) {
   if (data.on_roll === 0) {
     return (
       <Empty>
@@ -275,7 +282,7 @@ function RollFigures({ data }: { data: Roll }) {
   ).filter(([, count]) => count > 0);
   return (
     <>
-      {data.term_label && <h2 className="section-title">{data.term_label}</h2>}
+      {withTerm && data.term_label && <h2 className="section-title">{data.term_label}</h2>}
       <div className="stats">
         <Stat
           label="Pupils on roll"

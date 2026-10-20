@@ -87,6 +87,8 @@ const AREAS = [
   {
     title: 'For the school admin',
     rows: [
+      ['Everything the bursar can do (bills, extra fees, payments, approvals, reports, messages), with a code from an authenticator app at sign-in',
+        'One person can run the school’s fees day to day; only the proprietor controls staff and the bank account'],
       ['Load all pupils and their parents from the school’s existing Excel or CSV list, see every problem by row before saving',
         'Getting started takes an afternoon, not weeks of typing'],
       ['Set up the school year, terms, classes and arms; move everyone into the next term or promote them at the end of the year',
@@ -181,6 +183,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['20 Oct 2026', 'School admins can now do everything the bursar does, with two-factor sign-in'],
   ['20 Oct 2026', 'Payment provider switchable at any time (Paystack or Bachs), with Bachs checkout and onboarding'],
   ['20 Oct 2026', 'Fee status by pupil: every fee paid, part paid or unpaid, for the school or one class (Excel and PDF)'],
   ['19 Oct 2026', 'Pay for all your children by bank transfer, card or USSD, from the link or the portal'],

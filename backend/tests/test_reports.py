@@ -331,7 +331,7 @@ async def test_downloads_are_rate_limited(client, world, monkeypatch):
 
 async def test_only_staff_who_see_money(client, world):
     for path in ("overview", "debtors", "collections", "debtors/export", "collections/export"):
-        assert (await client.get(f"/api/v1/reports/{path}", headers=world["admin"])).status_code == 403
+        assert (await client.get(f"/api/v1/reports/{path}", headers=world["admin"])).status_code == 200  # 2026-10-20
     assert (await client.get("/api/v1/reports/overview")).status_code == 401
 
 

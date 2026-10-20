@@ -22,6 +22,7 @@ from app.core.http import RequestMeta
 from app.core.tenancy import scope_platform_wide
 from app.modules.accounts import auth_service
 from app.modules.accounts.models import Role, User
+from app.modules.accounts.permissions import MFA_REQUIRED_ROLES
 from app.modules.accounts.security import hash_password
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, School, Term
 from app.modules.students.models import Enrollment, Student
@@ -67,7 +68,7 @@ def make_user(
         is_active=active,
     )
     # Roles that must use two-factor sign-in get it by default, so they can act straight away
-    if mfa if mfa is not None else role in (Role.PROPRIETOR, Role.BURSAR, Role.PLATFORM_ADMIN):
+    if mfa if mfa is not None else role in MFA_REQUIRED_ROLES:
         user.mfa_secret = pyotp.random_base32()
         user.mfa_enabled = True
     db.add(user)

@@ -173,13 +173,14 @@ async def test_copy_schedule_keeps_existing_amounts(client, world):
     assert kept["amount_kobo"] == 1
 
 
-async def test_school_admin_sees_fees_but_cannot_bill(client, world):
-    h = world["admin"]
+async def test_school_admin_sets_fees_and_bills(client, world):
+    h = world["admin"]  # school admins do everything a bursar does (owner, 2026-10-20)
     assert (await client.get("/api/v1/fee-items", headers=h)).status_code == 200
-    assert (await client.post("/api/v1/fee-items", headers=h, json={"name": "X Fee"})).status_code == 403
+    assert (await client.post("/api/v1/fee-items", headers=h, json={"name": "X Fee"})).status_code == 201
     term = world["terms"][0]
     generated = await client.post(f"/api/v1/terms/{term.id}/invoices/generate", headers=h, json={"dry_run": True})
-    assert generated.status_code == 403
+    assert generated.status_code == 200
+    assert (await client.get("/api/v1/fee-items")).status_code == 401
 
 
 # --- Generation ----------------------------------------------------------------------------------

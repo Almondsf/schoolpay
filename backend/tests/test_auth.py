@@ -24,7 +24,7 @@ def audit_actions(db, school_id):
 
 
 async def test_login_without_mfa_returns_tokens_and_refresh_cookie(client, db):
-    user = make_user(db, make_school(db), Role.SCHOOL_ADMIN)
+    user = make_user(db, make_school(db), Role.SCHOOL_ADMIN, mfa=False)
     db.commit()
     response = await login(client, user)
     assert response.status_code == 200
@@ -148,7 +148,7 @@ async def test_mfa_setup_requires_password(client, db):
 
 
 async def test_refresh_rotates_and_reuse_revokes_the_session(client, db):
-    user = make_user(db, make_school(db))
+    user = make_user(db, make_school(db), mfa=False)
     db.commit()
     signed_in = await login(client, user)
     access = signed_in.json()["access_token"]
@@ -249,7 +249,7 @@ async def test_bad_credentials_are_rejected(client, header):
 
 
 async def test_sessions_are_recorded_with_device_details(client, db):
-    user = make_user(db, make_school(db))
+    user = make_user(db, make_school(db), mfa=False)
     db.commit()
     await client.post(
         "/api/v1/auth/login",

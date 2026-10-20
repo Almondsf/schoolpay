@@ -11,8 +11,8 @@ It is updated with every change that affects security.
   never a role name. Nobody can change their own role or deactivate themselves,
   a school always keeps an active proprietor, and only the three school roles
   can be assigned (no escalation to platform admin).
-- **Two-factor sign-in (TOTP)** is required for proprietors, bursars and platform
-  admins (`ENFORCE_MFA`). Codes can't be replayed (the last used time step is
+- **Two-factor sign-in (TOTP)** is required for proprietors, bursars, school admins
+  and platform admins (`ENFORCE_MFA`): everyone who can move money or change access. Codes can't be replayed (the last used time step is
   stored and updated atomically). Recovery codes are single-use and stored
   hashed. The TOTP secret is encrypted at rest. Enrolling needs the password;
   turning MFA off needs the password and a code.
@@ -187,8 +187,8 @@ It is updated with every change that affects security.
 - Subscription invoice lines and payments are append-only (database trigger); a payment can't exceed what's owed; a live bill per school per term is enforced by a unique index.
 
 ## Reports and downloads
-- Reports need `reports.view` (proprietor and bursar only); school admins
-  can't see money.
+- Reports need `reports.view` (proprietor, bursar and school admin, all on two-factor
+  sign-in).
 - Every download is recorded in the activity log (who, which report,
   format, row count, scope; never the contents), rate limited per school
   (60 an hour), capped at 5,000 rows, and sent `Cache-Control: no-store`.

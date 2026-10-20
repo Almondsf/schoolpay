@@ -400,13 +400,6 @@ async def test_reversal_reopens_the_debt(client, world):
     await generate(client, world)
     approved = await pay_cash(client, world, 155_000)
     assert (await account(client, world))["outstanding_kobo"] == 0
-    assert (
-        await client.post(
-            f"/api/v1/payments/{approved['payment_id']}/reverse",
-            headers=world["admin"],
-            json={"reason": "Wrong student"},
-        )
-    ).status_code == 403
     reversal = await client.post(
         f"/api/v1/payments/{approved['payment_id']}/reverse", headers=world["bursar"], json={"reason": "Teller bounced"}
     )

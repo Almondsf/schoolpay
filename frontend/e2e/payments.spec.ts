@@ -32,7 +32,7 @@ test('a made-up receipt code is reported as not genuine', async ({ page }) => {
 
 test('cash recorded by the admin is approved by the bursar', async ({ browser }) => {
   const admin = await browser.newPage();
-  await signIn(admin, 'admin@demo.schoolpay.ng');
+  await signIn(admin, 'admin@demo.schoolpay.ng', { mfa: true });
   await admin.getByRole('link', { name: 'Payments', exact: true }).click();
   await admin.getByRole('button', { name: 'Record cash or teller' }).click();
   await admin.getByLabel('Find student').fill('DMC');
@@ -40,7 +40,7 @@ test('cash recorded by the admin is approved by the bursar', async ({ browser })
   await admin.getByLabel('Amount (₦)').fill('12,345');
   await admin.getByRole('button', { name: 'Record', exact: true }).click();
   await expect(admin.getByRole('cell', { name: /₦12,345\.00/ })).toBeVisible();
-  await expect(admin.getByRole('button', { name: 'Approve' })).toHaveCount(0); // admins record, they don't approve
+  await expect(admin.getByRole('button', { name: 'Approve' })).toHaveCount(0); // nobody approves their own entry
 
   const bursar = await browser.newPage();
   await signIn(bursar, 'bursar@demo.schoolpay.ng', { mfa: true });
