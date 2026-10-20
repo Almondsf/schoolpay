@@ -4,9 +4,22 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-19 (product name and providers noted)
+Last updated: 2026-10-20 (payment providers: Paystack sandbox live, Bachs added)
 
-## Decisions
+## _(new)_ Payment providers (2026-10-20)
+
+- [ ] **Paystack "Dedicated NUBAN"** (each pupil's own account number) is not enabled on your
+      Paystack business yet: email support@paystack.com to request it. Until then, parents pay
+      by card or bank transfer on Paystack's checkout page.
+- [ ] **Bachs sandbox key and webhook secret**: create an `sk_sandbox_…` key and a webhook
+      endpoint in the Bachs developer portal, and send them over (they go in `backend/.env`
+      only). Then the demo school can be set up on Bachs and Bachs' checkout tried.
+- [ ] **Decide how Bachs fits**: Bachs gives each school one fixed account number, not one per
+      pupil, so automatic matching of transfers to pupils needs Paystack (or a matching rule
+      on the narration, with a review queue for the rest). Card and bank-transfer checkout work
+      on both.
+
+Decisions
 
 - [ ] _(new)_ **Set the actual prices.** The model is decided (ParentPay's:
       set-up fee + annual licence + per pupil per year, billed termly, free

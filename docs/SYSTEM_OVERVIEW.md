@@ -458,6 +458,30 @@ intent is parked as `needs_review`; nothing is split by guesswork. All recording
 goes through `service.record_payments()`, which handles any number of payments
 in a fixed number of statements (`record_payment()` is the one-payment wrapper).
 
+**Choosing the provider at runtime** (`providers.py`). Which gateway new checkouts go
+through is a platform setting (`provider_settings`, service `payment`), switched by a
+platform admin with `PUT /platform/providers/payment` (console: Platform → Providers;
+audited), like diplace's provider config. Only gateways configured in
+`PAYMENT_GATEWAYS` can be chosen; with nothing saved, the first configured real one is
+used. A school can be set up on several gateways (`school_payment_accounts`, unique per
+school and gateway): checkouts use its account on the active provider and fall back to
+any other it has, so switching never stops a school taking payments. Payments under way
+finish on the gateway they began on (`PaymentIntent.gateway`), and transfers into
+students' account numbers keep arriving from the gateway that issued them.
+
+**Bachs** (`gateways/bachs.py`). A school is a Bachs *connected account*, set up on
+Bachs' hosted onboarding (`POST /payment-settings/bachs/onboarding` returns the link;
+Bachs collects the business, identity and payout bank details). Checkouts are checkout
+sessions charged as *destination charges* to the school's account with our
+`platform_fee`, so the platform never holds the money. Bachs gives a business one fixed
+account number, not one per customer, so it **can't issue students' own account numbers**
+(`supports_virtual_accounts = False`); those come from Paystack. Its webhook
+(`POST /webhooks/bachs`, HMAC-SHA256 of `timestamp.body`, 5-minute window) carries our
+reference and Bachs' `charge_id`; the payment is re-read from `GET /v1/payments/{id}`
+before anything is recorded. A deposit into a school's fixed Bachs number (no reference)
+is parked for review. `BACHS_SECRET_KEY` starting `sk_sandbox_` uses the sandbox,
+`sk_live_` the live API.
+
 **How a checkout was paid.** The gateway's checkout page offers card, bank
 transfer (a temporary account number for the exact amount) and USSD (Paystack
 `channels`, Flutterwave `payment_options`). The payment is recorded with the
@@ -923,6 +947,7 @@ production.
 | Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
 | Payment setup | `GET/PUT /payment-settings`; `GET /payment-settings/banks`; `POST /virtual-accounts/provision`; `GET /students/{id}/virtual-account` |
 | Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
+| Payment providers | `GET /platform/providers`, `PUT /platform/providers/payment` (platform admin); `POST /payment-settings/bachs/onboarding`; webhook `POST /webhooks/bachs` |
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |

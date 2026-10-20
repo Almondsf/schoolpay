@@ -21,7 +21,7 @@ from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.receipts.service import receipts_for_payments
 from app.modules.students.models import Student
 
-from . import accounts, checkout, manual, service, webhooks
+from . import accounts, checkout, manual, providers, service, webhooks
 from .allocation import credit_by_student
 from .gateways import FakeGateway, GatewayCode, InvalidSignature, enabled_gateways
 from .models import (
@@ -73,7 +73,13 @@ class PaymentAccountIn(BaseModel):
 
 class PaymentSettingsOut(BaseModel):
     gateways: list[GatewayCode]
-    account: PaymentAccountOut | None
+    active_provider: GatewayCode = Field(description="The provider new checkouts go through (set by the platform)")
+    account: PaymentAccountOut | None = Field(description="The account checkouts use now")
+    accounts: list[PaymentAccountOut] = Field(description="Every gateway the school is set up on")
+
+
+class OnboardingOut(BaseModel):
+    url: str
 
 
 class VirtualAccountOut(BaseModel):
@@ -246,8 +252,22 @@ def _manual_out(entry: ManualPayment, student: Student) -> ManualOut:
 def get_settings_(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> PaymentSettingsOut:
     account = accounts.payment_account(db)
     return PaymentSettingsOut(
-        gateways=enabled_gateways(), account=PaymentAccountOut.model_validate(account) if account else None
+        gateways=enabled_gateways(),
+        active_provider=providers.active_payment_gateway(db),
+        account=PaymentAccountOut.model_validate(account) if account else None,
+        accounts=[PaymentAccountOut.model_validate(a) for a in accounts.school_accounts(db)],
     )
+
+
+@router.post(
+    "/payment-settings/bachs/onboarding",
+    response_model=OnboardingOut,
+    summary="Set the school up on Bachs: a link to Bachs' own onboarding (business, identity, payout bank)",
+)
+def bachs_onboarding(ctx: StaffContext = SETUP, db: Session = Depends(get_db)) -> OnboardingOut:
+    get_limiter().hit("payment-setup:school", "10/hour", str(ctx.school_id))
+    back = f"{get_settings().frontend_url}/console/payment-settings"
+    return OnboardingOut(url=accounts.start_bachs_onboarding(db, ctx, return_url=back))
 
 
 @router.get("/payment-settings/banks", response_model=list[BankOut], summary="Banks the gateway can pay out to")
@@ -466,6 +486,11 @@ async def paystack_webhook(request: Request, db: Session = Depends(get_db)) -> R
 @webhook_router.post("/flutterwave")
 async def flutterwave_webhook(request: Request, db: Session = Depends(get_db)) -> Response:
     return await _webhook(GatewayCode.FLUTTERWAVE, request, db)
+
+
+@webhook_router.post("/bachs")
+async def bachs_webhook(request: Request, db: Session = Depends(get_db)) -> Response:
+    return await _webhook(GatewayCode.BACHS, request, db)
 
 
 @webhook_router.post("/fake")

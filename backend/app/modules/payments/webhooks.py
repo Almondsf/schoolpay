@@ -52,6 +52,7 @@ def receive(session: Session, gateway: GatewayCode, headers: dict[str, str], bod
             event_type=event.event_type[:60],
             reference=event.reference,
             receiver_account_number=event.receiver_account_number,
+            provider_payment_id=event.provider_payment_id,
             claimed_amount_kobo=event.amount_kobo,
             payload=redact(event.payload),
             status=WebhookStatus.RECEIVED if event.kind == WebhookKind.CHARGE else WebhookStatus.IGNORED,
@@ -100,6 +101,7 @@ def process_event(event_id: uuid.UUID) -> WebhookStatus:
             return event.status if event else WebhookStatus.IGNORED
         event.attempts += 1
         gateway, reference, account_number = event.gateway, event.reference, event.receiver_account_number
+        payment_id = event.provider_payment_id
         session.commit()
     if reference is None:
         _finish(event_id, WebhookStatus.IGNORED, "No transaction reference")
@@ -110,7 +112,7 @@ def process_event(event_id: uuid.UUID) -> WebhookStatus:
         scope_platform_wide(session)
         is_checkout = session.scalar(select(PaymentIntent.id).where(PaymentIntent.reference == reference)) is not None
     if is_checkout:
-        intent = checkout.confirm(reference)
+        intent = checkout.confirm(reference, payment_id)
         outcomes = {
             IntentStatus.SUCCEEDED: WebhookStatus.PROCESSED,
             IntentStatus.NEEDS_REVIEW: WebhookStatus.NEEDS_REVIEW,
@@ -125,7 +127,7 @@ def process_event(event_id: uuid.UUID) -> WebhookStatus:
         return status
 
     # Otherwise it must be a transfer into a student's virtual account
-    verification = get_gateway(gateway).verify(reference)  # GatewayError propagates: the task retries
+    verification = get_gateway(gateway).verify(reference, payment_id=payment_id)  # GatewayError: the task retries
     if verification.status != TransactionStatus.SUCCESS:
         _finish(event_id, WebhookStatus.IGNORED, f"Gateway says {verification.status.value}")
         return WebhookStatus.IGNORED

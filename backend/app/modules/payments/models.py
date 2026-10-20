@@ -52,10 +52,14 @@ GATEWAY_ENUM = enum_type(GatewayCode, "payment_gateway")
 
 
 class SchoolPaymentAccount(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
-    """Where a school's money settles: one gateway subaccount per school."""
+    """
+    Where a school's money settles, on one gateway: a Paystack/Flutterwave subaccount on the
+    school's bank account, or a Bachs connected account (bank details held by Bachs, so the
+    bank fields are blank). A school can be set up on more than one gateway.
+    """
 
     __tablename__ = "school_payment_accounts"
-    __table_args__ = (UniqueConstraint("school_id"),)
+    __table_args__ = (UniqueConstraint("school_id", "gateway"),)
 
     gateway: Mapped[GatewayCode] = mapped_column(GATEWAY_ENUM)
     subaccount_code: Mapped[str] = mapped_column(String(100))
@@ -125,6 +129,8 @@ class PaymentIntent(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
         enum_type(IntentStatus, "payment_intent_status"), default=IntentStatus.PENDING
     )
     authorization_url: Mapped[str] = mapped_column(String(500), default="")
+    # The gateway's own id for the checkout, when it differs from our reference (Bachs: chk_...)
+    provider_reference: Mapped[str] = mapped_column(String(100), default="", server_default="")
     review_reason: Mapped[str] = mapped_column(String(300), default="")
     created_by: Mapped[uuid.UUID | None] = mapped_column()  # staff user (payment link) or None (parent)
 
@@ -312,6 +318,7 @@ class WebhookEvent(UUIDPrimaryKey, Base):
     event_type: Mapped[str] = mapped_column(String(60))
     reference: Mapped[str | None] = mapped_column(String(100))
     receiver_account_number: Mapped[str | None] = mapped_column(String(20))
+    provider_payment_id: Mapped[str | None] = mapped_column(String(100))  # verify by this id (Bachs: ch_...)
     claimed_amount_kobo: Mapped[int | None] = mapped_column(BigInteger)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
     status: Mapped[WebhookStatus] = mapped_column(
@@ -323,3 +330,18 @@ class WebhookEvent(UUIDPrimaryKey, Base):
     payment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("payments.id", ondelete="RESTRICT"))
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ProviderSetting(UUIDPrimaryKey, Base):
+    """
+    Which provider a platform-wide service uses right now (e.g. payment: paystack or bachs),
+    switched by a platform admin without a deploy. No row: the configured default.
+    """
+
+    __tablename__ = "provider_settings"
+    __table_args__ = (UniqueConstraint("service"),)
+
+    service: Mapped[str] = mapped_column(String(30))
+    active_provider: Mapped[str] = mapped_column(String(30))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column()
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

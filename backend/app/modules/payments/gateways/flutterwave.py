@@ -54,6 +54,7 @@ def _to_naira(kobo: int) -> str:
 
 class FlutterwaveGateway:
     code = GatewayCode.FLUTTERWAVE
+    supports_virtual_accounts = True
 
     def __init__(self, secret_key: str | None = None, webhook_hash: str | None = None) -> None:
         settings = get_settings()
@@ -110,7 +111,15 @@ class FlutterwaveGateway:
         )
 
     def initialize_payment(
-        self, *, reference: str, amount_kobo: int, email: str, callback_url: str, subaccount_code: str, description: str
+        self,
+        *,
+        reference: str,
+        amount_kobo: int,
+        email: str,
+        callback_url: str,
+        subaccount_code: str,
+        description: str,
+        platform_fee_bp: int = 0,  # set on the subaccount instead
     ) -> Checkout:
         data = self._request(
             "POST",
@@ -128,7 +137,9 @@ class FlutterwaveGateway:
         )
         return Checkout(authorization_url=data["link"])
 
-    def verify(self, reference: str) -> Verification:
+    def verify(
+        self, reference: str, *, provider_reference: str | None = None, payment_id: str | None = None
+    ) -> Verification:
         data = self._request("GET", "/transactions/verify_by_reference", params={"tx_ref": reference}) or {}
         return Verification(
             reference=data.get("tx_ref", reference),

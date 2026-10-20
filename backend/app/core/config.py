@@ -91,14 +91,20 @@ class Settings(BaseSettings):
     # How long invite and password-reset links stay valid
     password_link_hours: int = Field(default=48, ge=1, le=168)
 
-    # Payment gateways schools may use. "fake" simulates a gateway (development and tests only).
-    payment_gateways: Annotated[list[Literal["paystack", "flutterwave", "fake"]], NoDecode] = ["paystack"]
+    # Payment gateways the platform can use (keys configured). Which one new checkouts go through is
+    # switched at runtime by a platform admin (PUT /platform/providers/payment); until then, the first one.
+    # "fake" simulates a gateway (development and tests only).
+    payment_gateways: Annotated[list[Literal["paystack", "bachs", "flutterwave", "fake"]], NoDecode] = ["paystack"]
     paystack_secret_key: str = ""
     # Bank Paystack issues dedicated virtual accounts from ("wema-bank", "titan-paystack", ...)
     paystack_preferred_bank: str = "wema-bank"
     flutterwave_secret_key: str = ""
     # The "secret hash" set in the Flutterwave dashboard; sent back in the verif-hash header
     flutterwave_webhook_hash: str = ""
+    # Bachs (https://docs.bachs.io): sk_sandbox_... uses the sandbox, sk_live_... the live API
+    bachs_secret_key: str = ""
+    # The signing secret of our webhook endpoint in the Bachs developer portal
+    bachs_webhook_secret: str = ""
     # Platform fee taken through the gateway split, in basis points (100 = 1%). Schools can be set individually.
     platform_fee_bp: int = Field(default=100, ge=0, le=2000)
     # Where the gateway sends parents after a card payment (the web app verifies and shows the result)
@@ -216,6 +222,10 @@ class Settings(BaseSettings):
                 self.flutterwave_secret_key and self.flutterwave_webhook_hash
             ):
                 raise ValueError("FLUTTERWAVE_SECRET_KEY and FLUTTERWAVE_WEBHOOK_HASH are required for flutterwave")
+            if "bachs" in self.payment_gateways and not (
+                self.bachs_secret_key.startswith("sk_live_") and self.bachs_webhook_secret
+            ):
+                raise ValueError("A live BACHS_SECRET_KEY and BACHS_WEBHOOK_SECRET are required for bachs")
             if self.whatsapp_backend == "memory":
                 raise ValueError("WHATSAPP_BACKEND=memory is for tests only")
             if self.whatsapp_backend == "cloud" and not (self.whatsapp_token and self.whatsapp_phone_number_id):

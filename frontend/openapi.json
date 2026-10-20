@@ -2317,6 +2317,7 @@
         "enum": [
           "paystack",
           "flutterwave",
+          "bachs",
           "fake"
         ],
         "title": "GatewayCode",
@@ -3770,6 +3771,19 @@
         "title": "NewLineIn",
         "type": "object"
       },
+      "OnboardingOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "OnboardingOut",
+        "type": "object"
+      },
       "OnboardingStepOut": {
         "properties": {
           "done": {
@@ -4999,7 +5013,20 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The account checkouts use now"
+          },
+          "accounts": {
+            "description": "Every gateway the school is set up on",
+            "items": {
+              "$ref": "#/components/schemas/PaymentAccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "active_provider": {
+            "$ref": "#/components/schemas/GatewayCode",
+            "description": "The provider new checkouts go through (set by the platform)"
           },
           "gateways": {
             "items": {
@@ -5011,7 +5038,9 @@
         },
         "required": [
           "gateways",
-          "account"
+          "active_provider",
+          "account",
+          "accounts"
         ],
         "title": "PaymentSettingsOut",
         "type": "object"
@@ -5374,6 +5403,57 @@
           "text"
         ],
         "title": "PreviewOut",
+        "type": "object"
+      },
+      "ProviderIn": {
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/GatewayCode"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "ProviderIn",
+        "type": "object"
+      },
+      "ProviderOut": {
+        "properties": {
+          "active_provider": {
+            "$ref": "#/components/schemas/GatewayCode"
+          },
+          "available": {
+            "description": "Providers configured on this platform (keys set)",
+            "items": {
+              "$ref": "#/components/schemas/GatewayCode"
+            },
+            "title": "Available",
+            "type": "array"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "service",
+          "active_provider",
+          "available",
+          "updated_at"
+        ],
+        "title": "ProviderOut",
         "type": "object"
       },
       "ProvisionIn": {
@@ -15386,6 +15466,102 @@
         ]
       }
     },
+    "/api/v1/payment-settings/bachs/onboarding": {
+      "post": {
+        "operationId": "payments_bachs_onboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set the school up on Bachs: a link to Bachs' own onboarding (business, identity, payout bank)",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/api/v1/payment-settings/banks": {
       "get": {
         "operationId": "payments_list_banks",
@@ -17514,6 +17690,212 @@
           }
         ],
         "summary": "Change a plan's prices (affects later bills only)",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/providers": {
+      "get": {
+        "operationId": "platform_get_providers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderOut"
+                  },
+                  "title": "Response Platform Get Providers",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Which provider each service uses right now",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/providers/payment": {
+      "put": {
+        "operationId": "platform_put_payment_provider",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Switch the payment provider for new checkouts (payments under way finish where they began)",
         "tags": [
           "platform"
         ]

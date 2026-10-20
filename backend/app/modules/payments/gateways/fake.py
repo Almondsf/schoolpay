@@ -61,6 +61,7 @@ class _State:
 
 class FakeGateway:
     code = GatewayCode.FAKE
+    supports_virtual_accounts = True
     _shared: ClassVar["FakeGateway | None"] = None
 
     def __init__(self) -> None:
@@ -109,13 +110,23 @@ class FakeGateway:
         )
 
     def initialize_payment(
-        self, *, reference: str, amount_kobo: int, email: str, callback_url: str, subaccount_code: str, description: str
+        self,
+        *,
+        reference: str,
+        amount_kobo: int,
+        email: str,
+        callback_url: str,
+        subaccount_code: str,
+        description: str,
+        platform_fee_bp: int = 0,  # set on the subaccount instead
     ) -> Checkout:
         self._check()
         self.state.transactions[reference] = _Transaction(reference, amount_kobo, TransactionStatus.PENDING, "card")
         return Checkout(authorization_url=f"https://checkout.fake/{reference}")
 
-    def verify(self, reference: str) -> Verification:
+    def verify(
+        self, reference: str, *, provider_reference: str | None = None, payment_id: str | None = None
+    ) -> Verification:
         self._check()
         txn = self.state.transactions.get(reference)
         if txn is None:

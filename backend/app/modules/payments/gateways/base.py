@@ -1,5 +1,5 @@
 """
-The payment gateway interface. Paystack, Flutterwave and the fake gateway
+The payment gateway interface. Paystack, Bachs, Flutterwave and the fake gateway
 all implement it, so the rest of the system never knows which one a school uses.
 
 The platform never holds school money. Each school has a gateway
@@ -23,6 +23,7 @@ from app.core.errors import DomainError, ServiceUnavailable
 class GatewayCode(enum.StrEnum):
     PAYSTACK = "paystack"
     FLUTTERWAVE = "flutterwave"
+    BACHS = "bachs"
     FAKE = "fake"
 
 
@@ -81,6 +82,7 @@ class IssuedVirtualAccount:
 @dataclass(frozen=True)
 class Checkout:
     authorization_url: str
+    provider_reference: str = ""  # the gateway's own id for the checkout, when it differs from ours
 
 
 class TransactionStatus(enum.StrEnum):
@@ -129,11 +131,13 @@ class WebhookEvent:
     reference: str | None = None
     receiver_account_number: str | None = None
     amount_kobo: int | None = None
+    provider_payment_id: str | None = None  # the gateway's id for the payment, to verify it by
     payload: dict[str, Any] = field(default_factory=dict)
 
 
 class PaymentGateway(Protocol):
     code: GatewayCode
+    supports_virtual_accounts: bool  # can give each student their own permanent account number
 
     def list_banks(self) -> list[Bank]: ...
 
@@ -146,10 +150,22 @@ class PaymentGateway(Protocol):
     def create_virtual_account(self, *, customer: CustomerDetails, subaccount_code: str) -> IssuedVirtualAccount: ...
 
     def initialize_payment(
-        self, *, reference: str, amount_kobo: int, email: str, callback_url: str, subaccount_code: str, description: str
+        self,
+        *,
+        reference: str,
+        amount_kobo: int,
+        email: str,
+        callback_url: str,
+        subaccount_code: str,
+        description: str,
+        platform_fee_bp: int = 0,
     ) -> Checkout: ...
 
-    def verify(self, reference: str) -> Verification: ...
+    def verify(
+        self, reference: str, *, provider_reference: str | None = None, payment_id: str | None = None
+    ) -> Verification:
+        """Ask the gateway what happened. Gateways that track checkouts by their own ids use the hints."""
+        ...
 
     def parse_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent:
         """Check the signature (raise InvalidSignature) and normalise the event."""

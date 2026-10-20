@@ -87,8 +87,9 @@ def start_checkout(
         subaccount_code=account.subaccount_code,
         callback_url=f"{settings.frontend_url}{settings.payment_callback_path}",
         description=f"School fees: {student.full_name} ({student.admission_number})",
+        platform_fee_bp=account.platform_fee_bp,
     )
-    intent.authorization_url = checkout.authorization_url
+    intent.authorization_url, intent.provider_reference = checkout.authorization_url, checkout.provider_reference
     record(
         session,
         AuditAction.PAYMENT_LINK_CREATED,
@@ -102,7 +103,7 @@ def start_checkout(
     return intent
 
 
-def confirm(reference: str) -> PaymentIntent | None:
+def confirm(reference: str, payment_id: str | None = None) -> PaymentIntent | None:
     """
     Settle a checkout from the gateway's own record. Safe to call any number of
     times, from the redirect and the webhook at once. Returns None for an
@@ -119,7 +120,9 @@ def confirm(reference: str) -> PaymentIntent | None:
         intent = session.scalar(select(PaymentIntent).where(PaymentIntent.reference == reference).with_for_update())
         if intent is None or intent.status != IntentStatus.PENDING:
             return intent
-        verification = get_gateway(intent.gateway).verify(reference)
+        verification = get_gateway(intent.gateway).verify(
+            reference, provider_reference=intent.provider_reference or None, payment_id=payment_id
+        )
         if verification.status == TransactionStatus.PENDING:
             return intent
         if verification.status == TransactionStatus.FAILED:
@@ -134,10 +137,13 @@ def confirm(reference: str) -> PaymentIntent | None:
             )
         )
         wrong_total = bool(items) and verification.amount_kobo != intent.amount_kobo
-        if verification.currency != "NGN" or verification.amount_kobo <= 0 or wrong_total:
+        wrong_payment = verification.reference != reference  # a payment id that belongs to another checkout
+        if verification.currency != "NGN" or verification.amount_kobo <= 0 or wrong_total or wrong_payment:
             intent.status = IntentStatus.NEEDS_REVIEW
-            intent.review_reason = f"Paid {verification.amount_kobo} kobo in {verification.currency or '?'}" + (
-                f", expected {intent.amount_kobo} to split between children" if wrong_total else ""
+            intent.review_reason = (
+                f"Paid {verification.amount_kobo} kobo in {verification.currency or '?'}"
+                + (f", expected {intent.amount_kobo} to split between children" if wrong_total else "")
+                + (f", for another reference ({verification.reference[:40]})" if wrong_payment else "")
             )
             record(
                 session,

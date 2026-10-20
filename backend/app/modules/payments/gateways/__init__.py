@@ -2,6 +2,7 @@
 
 from app.core.config import get_settings
 
+from .bachs import BachsGateway
 from .base import (
     GatewayCode,
     GatewayError,
@@ -18,6 +19,7 @@ from .flutterwave import FlutterwaveGateway
 from .paystack import PaystackGateway
 
 __all__ = [
+    "BachsGateway",
     "FakeGateway",
     "GatewayCode",
     "GatewayError",
@@ -45,4 +47,6 @@ def get_gateway(code: GatewayCode | str) -> PaymentGateway:
         return PaystackGateway()
     if code is GatewayCode.FLUTTERWAVE:
         return FlutterwaveGateway()
+    if code is GatewayCode.BACHS:
+        return BachsGateway()
     return FakeGateway.shared()

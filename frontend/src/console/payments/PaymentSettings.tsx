@@ -3,10 +3,16 @@ import { useState, type FormEvent } from 'react';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { BRAND } from '../../lib/brand';
 import { ErrorAlert, Field, Loading, Notice, PageHeader } from '../../lib/ui';
 
 type Gateway = Schemas['GatewayCode'];
-const GATEWAY_NAMES: Record<Gateway, string> = { paystack: 'Paystack', flutterwave: 'Flutterwave', fake: 'Test gateway (no real money)' };
+export const GATEWAY_NAMES: Record<Gateway, string> = {
+  paystack: 'Paystack',
+  bachs: 'Bachs',
+  flutterwave: 'Flutterwave',
+  fake: 'Test gateway (no real money)',
+};
 
 export function PaymentSettings() {
   const { can } = useAuth();
@@ -16,17 +22,29 @@ export function PaymentSettings() {
     mutationFn: async () => unwrap(await api.POST('/api/v1/virtual-accounts/provision', { body: {} })),
   });
   const [editing, setEditing] = useState(false);
+  const bachs = useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/payment-settings/bachs/onboarding')),
+    onSuccess: (link) => window.location.assign(link.url),
+  });
 
   if (settings.isPending) return <Loading />;
   if (settings.isError) return <ErrorAlert error={settings.error} />;
   const account = settings.data.account;
+  const onBachs = settings.data.accounts.some((a) => a.gateway === 'bachs');
+  const bankGateways = settings.data.gateways.filter((g) => g !== 'bachs');
 
   return (
     <>
       <PageHeader
         title="Payment settings"
-        subtitle="Parents' payments settle straight into the school's own bank account. SchoolPay never holds the money."
+        subtitle={`Parents' payments settle straight into the school's own bank account. ${BRAND} never holds the money.`}
       />
+      <Notice>
+        Payments currently go through <strong>{GATEWAY_NAMES[settings.data.active_provider]}</strong>
+        {account && account.gateway !== settings.data.active_provider
+          ? `. This school isn't set up on it yet, so its payments still go through ${GATEWAY_NAMES[account.gateway]}.`
+          : '.'}
+      </Notice>
       <div className="grid-2">
         <div className="card">
           <h2>School bank account</h2>
@@ -44,17 +62,43 @@ export function PaymentSettings() {
                 <dt>Platform fee</dt>
                 <dd>{account.platform_fee_bp / 100}% of each payment</dd>
               </dl>
-              {can('payments.setup') && (
-                <button className="secondary" onClick={() => setEditing(true)}>
-                  Change account
-                </button>
+              {settings.data.accounts.length > 1 && (
+                <p className="small muted">
+                  Also set up on: {settings.data.accounts.filter((a) => a.gateway !== account.gateway).map((a) => GATEWAY_NAMES[a.gateway]).join(', ')}
+                </p>
               )}
+              {can('payments.setup') && (
+                <div className="row wrap">
+                  {bankGateways.length > 0 && (
+                    <button className="secondary" onClick={() => setEditing(true)}>
+                      Connect a bank account
+                    </button>
+                  )}
+                  {settings.data.gateways.includes('bachs') && (
+                    <button className="secondary" onClick={() => bachs.mutate()} disabled={bachs.isPending}>
+                      {onBachs ? 'Finish setting up with Bachs' : 'Set up with Bachs'}
+                    </button>
+                  )}
+                </div>
+              )}
+              <ErrorAlert error={bachs.error} />
             </>
           ) : can('payments.setup') ? (
-            <ConnectAccount gateways={settings.data.gateways} onDone={() => {
+            <>
+              {settings.data.gateways.includes('bachs') && (
+                <p>
+                  <button onClick={() => bachs.mutate()} disabled={bachs.isPending}>
+                    Set up with Bachs
+                  </button>{' '}
+                  <span className="small muted">Bachs takes the school's details and bank account on its own pages.</span>
+                </p>
+              )}
+              <ErrorAlert error={bachs.error} />
+              {bankGateways.length > 0 && <ConnectAccount gateways={bankGateways} onDone={() => {
               setEditing(false);
               void queryClient.invalidateQueries({ queryKey: ['payment-settings'] });
-            }} />
+            }} />}
+            </>
           ) : (
             <p className="muted">Not set up yet. The proprietor connects the school's bank account here.</p>
           )}

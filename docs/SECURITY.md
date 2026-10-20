@@ -114,6 +114,11 @@ It is updated with every change that affects security.
   the bank, audited, and blocked once students have account numbers (support
   must handle it).
 - The fake gateway and its development endpoint can't be enabled in production.
+- **Switching the payment provider** is platform-admin only (two-factor), audited, and
+  limited to providers configured with keys on the server. Bachs webhooks are verified
+  (HMAC-SHA256 over `timestamp.body`, constant-time, 5-minute window, rotation-aware
+  `X-Bachs-Signature-V2`), and every Bachs payment is re-read from its API; a payment
+  id that answers with another checkout's reference is parked for review.
 - **Family payment links** are bearer tokens (192 bits). They're stored as a keyed
   hash (lookup) and encrypted (to resend), expire after `FAMILY_LINK_DAYS`, can be
   replaced by staff (audited) and end when the parent is erased or the school is

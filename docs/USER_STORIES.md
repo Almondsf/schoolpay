@@ -16,6 +16,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Download the debtors list and money received as Excel or PDF to share with the board.
 
 ## Bursar
+- ✅ (Proprietor) Set the school up on Bachs through Bachs’ own onboarding, beside Paystack.
 - ✅ Download every pupil’s fees for a term, for the whole school or one class, each fee marked paid, part paid or unpaid with what’s left (Excel with a sheet per class, or PDF to print).
 - ✅ Switch on phone calls for parents who prefer them, with a cap per bill, and mark those parents (and their language) on each pupil's page.
 - ✅ Copy a parent's family payment link to send by hand, or replace it if it went to the wrong person.
@@ -78,6 +79,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Check that a receipt is genuine on a public page (scan its QR code), without seeing the child's details. A reversed payment shows as reversed; a fake receipt doesn't match anything.
 
 ## Platform admin
+- ✅ Switch the payment provider (Paystack or Bachs) for new payments at once, without a release; payments under way and schools not yet set up on the new provider keep working.
 - ✅ Create a school and invite its proprietor.
 - ✅ Suspend a school (its staff are signed out at once) and reactivate it, with the reason recorded.
 - ✅ See platform-level activity (school changes, platform sign-ins, failed sign-ins for unknown emails).

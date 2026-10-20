@@ -47,6 +47,23 @@ Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` 
 
 Self sign-up is on by default (`SIGNUP_ENABLED`), limited by `SIGNUP_RATE_PER_IP`. Beat must run for unconfirmed sign-ups to be cleaned up (`PENDING_SCHOOL_DAYS`).
 
+## Payment providers
+
+Configure every provider you may use in `PAYMENT_GATEWAYS` (e.g. `paystack,bachs`) with
+its keys; which one new checkouts use is switched at runtime by a platform admin
+(console: Platform → Providers, or `PUT /api/v1/platform/providers/payment`). With
+nothing chosen, the first configured one is used.
+
+- **Paystack:** `PAYSTACK_SECRET_KEY`; webhook URL `https://<api-host>/api/v1/webhooks/paystack`.
+  Students' own account numbers need Paystack's "Dedicated NUBAN" enabled on the business
+  (ask Paystack support). In test mode a school can be connected with Zenith Bank (057)
+  and account number 0000000000.
+- **Bachs:** `BACHS_SECRET_KEY` (`sk_sandbox_…` or `sk_live_…`) and `BACHS_WEBHOOK_SECRET`
+  (the signing secret of the endpoint `https://<api-host>/api/v1/webhooks/bachs`, created
+  in the Bachs developer portal with `event_source` `connect` or `all`, events
+  `collection.succeeded`). Production needs a live key. Each school sets itself up with
+  "Set up with Bachs" on its Payment settings page.
+
 ## Messages to parents
 
 Messages go by **WhatsApp first**, then SMS, then email, whichever works.

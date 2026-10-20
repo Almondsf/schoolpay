@@ -70,6 +70,28 @@ describe('platform console', () => {
     });
   });
 
+  it('switches the payment provider', async () => {
+    let active = 'paystack';
+    const calls = mockApi({
+      'POST /api/v1/auth/refresh': () => json(signedIn(platformAdmin)),
+      'GET /api/v1/platform/providers': () =>
+        json([{ service: 'payment', active_provider: active, available: ['paystack', 'bachs'], updated_at: null }]),
+      'PUT /api/v1/platform/providers/payment': async (request) => {
+        active = (await request.json()).provider;
+        return json({ service: 'payment', active_provider: active, available: ['paystack', 'bachs'], updated_at: '2026-10-20T10:00:00Z' });
+      },
+    });
+    renderConsole('/console/platform/providers');
+    const paystack = await screen.findByRole('radio', { name: /Paystack/ });
+    expect(paystack).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Switch' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('radio', { name: /Bachs/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Switch' }));
+    expect(await screen.findByText('Switched to Bachs.')).toBeInTheDocument();
+    const put = calls.find((c) => c.method === 'PUT')!;
+    expect(await put.json()).toEqual({ provider: 'bachs' });
+  });
+
   it('platform admins land on the overview', async () => {
     mockApi({
       'POST /api/v1/auth/refresh': () => json(signedIn(platformAdmin)),

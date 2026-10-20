@@ -47,6 +47,7 @@ _STATUSES = {
 
 class PaystackGateway:
     code = GatewayCode.PAYSTACK
+    supports_virtual_accounts = True
 
     def __init__(self, secret_key: str | None = None) -> None:
         self.secret_key = secret_key if secret_key is not None else get_settings().paystack_secret_key
@@ -120,7 +121,15 @@ class PaystackGateway:
         )
 
     def initialize_payment(
-        self, *, reference: str, amount_kobo: int, email: str, callback_url: str, subaccount_code: str, description: str
+        self,
+        *,
+        reference: str,
+        amount_kobo: int,
+        email: str,
+        callback_url: str,
+        subaccount_code: str,
+        description: str,
+        platform_fee_bp: int = 0,  # set on the subaccount instead
     ) -> Checkout:
         data = self._request(
             "POST",
@@ -139,7 +148,9 @@ class PaystackGateway:
         )
         return Checkout(authorization_url=data["authorization_url"])
 
-    def verify(self, reference: str) -> Verification:
+    def verify(
+        self, reference: str, *, provider_reference: str | None = None, payment_id: str | None = None
+    ) -> Verification:
         data = self._request("GET", f"/transaction/verify/{reference}") or {}
         authorization = data.get("authorization") or {}
         metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}

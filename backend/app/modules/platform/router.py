@@ -16,6 +16,8 @@ from app.core.tenancy import scope_platform_wide
 from app.modules.accounts.deps import Principal, StaffContext, require, require_platform_admin
 from app.modules.accounts.models import Role
 from app.modules.accounts.permissions import Capability
+from app.modules.payments import providers
+from app.modules.payments.gateways import GatewayCode
 from app.modules.schools.models import School, SchoolOrigin, SchoolStatus
 from app.modules.schools.schemas import SchoolOut
 
@@ -585,3 +587,29 @@ def school_onboarding(
     if school is None:
         raise NotFound("School not found.")
     return [OnboardingStepOut.model_validate(s) for s in onboarding.checklist(db, school)]
+
+
+class ProviderOut(BaseModel):
+    service: str
+    active_provider: GatewayCode
+    available: list[GatewayCode] = Field(description="Providers configured on this platform (keys set)")
+    updated_at: datetime | None
+
+
+class ProviderIn(BaseModel):
+    provider: GatewayCode
+
+
+@router.get("/providers", response_model=list[ProviderOut], summary="Which provider each service uses right now")
+def get_providers(admin: Principal = ADMIN, db: Session = Depends(get_db)) -> list[ProviderOut]:
+    return [ProviderOut.model_validate(providers.payment_provider(db), from_attributes=True)]
+
+
+@router.put(
+    "/providers/payment",
+    response_model=ProviderOut,
+    summary="Switch the payment provider for new checkouts (payments under way finish where they began)",
+)
+def put_payment_provider(body: ProviderIn, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> ProviderOut:
+    view = providers.set_payment_provider(db, body.provider, actor=admin.actor, meta=admin.meta, user_id=admin.user.id)
+    return ProviderOut.model_validate(view, from_attributes=True)
