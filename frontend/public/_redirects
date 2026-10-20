@@ -1,0 +1,6 @@
+# Netlify: forward API calls to the Render backend, so the site and the API share one address
+# (the sign-in refresh cookie is SameSite=Strict and wouldn't cross between two sites).
+/api/*  https://schoolpay-a97t.onrender.com/api/:splat  200
+
+# Single-page app: every other path loads the app, which picks the page
+/*  /index.html  200

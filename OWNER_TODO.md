@@ -43,7 +43,7 @@ Last updated: 2026-10-20 (Paystack chosen as the payment provider)
 | _(new)_ **Backups** | Off-site storage (any S3-compatible bucket or similar) and an [age](https://age-encryption.org) key pair. The private key and the `FIELD_ENCRYPTION_KEYS` are kept by you, off the server, apart from each other. See `docs/DEPLOYMENT.md` → Backups. | Recovering from a lost server |
 | _(new)_ **Error monitoring** (optional) | A Sentry project; set `SENTRY_DSN`. | Hearing about errors before schools do |
 | _(new)_ **Support email** | A mailbox schools and parents can write to; set `SUPPORT_EMAIL` (shown on the website and privacy notice). | Parents' data requests |
-| **Hosting and domain** | Where the app will run (a VPS or a managed platform), plus the domain. | Going live |
+| **Hosting and domain** | _(new)_ Hosting chosen: the API, worker, database and Redis on **Render**, the web app on **Netlify** (https://parentpay.netlify.app); setup in `docs/DEPLOYMENT.md`. Still to do: buy a domain and add it on Netlify, then update `FRONTEND_URL` and `CORS_ORIGINS` on Render. | Going live |
 
 ## Validate with schools (PLAN.md §7)
 

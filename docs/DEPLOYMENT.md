@@ -26,6 +26,36 @@ proxy (Caddy, nginx, a cloud load balancer) in front of it and set
 frontend container, `NUM_PROXIES` should be the total count of proxies that
 add `X-Forwarded-For` (2 in that case).
 
+## On Render and Netlify (the current hosting)
+
+The live site runs as managed services instead of Compose:
+
+| Piece | Where | Settings |
+|---|---|---|
+| Database | Render Postgres | Its internal URL is `DATABASE_URL` (the `postgres://` form is accepted) |
+| Redis | Render Key Value | Its internal URL is `REDIS_URL` and `RATE_LIMIT_STORAGE_URL` |
+| API | Render web service, Docker | Dockerfile `backend/Dockerfile`, build context `backend`, pre-deploy command `python -m app.core.migrate`, health check `/api/v1/health`, `PORT=8002`, `WEB_CONCURRENCY=1` on 512 MB, `FORWARDED_ALLOW_IPS=*` |
+| Worker | Render background worker, same image | Command `celery -A app.workers.celery_app worker -B -l info --concurrency 1`. `-B` runs the scheduler too, so run exactly one |
+| Web app | Netlify | Base directory `frontend`, build `npm run build`, publish `frontend/dist`, `NODE_VERSION=22`, no `VITE_API_URL` |
+
+The API and worker share one environment (a Render environment group); see
+`backend/.env.example` and the Secrets section below.
+
+Netlify forwards `/api/*` to the Render API (`frontend/public/_redirects`), so the
+browser sees one address and the SameSite=Strict refresh cookie works. Don't point
+the app at the API's own address with `VITE_API_URL`: two different sites can't
+share that cookie and everyone would be signed out when their 15-minute access token
+ends. `frontend/public/_headers` sets the same security headers as `nginx.conf`.
+When the API's address changes, update `_redirects`.
+
+With Netlify and Render's proxy both in front of the API, `NUM_PROXIES=2`. Check it once:
+sign in, then look at the address on that entry in the activity log. It should be yours,
+not the same Render address for everyone. `FRONTEND_URL` is the Netlify address (or your
+domain), one address only, with no trailing slash; it builds the links in emails and texts.
+`CORS_ORIGINS` lists the same address. Never add `localhost` there in production.
+
+Run the CLI commands below from the API service's Shell on Render.
+
 ## First platform admin
 
 ```bash
