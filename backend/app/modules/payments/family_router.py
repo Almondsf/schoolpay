@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -56,6 +56,9 @@ class FamilyPageOut(BaseModel):
 class FamilyPartIn(BaseModel):
     student_id: uuid.UUID
     amount_kobo: int = Field(ge=0, le=MAX_AMOUNT_KOBO, description="0: not this time")
+    fees: list[Annotated[str, StringConstraints(max_length=200)]] = Field(
+        default_factory=list, max_length=30, description="Pay for these fees (from the breakdown); empty: bill order"
+    )
 
 
 class FamilyCheckoutIn(BaseModel):
@@ -126,7 +129,7 @@ def family_checkout(
     meta: RequestMeta = Depends(request_meta),
 ) -> FamilyCheckoutOut:
     get_limiter().hit("family-link:checkout", "20/hour", str(found.link_id))
-    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo) for p in body.items], meta)
+    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo, p.fees) for p in body.items], meta)
     return FamilyCheckoutOut(
         reference=intent.reference, amount_kobo=intent.amount_kobo, authorization_url=intent.authorization_url
     )

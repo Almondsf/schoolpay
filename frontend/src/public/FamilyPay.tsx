@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { api, unwrap, type Schemas } from '../api/client';
 import { BRAND } from '../lib/brand';
 import { formatKobo, koboToInput, parseNairaToKobo } from '../lib/format';
-import { FeeList } from '../lib/FeeBreakdown';
+import { FeeList, FeePicker, leftOn } from '../lib/FeeBreakdown';
 import { ErrorAlert, Field, Loading } from '../lib/ui';
 
 type Child = Schemas['FamilyChildOut'];
@@ -47,6 +47,12 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
     Object.fromEntries(owing.map((c) => [c.student_id, koboToInput(c.suggested_kobo)])),
   );
+  // Fees the parent ticked per child (e.g. only WAEC); none: the amount goes to the bill in its usual order
+  const [picked, setPicked] = useState<Record<string, string[]>>({});
+  const pick = (child: Child, names: string[]) => {
+    setPicked({ ...picked, [child.student_id]: names });
+    setAmounts({ ...amounts, [child.student_id]: koboToInput(names.length ? leftOn(child.fees, names) : child.suggested_kobo) });
+  };
   const parsed = owing.map((c) => {
     const text = amounts[c.student_id] ?? '';
     const kobo = text.trim() === '' ? 0 : parseNairaToKobo(text);
@@ -64,7 +70,12 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
   const valid = total > 0 && parsed.every((p) => !p.problem);
   const paying = parsed.filter((p) => p.kobo > 0).length;
   const pay = useMutation({
-    mutationFn: () => checkout(parsed.filter((p) => p.kobo > 0).map((p) => ({ student_id: p.child.student_id, amount_kobo: p.kobo }))),
+    mutationFn: () =>
+      checkout(
+        parsed
+          .filter((p) => p.kobo > 0)
+          .map((p) => ({ student_id: p.child.student_id, amount_kobo: p.kobo, fees: picked[p.child.student_id] ?? [] })),
+      ),
     onSuccess: (started) => window.location.assign(started.authorization_url),
   });
 
@@ -107,6 +118,8 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
           amount={amounts[c.student_id] ?? ''}
           problem={parsed.find((p) => p.child.student_id === c.student_id)?.problem}
           onAmount={(value) => setAmounts({ ...amounts, [c.student_id]: value })}
+          picked={picked[c.student_id] ?? []}
+          onPick={(names) => pick(c, names)}
         />
       ))}
       {payNow && (
@@ -129,12 +142,16 @@ function ChildCard({
   amount,
   problem,
   onAmount,
+  picked,
+  onPick,
 }: {
   child: Child;
   payOnline: boolean;
   amount: string;
   problem?: string;
   onAmount: (value: string) => void;
+  picked: string[];
+  onPick: (names: string[]) => void;
 }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -157,8 +174,15 @@ function ChildCard({
         )}
       </div>
       <FeeList fees={child.fees} earlierKobo={child.earlier_left_kobo} />
+      {payOnline && child.owed_kobo > 0 && child.fees.some((f) => f.left_kobo > 0) && (
+        <FeePicker fees={child.fees} picked={picked} onChange={onPick} label="Pay for particular fees? (optional)" />
+      )}
       {payOnline && child.owed_kobo > 0 && (
-        <Field label={`Amount for ${child.first_name} now (₦)`} error={problem}>
+        <Field
+          label={`Amount for ${child.first_name} now (₦)`}
+          hint={picked.length ? `For ${picked.join(', ')}` : undefined}
+          error={problem}
+        >
           <input inputMode="decimal" value={amount} onChange={(e) => onAmount(e.target.value)} placeholder="0" />
         </Field>
       )}

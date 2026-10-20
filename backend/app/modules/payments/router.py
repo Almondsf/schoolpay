@@ -141,6 +141,9 @@ class ManualIn(BaseModel):
     received_on: date
     reference: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] = ""
     note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+    fees: list[Annotated[str, StringConstraints(max_length=200)]] = Field(
+        default_factory=list, max_length=30, description="What it's for (fee names); empty: the bill order"
+    )
 
 
 class ManualOut(BaseModel):
@@ -157,6 +160,7 @@ class ManualOut(BaseModel):
     rejection_reason: str
     payment_id: uuid.UUID | None
     created_at: datetime
+    for_fees: list[str] = Field(description="The fees it's for, if the person recording it chose")
 
 
 class PaymentLinkIn(BaseModel):
@@ -238,6 +242,7 @@ def _manual_out(entry: ManualPayment, student: Student) -> ManualOut:
         rejection_reason=entry.rejection_reason,
         payment_id=entry.payment_id,
         created_at=entry.created_at,
+        for_fees=list(dict.fromkeys(str(e.get("name", "")) for e in entry.earmarks)),
     )
 
 
@@ -390,6 +395,7 @@ def record_manual(body: ManualIn, ctx: StaffContext = RECORD, db: Session = Depe
         received_on=body.received_on,
         reference=body.reference,
         note=body.note,
+        fees=body.fees,
     )
     return _manual_out(entry, get_or_404(db, Student, entry.student_id))
 

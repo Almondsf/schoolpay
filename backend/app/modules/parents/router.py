@@ -377,7 +377,7 @@ def family_checkout(
 ) -> FamilyCheckoutOut:
     get_limiter().hit("parent-pay:guardian", "20/hour", str(ctx.guardian_id))
     found = family_links.resolved_for(db, ctx.guardian_id, ctx.school_id)
-    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo) for p in body.items], ctx.meta)
+    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo, p.fees) for p in body.items], ctx.meta)
     return FamilyCheckoutOut(
         reference=intent.reference, amount_kobo=intent.amount_kobo, authorization_url=intent.authorization_url
     )

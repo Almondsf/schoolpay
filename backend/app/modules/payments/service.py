@@ -28,8 +28,9 @@ from app.modules.receipts.service import issue_receipts
 from app.modules.students.models import Student
 
 from .allocation import NewAllocation, allocate
+from .earmarks import Earmark
 from .gateways import GatewayCode
-from .models import Allocation, Payment, PaymentKind, PaymentMethod
+from .models import Allocation, Payment, PaymentEarmark, PaymentKind, PaymentMethod
 
 AUTOMATIC = Actor.system("gateway")
 
@@ -55,6 +56,7 @@ class NewPayment:
     note: str = ""
     recorded_by: uuid.UUID | None = None
     approved_by: uuid.UUID | None = None
+    earmarks: tuple[Earmark, ...] = ()  # the fees the payer chose, if any
 
 
 def record_payments(
@@ -102,8 +104,27 @@ def record_payments(
     if len(by_id) != len(inserted):  # inserted a moment ago in this transaction, so only a scoping bug lands here
         raise RuntimeError("Recorded payment not visible in this session's school scope.")
     recorded = [by_id[i] for i in ids if i in inserted]  # in the order given
+    chosen = {i: p.earmarks for i, p in zip(ids, payments, strict=True) if i in inserted and p.earmarks}
+    session.add_all(
+        PaymentEarmark(
+            payment_id=payment_id,
+            invoice_id=e.invoice_id,
+            fee_item_id=e.fee_item_id,
+            description=e.description,
+            amount_kobo=e.amount_kobo,
+        )
+        for payment_id, marks in chosen.items()
+        for e in marks
+    )
+    session.flush()
     allocations = allocate(session, list({p.student_id for p in recorded}))
-    receipts = issue_receipts(session, school_id=school_id, payments=recorded, allocations=allocations)
+    receipts = issue_receipts(
+        session,
+        school_id=school_id,
+        payments=recorded,
+        allocations=allocations,
+        fees_for={pid: list(dict.fromkeys(e.name for e in marks)) for pid, marks in chosen.items()},
+    )
     queue_receipts(session, school_id, recorded)  # parents get them on WhatsApp/SMS once this commits
     results = []
     for payment, receipt in zip(recorded, receipts, strict=True):

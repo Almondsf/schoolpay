@@ -4,11 +4,12 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { formatDate, formatDateTime, formatKobo, humanize, parseNairaToKobo } from '../../lib/format';
+import { formatDate, formatDateTime, formatKobo, humanize, koboToInput, parseNairaToKobo } from '../../lib/format';
 import { METHOD_LABELS } from '../Dashboard';
 import { Empty, ErrorAlert, Field, Loading, Modal, Notice, PageHeader, Pager } from '../../lib/ui';
 import { ReceiptLink } from './ReceiptLink';
 import { StudentPicker, type PickedStudent } from './StudentPicker';
+import { FeePicker, leftOn } from '../../lib/FeeBreakdown';
 
 type Payment = Schemas['PaymentOut'];
 type Manual = Schemas['ManualOut'];
@@ -177,6 +178,7 @@ function Pending() {
                   <td>
                     {m.student.full_name} <span className="muted small">({m.student.admission_number})</span>
                     {m.note && <div className="muted small">{m.note}</div>}
+                    {m.for_fees.length > 0 && <div className="small">For: {m.for_fees.join(', ')}</div>}
                   </td>
                   <td>
                     {humanize(m.method)}
@@ -225,11 +227,24 @@ function RecordManual({ onClose, onDone }: { onClose: () => void; onDone: () => 
     note: '',
   });
   const kobo = parseNairaToKobo(form.amount);
+  const [picked, setPicked] = useState<string[]>([]);
+  const breakdown = useQuery({
+    queryKey: ['account', student?.id ?? '', 'fee-breakdown'],
+    enabled: !!student,
+    queryFn: async () =>
+      unwrap(await api.GET('/api/v1/reports/students/{student_id}/fee-breakdown', { params: { path: { student_id: student!.id } } })),
+  });
+  const pick = (names: string[]) => {
+    setPicked(names);
+    const left = leftOn(breakdown.data?.fees ?? [], names);
+    if (names.length > 0) setForm({ ...form, amount: koboToInput(left) }); // the whole of those fees; can be lowered
+  };
   const save = useMutation({
     mutationFn: async () =>
       unwrap(
         await api.POST('/api/v1/manual-payments', {
           body: {
+            fees: picked,
             student_id: student!.id,
             amount_kobo: kobo!,
             method: form.method,
@@ -256,8 +271,15 @@ function RecordManual({ onClose, onDone }: { onClose: () => void; onDone: () => 
         <Notice>It won't count until someone else approves it.</Notice>
         <ErrorAlert error={save.error} />
         <Field label="Student">
-          <StudentPicker value={student} onChange={setStudent} />
+          <StudentPicker
+            value={student}
+            onChange={(s) => {
+              setStudent(s);
+              setPicked([]);
+            }}
+          />
         </Field>
+        {breakdown.data && <FeePicker fees={breakdown.data.fees} picked={picked} onChange={pick} />}
         <div className="grid-2 tight">
           <Field label="Amount (₦)" error={form.amount && kobo === null ? 'Not a valid amount' : undefined}>
             <input value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} inputMode="decimal" required />

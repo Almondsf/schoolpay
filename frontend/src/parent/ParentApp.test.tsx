@@ -181,7 +181,7 @@ describe('parent portal', () => {
     const pay = within(await screen.findByRole('region', { name: 'Pay for all your children' })).getByRole('button', { name: 'Pay ₦50,000.00 now' });
     await userEvent.click(pay);
     const post = calls.find((c) => c.url.endsWith('/parent/family/checkout'))!;
-    expect(await post.json()).toEqual({ items: [{ student_id: 'c1', amount_kobo: 5_000_000 }] });
+    expect(await post.json()).toEqual({ items: [{ student_id: 'c1', amount_kobo: 5_000_000, fees: [] }] });
     await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('https://pay.example/SP1'));
   });
 

@@ -16,6 +16,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Download the debtors list and money received as Excel or PDF to share with the board.
 
 ## Bursar
+- ✅ When taking cash or a teller, note which fees it’s for, so it goes to those fees (even if older debts are owed).
 - ✅ Add a fee to a class in the fee grid after the bills have gone out, and add it to those pupils’ bills with one click (exempt pupils and optional fees left out).
 - ✅ See each pupil’s fees for the term one by one (charged, paid, left) on the pupil’s page, plus earlier debts.
 - ✅ (Proprietor) Set the school up on Bachs through Bachs’ own onboarding, beside Paystack.
@@ -61,6 +62,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
+- ✅ Pay for a particular fee (say WAEC) rather than the bill in general, by ticking it on the payment page; the receipt says what it was for.
 - ✅ See what each child’s balance is made of (tuition, levies, WAEC, bus…), with what’s paid and what’s left on each, on my portal and on the payment page.
 - ✅ If I find messages hard to read, get a phone call in English or Pidgin that tells me what's owed and reads my child's account number slowly, twice, and another when my payment arrives.
 - ✅ Open one link from my bill or reminder, no sign-in, and see all my children's balances and account numbers.

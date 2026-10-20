@@ -1261,3 +1261,9 @@ table.lines {
   text-align: right;
   white-space: nowrap;
 }
+
+.fee-picker {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}

@@ -2232,6 +2232,16 @@
             "title": "Amount Kobo",
             "type": "integer"
           },
+          "fees": {
+            "description": "Pay for these fees (from the breakdown); empty: bill order",
+            "items": {
+              "maxLength": 200,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Fees",
+            "type": "array"
+          },
           "student_id": {
             "format": "uuid",
             "title": "Student Id",
@@ -3365,6 +3375,16 @@
             "title": "Amount Kobo",
             "type": "integer"
           },
+          "fees": {
+            "description": "What it's for (fee names); empty: the bill order",
+            "items": {
+              "maxLength": 200,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Fees",
+            "type": "array"
+          },
           "method": {
             "enum": [
               "cash",
@@ -3430,6 +3450,14 @@
             ],
             "title": "Decided By"
           },
+          "for_fees": {
+            "description": "The fees it's for, if the person recording it chose",
+            "items": {
+              "type": "string"
+            },
+            "title": "For Fees",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -3492,7 +3520,8 @@
           "decided_by",
           "rejection_reason",
           "payment_id",
-          "created_at"
+          "created_at",
+          "for_fees"
         ],
         "title": "ManualOut",
         "type": "object"

@@ -33,6 +33,7 @@ from app.modules.schools.models import School
 from app.modules.students.models import Guardian, Student
 
 from .accounts import require_payment_account
+from .earmarks import Earmark
 from .gateways import TransactionStatus, get_gateway
 from .gateways.base import parse_paid_at
 from .models import IntentStatus, PaymentIntent, PaymentIntentItem, method_for_channel
@@ -158,9 +159,11 @@ def confirm(reference: str, payment_id: str | None = None) -> PaymentIntent | No
             return intent
         received_at = parse_paid_at(verification.paid_at)
         if items:  # a family checkout: each child's share, as the parent chose it
-            parts = [(item.student_id, item.amount_kobo, f"{reference}-{item.position}") for item in items]
+            parts = [
+                (item.student_id, item.amount_kobo, f"{reference}-{item.position}", item.earmarks) for item in items
+            ]
         elif intent.student_id is not None:  # the verified amount is what reached the school's account
-            parts = [(intent.student_id, verification.amount_kobo, reference)]
+            parts = [(intent.student_id, verification.amount_kobo, reference, [])]
         else:
             raise RuntimeError(f"Checkout {reference} has no child to pay for.")
         record_payments(
@@ -175,8 +178,9 @@ def confirm(reference: str, payment_id: str | None = None) -> PaymentIntent | No
                     gateway=intent.gateway,
                     gateway_reference=gateway_reference,
                     reference=reference,
+                    earmarks=tuple(Earmark.from_json(e) for e in marks),
                 )
-                for student_id, amount, gateway_reference in parts
+                for student_id, amount, gateway_reference, marks in parts
             ],
         )
         intent.status = IntentStatus.SUCCEEDED

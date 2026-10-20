@@ -87,3 +87,39 @@ export function FeeTable({ breakdown }: { breakdown: Schemas['FeeBreakdownOut'] 
     </div>
   );
 }
+
+/** Tick the fees a payment is for (e.g. WAEC); none ticked: it goes to the bill in its usual order. */
+export function FeePicker({
+  fees,
+  picked,
+  onChange,
+  label = 'What is it for? (optional)',
+}: {
+  fees: FeeLine[];
+  picked: string[];
+  onChange: (names: string[]) => void;
+  label?: string;
+}) {
+  const unpaid = fees.filter((f) => f.left_kobo > 0);
+  if (unpaid.length === 0) return null;
+  return (
+    <fieldset className="fee-picker">
+      <legend>{label}</legend>
+      {unpaid.map((f) => (
+        <label key={f.name} className="checkbox">
+          <input
+            type="checkbox"
+            checked={picked.includes(f.name)}
+            onChange={(e) => onChange(e.target.checked ? [...picked, f.name] : picked.filter((n) => n !== f.name))}
+          />
+          {f.name} <span className="muted small">{formatKobo(f.left_kobo)} left</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** What's left on the fees picked. */
+export function leftOn(fees: FeeLine[], picked: string[]): number {
+  return fees.filter((f) => picked.includes(f.name)).reduce((n, f) => n + f.left_kobo, 0);
+}

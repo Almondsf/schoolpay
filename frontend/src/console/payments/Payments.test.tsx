@@ -19,7 +19,7 @@ const term = { id: 't1', session_id: 's1', number: 1, label: 'First term', start
 const student = { id: 'st1', admission_number: 'A1', full_name: 'Ada Obi' };
 const manual = (overrides: Record<string, unknown>) => ({
   id: 'm1', student, amount_kobo: 2_500_000, method: 'cash', received_on: '2026-10-17', reference: '', note: '', status: 'pending',
-  recorded_by: 'someone-else', decided_by: null, rejection_reason: '', payment_id: null, created_at: '2026-10-17T10:00:00Z', ...overrides,
+  recorded_by: 'someone-else', decided_by: null, rejection_reason: '', payment_id: null, created_at: '2026-10-17T10:00:00Z', for_fees: [], ...overrides,
 });
 const base = {
   'POST /api/v1/auth/refresh': () => json(signedIn(bursar)),

@@ -3422,6 +3422,11 @@ export interface components {
              */
             amount_kobo: number;
             /**
+             * Fees
+             * @description Pay for these fees (from the breakdown); empty: bill order
+             */
+            fees?: string[];
+            /**
              * Student Id
              * Format: uuid
              */
@@ -3880,6 +3885,11 @@ export interface components {
              */
             amount_kobo: number;
             /**
+             * Fees
+             * @description What it's for (fee names); empty: the bill order
+             */
+            fees?: string[];
+            /**
              * Method
              * @enum {string}
              */
@@ -3916,6 +3926,11 @@ export interface components {
             created_at: string;
             /** Decided By */
             decided_by: string | null;
+            /**
+             * For Fees
+             * @description The fees it's for, if the person recording it chose
+             */
+            for_fees: string[];
             /**
              * Id
              * Format: uuid

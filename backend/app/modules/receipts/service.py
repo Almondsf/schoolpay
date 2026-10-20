@@ -36,7 +36,12 @@ def verification_url(code: str) -> str:
 
 
 def issue_receipts(
-    session: Session, *, school_id: uuid.UUID, payments: list[Payment], allocations: list[NewAllocation]
+    session: Session,
+    *,
+    school_id: uuid.UUID,
+    payments: list[Payment],
+    allocations: list[NewAllocation],
+    fees_for: dict[uuid.UUID, list[str]] | None = None,
 ) -> list[Receipt]:
     """
     One receipt per payment (snapshot included), numbered in the order given. A fixed
@@ -75,6 +80,7 @@ def issue_receipts(
         student = students[payment.student_id]
         mine = [a for a in allocations if a.payment_id == payment.id]
         snapshot: dict[str, Any] = {
+            "for_fees": (fees_for or {}).get(payment.id, []),  # the fees the payer said it was for
             "school": {"name": school.name, "address": school.address, "phone": school.phone, "email": school.email},
             "student": {
                 "first_name": student.first_name,

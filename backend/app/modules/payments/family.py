@@ -24,12 +24,13 @@ from app.modules.fees.invoicing import paid_subquery, totals_subquery
 from app.modules.fees.models import Invoice
 from app.modules.fees.plans import plan_views
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
-from app.modules.reports.fee_status import FeeBreakdown, fee_breakdowns
+from app.modules.reports.fee_status import FeeBreakdown, fee_breakdowns, fee_targets
 from app.modules.schools.models import Arm, ClassLevel, School, Term
 from app.modules.students.models import Enrollment, Guardian, GuardianStudent, Student, StudentStatus
 
 from .accounts import payment_account, require_payment_account
 from .checkout import checkout_email, new_reference
+from .earmarks import Earmark, choose_from
 from .family_links import Resolved
 from .gateways import get_gateway
 from .models import FamilyPayLink, PaymentIntent, PaymentIntentItem, VirtualAccount, VirtualAccountStatus
@@ -146,18 +147,31 @@ def family_page(session: Session, found: Resolved) -> FamilyPage:
 
 
 def start_checkout(
-    session: Session, found: Resolved, parts: list[tuple[uuid.UUID, int]], meta: RequestMeta
+    session: Session,
+    found: Resolved,
+    parts: list[tuple[uuid.UUID, int, list[str]]],
+    meta: RequestMeta,
 ) -> PaymentIntent:
-    """One card checkout for the amounts the parent chose per child (zero means not this time)."""
+    """
+    One online payment for the amounts the parent chose per child (zero means not this time),
+    each optionally for particular fees (earmarked, see `earmarks.py`).
+    """
     account = require_payment_account(session)
-    chosen = [(sid, amount) for sid, amount in parts if amount != 0]
+    chosen = [(sid, amount, fees) for sid, amount, fees in parts if amount != 0]
     if not chosen:
         raise DomainError("Enter an amount for at least one child.", field="items")
-    if len({sid for sid, _ in chosen}) != len(chosen):
+    if len({sid for sid, _, _ in chosen}) != len(chosen):
         raise DomainError("Each child can only appear once.", field="items")
     children = {s.id: s for s in _children(session, found.guardian_id)}
     owed = _owed(session, list(children))
-    for sid, amount in chosen:
+    if any(sid not in children for sid, _, _ in chosen):
+        raise NotFound("Child not found.")
+    wanted = [sid for sid, _, fees in chosen if fees]
+    targets = fee_targets(session, wanted) if wanted else {}
+    marks: dict[uuid.UUID, list[Earmark]] = {
+        sid: choose_from(targets[sid], fees, amount)[0] for sid, amount, fees in chosen if fees
+    }
+    for sid, amount, _ in chosen:
         if sid not in children:
             raise NotFound("Child not found.")
         name, left = children[sid].first_name, owed[sid][0]
@@ -167,7 +181,7 @@ def start_checkout(
             raise DomainError(f"For {name}, enter up to what's owed.", field="items")
         if amount < min(MIN_PART_KOBO, left):
             raise DomainError(f"For {name}, pay at least ₦1,000 (or everything owed).", field="items")
-    total = sum(amount for _, amount in chosen)
+    total = sum(amount for _, amount, _ in chosen)
     if total > MAX_AMOUNT_KOBO:
         raise DomainError("That's more than one card payment can take. Pay in two goes.", field="items")
     guardian = session.get(Guardian, found.guardian_id)
@@ -186,9 +200,14 @@ def start_checkout(
     session.flush()
     session.add_all(
         PaymentIntentItem(
-            school_id=found.school_id, intent_id=intent.id, student_id=sid, position=n, amount_kobo=amount
+            school_id=found.school_id,
+            intent_id=intent.id,
+            student_id=sid,
+            position=n,
+            amount_kobo=amount,
+            earmarks=[e.to_json() for e in marks.get(sid, [])],
         )
-        for n, (sid, amount) in enumerate(chosen, start=1)
+        for n, (sid, amount, _) in enumerate(chosen, start=1)
     )
     settings = get_settings()
     checkout = get_gateway(account.gateway).initialize_payment(
@@ -212,7 +231,7 @@ def start_checkout(
             "parent": found.guardian_id,
             "amount_kobo": total,
             "reference": intent.reference,
-            "children": [{"student": sid, "amount_kobo": amount} for sid, amount in chosen],
+            "children": [{"student": sid, "amount_kobo": amount, "for": fees} for sid, amount, fees in chosen],
         },
     )
     session.commit()

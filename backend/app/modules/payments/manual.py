@@ -22,6 +22,7 @@ from app.modules.audit.service import record
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.students.models import Student
 
+from .earmarks import Earmark, choose
 from .models import MANUAL_METHODS, ManualPayment, ManualPaymentStatus, PaymentMethod
 from .service import NewPayment, record_payment
 
@@ -38,7 +39,9 @@ def record_manual(
     received_on: date,
     reference: str,
     note: str,
+    fees: list[str] | None = None,
 ) -> ManualPayment:
+    """Record money taken by hand. `fees`: what it's for (e.g. ["WAEC"]), else it follows the bill order."""
     if method not in MANUAL_METHODS:
         raise DomainError("Choose cash, teller, POS or bank transfer.", field="method")
     if not 0 < amount_kobo <= MAX_AMOUNT_KOBO:
@@ -58,8 +61,10 @@ def record_manual(
         raise Conflict(
             f"A {method.value} payment with reference {reference.strip()} is already recorded.", field="reference"
         )
+    marks = choose(session, student.id, fees, amount_kobo)[0] if fees else []
     entry = ManualPayment(
         id=uuid.uuid4(),
+        earmarks=[e.to_json() for e in marks],
         student_id=student.id,
         amount_kobo=amount_kobo,
         method=method,
@@ -76,7 +81,13 @@ def record_manual(
         actor=ctx.actor,
         meta=ctx.meta,
         target=entry,
-        changes={"student": student.id, "amount_kobo": amount_kobo, "method": method, "reference": entry.reference},
+        changes={
+            "student": student.id,
+            "amount_kobo": amount_kobo,
+            "method": method,
+            "reference": entry.reference,
+            "for": fees or [],
+        },
     )
     session.commit()
     return entry
@@ -106,6 +117,7 @@ def approve(session: Session, ctx: StaffContext, entry_id: uuid.UUID) -> ManualP
             note=entry.note,
             recorded_by=entry.recorded_by,
             approved_by=ctx.user.id,
+            earmarks=tuple(Earmark.from_json(e) for e in entry.earmarks),
         ),
         actor=ctx.actor,
         meta=ctx.meta,

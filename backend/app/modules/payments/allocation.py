@@ -3,7 +3,9 @@ Applying money to invoices.
 
 A student's unallocated money (from any of their payments) goes to their
 outstanding invoices **oldest first**: an opening balance before anything else,
-then invoices in the order they were issued. What can't be applied stays as
+then invoices in the order they were issued. Money a payer meant for particular
+fees (`PaymentEarmark`) goes to the bills holding those fees first, even before
+older debts; whatever is left of that payment then follows the usual order. What can't be applied stays as
 credit and is applied automatically when new invoices are issued.
 
 Credit is never stored. It's payments minus allocations, per student.
@@ -24,7 +26,7 @@ from app.modules.fees.invoicing import paid_subquery, totals_subquery
 from app.modules.fees.models import Invoice, InvoiceKind
 from app.modules.students.models import Student
 
-from .models import Allocation, Payment
+from .models import Allocation, Payment, PaymentEarmark
 
 
 @dataclass(frozen=True)
@@ -92,8 +94,33 @@ def allocate(session: Session, student_ids: list[uuid.UUID]) -> list[NewAllocati
     for invoice_id, student_id, left in owing:
         invoices_by_student[student_id].append(_Owing(invoice_id, int(left)))
 
+    # What each payment still owes its chosen bills: earmarked, less what it has already given them
+    payment_ids = [pid for pid, _, _ in money]
+    given = select(Allocation.payment_id, Allocation.invoice_id, func.sum(Allocation.amount_kobo).label("given"))
+    given = given.where(Allocation.payment_id.in_(payment_ids)).group_by(Allocation.payment_id, Allocation.invoice_id)
+    already = {(pid, iid): int(amount) for pid, iid, amount in session.execute(given)}
+    earmarked: dict[uuid.UUID, list[tuple[uuid.UUID, int]]] = defaultdict(list)
+    for pid, iid, amount in session.execute(
+        select(PaymentEarmark.payment_id, PaymentEarmark.invoice_id, func.sum(PaymentEarmark.amount_kobo))
+        .where(PaymentEarmark.payment_id.in_(payment_ids))
+        .group_by(PaymentEarmark.payment_id, PaymentEarmark.invoice_id)
+    ):
+        still = int(amount) - already.get((pid, iid), 0)
+        if still > 0:
+            earmarked[pid].append((iid, still))
+
     created: list[NewAllocation] = []
     for payment_id, student_id, available in money:
+        bills = {o.invoice_id: o for o in invoices_by_student.get(student_id, [])}
+        for invoice_id, wanted in earmarked.get(payment_id, []):
+            chosen_bill = bills.get(invoice_id)
+            if chosen_bill is None:
+                continue
+            amount = min(available, wanted, chosen_bill.due)
+            if amount > 0:
+                created.append(NewAllocation(payment_id, invoice_id, student_id, amount))
+                chosen_bill.due -= amount
+                available -= amount
         for owing_invoice in invoices_by_student.get(student_id, []):
             if available == 0:
                 break

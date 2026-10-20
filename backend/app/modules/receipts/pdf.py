@@ -80,6 +80,8 @@ def render_receipt(receipt: Receipt, *, reversed_: bool = False) -> bytes:
         ["Paid by", METHOD_LABELS.get(payment["method"], payment["method"])],
         ["Reference", payment["reference"] or "-"],
     ]
+    if snap.get("for_fees"):  # older receipts have no such key
+        details.append(["Paid for", ", ".join(snap["for_fees"])])
     table = Table(
         [[k, Paragraph(escape(v), styles["Normal"])] for k, v in details], colWidths=[40 * mm, 120 * mm], hAlign="LEFT"
     )

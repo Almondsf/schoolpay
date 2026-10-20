@@ -425,6 +425,16 @@ amount and an invoice is never paid beyond its total. A payment is recorded
 once per gateway reference (unique constraint), however many times the webhook
 or redirect arrives.
 
+**Paying for particular fees** (`earmarks.py`, `PaymentEarmark`, append-only). On the
+payment page (family link or portal) a parent can tick fees for each child; whoever records
+cash or a teller can tick them too (`fees` on `POST /manual-payments`, applied on approval).
+The amount defaults to what's left on those fees and can be lowered (it covers them in the
+order ticked). The payment is earmarked: allocation sends it to the bills holding those fees
+first, **even before older debts** (owner's decision, 2026-10-20), and the fee breakdowns,
+fee-status report and receipt ("Paid for: WAEC") show those fees paid. A reversed payment's
+earmarks stop counting. Transfers into a child's own account number can't say what they're
+for, so they follow the bill order.
+
 **Allocation** (`allocation.py`). A student's unallocated money pays their
 oldest debt first: the opening balance, then invoices in issue order. Whatever
 is left is the student's **credit** (payments minus allocations, never stored),

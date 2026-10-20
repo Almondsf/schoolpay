@@ -102,8 +102,27 @@ describe('family payment page', () => {
     await userEvent.click(top.getByRole('button', { name: 'Pay ₦155,000.00 now' }));
 
     const post = calls.find((c) => c.method === 'POST')!;
-    expect(await post.json()).toEqual({ items: [{ student_id: 's1', amount_kobo: 15_500_000 }] });
+    expect(await post.json()).toEqual({ items: [{ student_id: 's1', amount_kobo: 15_500_000, fees: [] }] });
     await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('https://gateway.example/pay/SP1'));
+  });
+
+  it('pays for particular fees the parent ticks', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const calls = mockApi({
+      [`GET /api/v1/public/pay/${TOKEN}`]: () => json(page),
+      [`POST /api/v1/public/pay/${TOKEN}/checkout`]: () =>
+        json({ reference: 'SP1', amount_kobo: 400_000, authorization_url: 'https://gateway.example/pay/SP1' }, 201),
+    });
+    renderPage();
+    const ada = await screen.findByRole('region', { name: 'Ada' });
+    await userEvent.click(within(ada).getByRole('checkbox', { name: /WAEC/ }));
+    expect(within(ada).getByLabelText(/Amount for Ada/)).toHaveValue('4000');
+    expect(within(ada).getByText('For WAEC')).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText(/Amount for Bayo/)); // Bayo another time
+    await userEvent.click(screen.getByRole('button', { name: 'Pay ₦4,000.00 now' }));
+    const post = calls.find((c) => c.method === 'POST')!;
+    expect(await post.json()).toEqual({ items: [{ student_id: 's1', amount_kobo: 400_000, fees: ['WAEC'] }] });
   });
 
   it('says plainly when a link no longer works', async () => {

@@ -148,6 +148,8 @@ class PaymentIntentItem(TenantMixin, Base):
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), primary_key=True)
     position: Mapped[int] = mapped_column(SmallInteger)  # 1, 2, ...: the payment's gateway reference suffix
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
+    # The fees this share is for, when the parent chose some (see PaymentEarmark); [] = in bill order
+    earmarks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
 
 
 class FamilyPayLink(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
@@ -290,6 +292,8 @@ class ManualPayment(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rejection_reason: Mapped[str] = mapped_column(String(300), default="")
     payment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("payments.id", ondelete="RESTRICT"), unique=True)
+    # The fees this money is for, when the person recording it chose some (see PaymentEarmark)
+    earmarks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
 
 
 class WebhookStatus(enum.StrEnum):
@@ -345,3 +349,26 @@ class ProviderSetting(UUIDPrimaryKey, Base):
     active_provider: Mapped[str] = mapped_column(String(30))
     updated_by: Mapped[uuid.UUID | None] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PaymentEarmark(TenantMixin, UUIDPrimaryKey, Base):
+    """
+    Part of a payment the payer meant for one fee on one bill (e.g. WAEC), when they chose.
+    The money goes to that bill first (even before older debts), and the fee-by-fee views
+    show that fee paid. Append-only, like the payments it belongs to; a reversed payment's
+    earmarks stop counting.
+    """
+
+    __tablename__ = "payment_earmarks"
+    __table_args__ = (
+        CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        Index("ix_payment_earmarks_payment", "payment_id"),
+        Index("ix_payment_earmarks_invoice", "invoice_id"),
+    )
+
+    payment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payments.id", ondelete="RESTRICT"))
+    invoice_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("invoices.id", ondelete="RESTRICT"))
+    fee_item_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("fee_items.id", ondelete="RESTRICT"))
+    description: Mapped[str] = mapped_column(String(200), default="")  # a one-off charge without a fee item
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
