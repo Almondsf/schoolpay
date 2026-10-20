@@ -186,7 +186,8 @@ def _staff(session: Session, school: School, mfa_secret: str) -> tuple[User, Use
     people = [
         ("proprietor@demo.schoolpay.ng", "Grace Adeyemi", Role.PROPRIETOR, school.id, True),
         ("bursar@demo.schoolpay.ng", "Musa Bello", Role.BURSAR, school.id, True),
-        ("admin@demo.schoolpay.ng", "Ada Obi", Role.SCHOOL_ADMIN, school.id, True),
+        # With ENFORCE_MFA off (local development only), Ada signs in with just the password
+        ("admin@demo.schoolpay.ng", "Ada Obi", Role.SCHOOL_ADMIN, school.id, get_settings().enforce_mfa),
         (PLATFORM_EMAIL, "Platform Ops", Role.PLATFORM_ADMIN, None, True),
     ]
     password_hash = hash_password(DEMO_PASSWORD)

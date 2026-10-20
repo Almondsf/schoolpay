@@ -1076,7 +1076,8 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   --reset --bare`. Run `npm run e2e`; on Windows `PW_CHANNEL=msedge` uses the installed Edge.
 - **Demo data:** `python -m app.cli seed-demo` (`app/demo.py`) creates "Demo
   Model College" with a proprietor, bursar, school admin and platform admin
-  (password `demo-password-123`, MFA secret `JBSWY3DPEHPK3PXP`), the 2026/2027
+  (password `demo-password-123`, MFA secret `JBSWY3DPEHPK3PXP`; with `ENFORCE_MFA=false`,
+  local only, the school admin Ada signs in without a code), the 2026/2027
   calendar (first term current), classes Primary 1 to SSS 3, 240 students in
   families (siblings share a parent, ages match their class), and first-term
   fees (tuition by class, optional bus, levies, a sibling discount). On top

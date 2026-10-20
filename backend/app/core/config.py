@@ -73,7 +73,8 @@ class Settings(BaseSettings):
     access_token_minutes: int = Field(default=15, ge=1, le=60)
     refresh_token_days: int = Field(default=14, ge=1, le=90)
     mfa_issuer: str = "ParentPay"
-    # Proprietors and bursars must enrol in two-factor sign-in before doing anything else
+    # Staff who can move money (proprietors, bursars, school admins) must enrol in two-factor sign-in before
+    # doing anything else. Can be turned off for local development only.
     enforce_mfa: bool = True
 
     # Rate limits on sign-in endpoints ("N/period"; see app.core.ratelimit)
@@ -214,6 +215,8 @@ class Settings(BaseSettings):
                 raise ValueError("CORS_ORIGINS can't be '*' in production")
             if self.rate_limit_storage_url.startswith("memory"):
                 raise ValueError("RATE_LIMIT_STORAGE_URL must be shared storage (Redis) in production")
+            if not self.enforce_mfa:
+                raise ValueError("ENFORCE_MFA can't be turned off in production")
             if "fake" in self.payment_gateways:
                 raise ValueError("The fake payment gateway can't be enabled in production")
             if "paystack" in self.payment_gateways and not self.paystack_secret_key:

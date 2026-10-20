@@ -35,6 +35,7 @@ test('school admin imports students from a spreadsheet', async ({ page }) => {
 test('classes and calendar are set up', async ({ page }) => {
   await signInAsAdmin(page);
   await navigate(page, 'Classes');
+  await expect(page.getByRole('heading', { name: 'Classes', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'SSS 3', exact: true })).toBeVisible();
   await navigate(page, 'Calendar');
   await expect(page.getByRole('heading', { name: '2026/2027' })).toBeVisible();

@@ -19,7 +19,7 @@ test('the proprietor sees the term at a glance and downloads the debtors list', 
     await page.getByRole('link', { name: 'Overview', exact: true }).click();
   }
   await expect(page.getByText('Billed', { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole('region', { name: 'By class' }).getByRole('cell', { name: 'Primary 1' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'By class', exact: true }).getByRole('cell', { name: 'Primary 1' })).toBeVisible();
 
   await page.getByRole('link', { name: /students owe/ }).click();
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();

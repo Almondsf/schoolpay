@@ -132,6 +132,8 @@ def test_production_settings_are_safe_by_default():
         {"whatsapp_backend": "cloud", "whatsapp_token": ""},
         {"whatsapp_templates": "reciept=payment_receipt"},
         {"whatsapp_templates": "receipt"},
+        {"enforce_mfa": False},
+        {"payment_gateways": "bachs", "bachs_secret_key": "sk_sandbox_x", "bachs_webhook_secret": "s"},
     ],
 )
 def test_production_refuses_unsafe_settings(overrides):
