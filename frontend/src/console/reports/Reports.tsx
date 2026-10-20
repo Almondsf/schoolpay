@@ -7,7 +7,7 @@ import { filenameFrom, saveBlob } from '../../lib/download';
 import { formatDate, formatKobo, parseNairaToKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Loading, PageHeader, Pager } from '../../lib/ui';
 import { METHOD_LABELS } from '../Dashboard';
-import { useClassLevels } from '../hooks';
+import { useClassLevels, useSessions } from '../hooks';
 
 type Sort = Schemas['DebtorSort'];
 type Format = 'xlsx' | 'pdf';
@@ -18,10 +18,10 @@ function isoDate(d: Date): string {
 }
 
 export function Reports() {
-  const [tab, setTab] = useState<'debtors' | 'collections'>('debtors');
+  const [tab, setTab] = useState<'debtors' | 'collections' | 'fees'>('debtors');
   return (
     <>
-      <PageHeader title="Reports" subtitle="Who owes, and money received. Download any of them for Excel or to print." />
+      <PageHeader title="Reports" subtitle="Who owes, money received, and each pupil’s fees. Download any of them for Excel or to print." />
       <div className="tabs" role="tablist">
         <button
           role="tab"
@@ -39,8 +39,11 @@ export function Reports() {
         >
           Money received
         </button>
+        <button role="tab" aria-selected={tab === 'fees'} className={tab === 'fees' ? 'tab active' : 'tab'} onClick={() => setTab('fees')}>
+          Fee status by pupil
+        </button>
       </div>
-      {tab === 'debtors' ? <Debtors /> : <Collections />}
+      {tab === 'debtors' ? <Debtors /> : tab === 'collections' ? <Collections /> : <FeeStatus />}
     </>
   );
 }
@@ -327,6 +330,54 @@ function Collections() {
         </>
       )}
     </>
+  );
+}
+
+/** Every pupil's fees for a term, each paid, part paid or unpaid with what's left: all classes or one. */
+function FeeStatus() {
+  const levels = useClassLevels();
+  const sessions = useSessions();
+  const [termId, setTermId] = useState('');
+  const [classId, setClassId] = useState('');
+  const terms = (sessions.data ?? []).flatMap((s) => s.terms.map((t) => ({ id: t.id, label: `${s.name} ${t.label}`, current: t.is_current })));
+  const download = useMutation({
+    mutationFn: async (format: Format) => {
+      const { data, error, response } = await api.GET('/api/v1/reports/fee-status/export', {
+        params: { query: { format, term_id: termId || undefined, class_level_id: classId || undefined } },
+        parseAs: 'blob',
+      });
+      if (!response.ok || !data) throw new Error(errorMessage(error) ?? 'Could not download the report.');
+      saveBlob(data as Blob, filenameFrom(response, `fee-status.${format}`));
+    },
+  });
+  return (
+    <section className="card section" aria-label="Fee status by pupil">
+      <p>
+        Each pupil’s fees for the term (tuition, bus, levies and the rest) as <strong>paid</strong>, <strong>part paid</strong> or{' '}
+        <strong>unpaid</strong>, with the amount left on each, earlier debts and the total owed. Excel has a sheet for every class too.
+      </p>
+      <div className="filters">
+        <select aria-label="Term" value={termId} onChange={(e) => setTermId(e.target.value)}>
+          <option value="">Current term</option>
+          {terms.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+              {t.current ? ' (current)' : ''}
+            </option>
+          ))}
+        </select>
+        <select aria-label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
+          <option value="">All classes</option>
+          {(levels.data ?? []).map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <Downloads onDownload={(f) => download.mutate(f)} pending={download.isPending} error={download.error} />
+      <p className="hint">A bill’s payments are shown covering its fees in the order they appear on the bill.</p>
+    </section>
   );
 }
 

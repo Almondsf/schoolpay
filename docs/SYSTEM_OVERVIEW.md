@@ -646,6 +646,7 @@ next unpaid instalment is, so a parent keeping to a plan isn't overdue.
 | Report | Endpoint | What it shows |
 |---|---|---|
 | Overview | `GET /reports/overview?term_id=` (default: current term) | This term's billed, collected and outstanding amounts, overall and per class (in promotion order); older debts (earlier terms, brought forward, one-off charges); credit held; how many students owe; money received today, in the last 7 days and per day this term; payment methods; cash and teller entries waiting for approval; and debts by how late they are (not yet due, 1–30, 31–60, 61–90, over 90 days) |
+| Fee status by pupil | `GET /reports/fee-status/export?term_id=&class_level_id=&format=xlsx\|pdf` (`fee_status.py`) | Every pupil placed in the term (all classes or one), each fee (tuition, bus, levies…) as paid, part paid or unpaid with the amount left, earlier debts and the total owed. Payments apply to whole bills, so a bill's payments are shown covering its fees **in the order they appear on the bill**; a discount reduces its fee (a whole-bill discount, the first fee). Excel adds a sheet per class and colours each status; the PDF fits about seven fees. Four queries for any number of pupils |
 | Debtors | `GET /reports/debtors` (filters: class, minimum owed, overdue only, search; sort: most owed, longest overdue, class, name) | Each student who owes: amount, oldest unpaid due date, days overdue, class, main parent and phone, reminders sent or turned off, last payment (a reversed payment doesn't count). Paginated, with the total owed across the filter |
 | Money received | `GET /reports/collections?start=&end=` (at most a year) | Received, reversed and net, per day and per method |
 
@@ -933,7 +934,7 @@ production.
 | Subscription and sign-up | `GET /subscription`, `GET /subscription/invoices/{id}/pdf`; `GET /school/onboarding`; `POST /public/signup` (public, rate limited) |
 | Privacy | `GET /guardians/{id}/export`; `POST /guardians/{id}/erase`, `POST /students/{id}/erase`; parents: `GET /parent/my-data` |
 | Public website | `GET /public/info` (name, contact, the default plan's prices) |
-| Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export` (`format=xlsx|pdf`) |
+| Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export`, `/reports/fee-status/export` (`format=xlsx|pdf`) |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |

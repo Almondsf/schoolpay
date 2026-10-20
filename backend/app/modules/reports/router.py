@@ -19,7 +19,7 @@ from app.modules.payments.models import PaymentMethod
 from app.modules.schools.models import ClassLevel, School
 from app.modules.students.models import StudentStatus
 
-from . import exports, service
+from . import exports, fee_status, service
 from .service import AgingBucket, DebtorFilters, DebtorSort
 
 router = APIRouter(prefix="/reports", tags=["reports"], responses=ERROR_RESPONSES)
@@ -244,3 +244,33 @@ def export_collections(
     )
     db.commit()
     return _download(content, format, f"money-received-{start.isoformat()}-to-{end.isoformat()}")
+
+
+@router.get(
+    "/fee-status/export",
+    summary="Download each pupil's fees for a term as paid, part paid or unpaid (Excel or PDF)",
+    response_class=Response,
+    responses={200: {"content": {exports.XLSX: {}, exports.PDF: {}}}},
+)
+def export_fee_status(
+    format: Literal["xlsx", "pdf"] = "xlsx",
+    term_id: uuid.UUID | None = Query(default=None, description="Defaults to the current term"),
+    class_level_id: uuid.UUID | None = Query(default=None, description="One class; all classes if left out"),
+    ctx: StaffContext = VIEW,
+    db: Session = Depends(get_db),
+) -> Response:
+    get_limiter().hit("reports-export:school", EXPORT_RATE, str(ctx.school_id))
+    report = fee_status.fee_status(db, term_id or service.current_term_id(db), class_level_id)
+    school = _school_name(db, ctx)
+    content = (exports.fee_status_xlsx if format == "xlsx" else exports.fee_status_pdf)(school, report)
+    record(
+        db,
+        AuditAction.REPORT_EXPORTED,
+        school_id=ctx.school_id,
+        actor=ctx.actor,
+        meta=ctx.meta,
+        changes={"report": "fee_status", "format": format, "rows": len(report.pupils), "scope": report.scope},
+    )
+    db.commit()
+    slug = "all-classes" if class_level_id is None else report.scope.lower().replace(" ", "-")
+    return _download(content, format, f"fee-status-{slug}-{service.lagos_today().isoformat()}")

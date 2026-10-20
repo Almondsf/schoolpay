@@ -27,6 +27,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from .fee_status import FeeCell, FeeStatusReport, PupilStatus
 from .service import LAGOS, CollectedPayment, Collections, Debtor
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -363,3 +364,133 @@ def collections_pdf(school: str, summary: Collections) -> bytes:
             days,
         ],
     )
+
+
+PAID_FILL = PatternFill("solid", fgColor="D8EFE2")
+PART_FILL = PatternFill("solid", fgColor="FCEBC7")
+UNPAID_FILL = PatternFill("solid", fgColor="F8D7D3")
+STATUS_FILLS = {"Paid": PAID_FILL, "Part paid": PART_FILL, "Unpaid": UNPAID_FILL}
+FEE_STATUS_RULE = (
+    "Payments are applied to whole bills; here a bill's payments are shown covering its fees "
+    "in the order they appear on the bill."
+)
+
+
+def _fee_status_sheet(
+    ws: Worksheet, school: str, report: FeeStatusReport, pupils: list[PupilStatus], scope: str
+) -> None:
+    headers: list[tuple[str, int]] = [("Student", 26), ("Admission no.", 16), ("Class", 14)]
+    for name in report.columns:
+        headers += [(name, 12), (f"{name}: left (NGN)", 16)]
+    headers += [
+        ("Billed this term (NGN)", 18),
+        ("Paid this term (NGN)", 18),
+        ("Left this term (NGN)", 18),
+        ("Earlier debts (NGN)", 17),
+        ("Total owed (NGN)", 16),
+        ("Status", 12),
+    ]
+    rows = []
+    for p in pupils:
+        row: list[Any] = [p.full_name, p.admission_number, p.class_name]
+        for name in report.columns:
+            cell = p.fees.get(name)
+            row += [cell.status, naira(cell.left_kobo)] if cell else ["Not charged", None]
+        row += [
+            naira(p.term_billed_kobo),
+            naira(p.term_paid_kobo),
+            naira(p.term_left_kobo),
+            naira(p.earlier_left_kobo),
+            naira(p.total_left_kobo),
+            p.status,
+        ]
+        rows.append(row)
+    fee_cols = len(report.columns) * 2
+    money = {4 + 2 * i + 1 for i in range(len(report.columns))} | set(range(4 + fee_cols, 4 + fee_cols + 5))
+    total: list[Any] = ["Total", "", ""]
+    for name in report.columns:
+        total += ["", naira(sum(p.fees[name].left_kobo for p in pupils if name in p.fees))]
+    total += [
+        naira(sum(p.term_billed_kobo for p in pupils)),
+        naira(sum(p.term_paid_kobo for p in pupils)),
+        naira(sum(p.term_left_kobo for p in pupils)),
+        naira(sum(p.earlier_left_kobo for p in pupils)),
+        naira(sum(p.total_left_kobo for p in pupils)),
+        "",
+    ]
+    _sheet(
+        ws,
+        school=school,
+        title=f"Fee status · {report.term_label}",
+        subtitle=f"{scope}  ·  {len(pupils)} pupils",
+        headers=headers,
+        rows=rows,
+        money_columns=money,
+        total=total,
+    )
+    status_cols = [4 + 2 * i for i in range(len(report.columns))] + [len(headers)]
+    first = ws.max_row - len(rows)  # the total row is last
+    for col in status_cols:
+        for (cell,) in ws.iter_rows(min_row=first, max_row=ws.max_row - 1, min_col=col, max_col=col):
+            if cell.value in STATUS_FILLS:
+                cell.fill = STATUS_FILLS[cell.value]
+    ws.append([])
+    ws.append([FEE_STATUS_RULE])
+
+
+def fee_status_xlsx(school: str, report: FeeStatusReport) -> bytes:
+    """One sheet for everyone selected; with all classes, also one sheet per class."""
+    wb = Workbook()
+    _fee_status_sheet(wb.active, school, report, report.pupils, report.scope)
+    wb.active.title = "All pupils" if report.scope == "All classes" else report.scope[:31]
+    if report.scope == "All classes":
+        by_class: dict[str, list[PupilStatus]] = {}
+        for p in report.pupils:
+            by_class.setdefault(p.class_name, []).append(p)
+        for class_name, pupils in by_class.items():
+            ws = wb.create_sheet(_sheet_title(class_name))
+            _fee_status_sheet(ws, school, report, pupils, class_name)
+    return _save(wb)
+
+
+def _sheet_title(name: str) -> str:
+    """Excel sheet names: at most 31 characters, none of the characters it forbids."""
+    return "".join("-" if ch in "[]:*?/\\" else ch for ch in name)[:31] or "Class"
+
+
+def _pdf_cell(cell: FeeCell | None) -> str:
+    if cell is None or cell.billed_kobo <= 0:
+        return "-"
+    if cell.left_kobo <= 0:
+        return "Paid"
+    return f"Unpaid {ngn(cell.left_kobo)}" if cell.status == "Unpaid" else f"{ngn(cell.left_kobo)} left"
+
+
+def fee_status_pdf(school: str, report: FeeStatusReport) -> bytes:
+    """Fits about seven fees across a landscape page; more go in one 'Other fees' column."""
+    shown = report.columns[:7] if len(report.columns) <= 7 else report.columns[:6]
+    rest = [c for c in report.columns if c not in shown]
+    header = ["Student", "Class", *shown, *(["Other fees"] if rest else []), "Earlier debts", "Total owed"]
+    rows = []
+    for p in report.pupils:
+        cells = [_pdf_cell(p.fees.get(name)) for name in shown]
+        if rest:
+            left = sum(p.fees[n].left_kobo for n in rest if n in p.fees)
+            billed = sum(p.fees[n].billed_kobo for n in rest if n in p.fees)
+            cells.append(_pdf_cell(FeeCell(billed, left)))
+        rows.append([p.full_name, p.class_name, *cells, ngn(p.earlier_left_kobo), ngn(p.total_left_kobo)])
+    rows.append(["Total", "", *[""] * (len(header) - 4), ngn(sum(p.earlier_left_kobo for p in report.pupils)),
+                 ngn(sum(p.total_left_kobo for p in report.pupils))])  # fmt: skip
+    fixed = 46 + 24 + 28 + 28
+    each = (273 - fixed) / max(len(header) - 4, 1)
+    table = _table(
+        header,
+        rows,
+        widths=[46, 24, *[each] * (len(header) - 4), 28, 28],
+        money_cols={len(header) - 2, len(header) - 1},
+        total_row=True,
+    )
+    note = Paragraph(escape(FEE_STATUS_RULE), getSampleStyleSheet()["Italic"])
+    owing = sum(1 for p in report.pupils if p.total_left_kobo > 0)
+    subtitle = f"{report.scope} · {len(report.pupils)} pupils, {owing} still owing"
+    return _pdf(school, f"Fee status · {report.term_label}", subtitle, [table, Spacer(1, 3 * mm), note])

@@ -9,7 +9,7 @@ const {
 } = require('docx');
 
 const BRAND = 'ParentPay'; // the product's working name (APP_NAME)
-const UPDATED = '19 October 2026';
+const UPDATED = '20 October 2026';
 const GREEN = '0F5132';
 const LIGHT = 'E8F3EE';
 
@@ -66,6 +66,8 @@ const AREAS = [
         'Mistakes are fixed openly, with a trail'],
       ['Correct a bill by adding a line (lines are never edited), void a bill issued by mistake, record old debts',
         'The full history of every bill is always visible'],
+      ['Fee status by pupil: for the whole school or one class, each fee (tuition, bus, levies) marked paid, part paid or unpaid with what’s left; Excel with a sheet per class, or PDF',
+        'Class teachers and the bursary see at a glance who still owes what, without adding anything up'],
       ['Debtors list: who owes, how much, how late, the parent’s phone (tap to call), reminders sent; download for Excel or PDF',
         'Follow-up calls start from an up-to-date list'],
       ['Add a fee to some classes after the bills have gone out (WAEC, NECO, JAMB, an end-of-year party), ticking off pupils not taking part',
@@ -179,6 +181,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['20 Oct 2026', 'Fee status by pupil: every fee paid, part paid or unpaid, for the school or one class (Excel and PDF)'],
   ['19 Oct 2026', 'Pay for all your children by bank transfer, card or USSD, from the link or the portal'],
   ['19 Oct 2026', 'Phone calls for parents who prefer them: overdue reminders and payment confirmations, in English or Pidgin'],
   ['19 Oct 2026', 'Family payment link: one link per parent to pay for all their children, choosing the amount per child'],

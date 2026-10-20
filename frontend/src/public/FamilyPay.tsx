@@ -91,22 +91,12 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
   return (
     <>
       <h1>School fees</h1>
-      {owing.length === 0 ? (
+      {owing.length === 0 && (
         <section className="card">
           <p className="success-text">
             <strong>Everything is paid. Thank you!</strong>
           </p>
         </section>
-      ) : (
-        data.card_payments && (
-          <section className="card" aria-label="Pay for all your children">
-            <div className="row between">
-              <span>Due now for {owing.length === 1 ? 'your child' : `all ${owing.length} children`}</span>
-              <strong>{formatKobo(total)}</strong>
-            </div>
-            {payNow}
-          </section>
-        )
       )}
       {data.children.map((c) => (
         <ChildCard
@@ -118,9 +108,13 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
           onAmount={(value) => setAmounts({ ...amounts, [c.student_id]: value })}
         />
       ))}
-      {payNow && owing.length > 1 && (
-        <section className="card" aria-label="Pay now">
-          <p className="hint">Change any amount above to pay part now, or clear it to leave that child for later.</p>
+      {payNow && (
+        <section className="card" aria-label="Pay for all your children">
+          <div className="row between">
+            <span>Due now for {owing.length === 1 ? 'your child' : `all ${owing.length} children`}</span>
+            <strong>{formatKobo(total)}</strong>
+          </div>
+          {owing.length > 1 && <p className="hint">Change any amount above to pay part now, or clear it to leave that child for later.</p>}
           {payNow}
         </section>
       )}

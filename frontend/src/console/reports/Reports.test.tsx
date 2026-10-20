@@ -242,4 +242,32 @@ describe('dashboard and reports', () => {
     expect(exported.searchParams.get('format')).toBe('xlsx');
     expect(exported.searchParams.get('class_level_id')).toBe('l3');
   });
+
+  it('downloads every pupil’s fee status for one class', async () => {
+    const calls = mockApi({
+      ...session,
+      'GET /api/v1/academic-sessions': () => json(sessions),
+      'GET /api/v1/class-levels': () => json([{ id: 'l3', name: 'JSS 3', rank: 3, is_active: true, arms: [] }]),
+      'GET /api/v1/reports/debtors': () => json({ items: [], total: 0, limit: 50, offset: 0, total_owed_kobo: 0 }),
+      'GET /api/v1/reports/fee-status/export': () =>
+        new Response('pdf', { headers: { 'Content-Disposition': 'attachment; filename="fee-status-jss-3-2026-10-20.pdf"' } }),
+    });
+    const saved: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    renderConsole('/console/reports');
+    await userEvent.click(await screen.findByRole('tab', { name: 'Fee status by pupil' }));
+    const panel = screen.getByRole('region', { name: 'Fee status by pupil' });
+    await userEvent.selectOptions(within(panel).getByLabelText('Class'), 'l3');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Download PDF' }));
+    await vi.waitFor(() => expect(saved).toEqual(['fee-status-jss-3-2026-10-20.pdf']));
+    const exported = new URL(calls.find((c) => c.url.includes('/fee-status/export'))!.url);
+    expect(exported.searchParams.get('format')).toBe('pdf');
+    expect(exported.searchParams.get('class_level_id')).toBe('l3');
+    expect(exported.searchParams.get('term_id')).toBeNull(); // the current term
+  });
 });

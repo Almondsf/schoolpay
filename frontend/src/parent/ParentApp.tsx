@@ -63,6 +63,10 @@ function Home() {
     <>
       <p className="muted">{home.data.school_name}</p>
       <h1>Hello, {home.data.guardian_name}</h1>
+      {home.data.children.length === 0 && <Empty>No children are linked to your number yet. Please contact the school.</Empty>}
+      {home.data.children.map((child) => (
+        <ChildCard key={child.id} child={child} />
+      ))}
       {totalOwed > 0 && (
         <section className="card total-owed" aria-label="Pay for all your children">
           <div>
@@ -75,10 +79,6 @@ function Home() {
           <p className="hint">One payment: bank transfer, card or USSD. You choose how much goes to each child.</p>
         </section>
       )}
-      {home.data.children.length === 0 && <Empty>No children are linked to your number yet. Please contact the school.</Empty>}
-      {home.data.children.map((child) => (
-        <ChildCard key={child.id} child={child} />
-      ))}
       <MessagePreferences />
     </>
   );
