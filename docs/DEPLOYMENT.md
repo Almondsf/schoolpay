@@ -49,6 +49,9 @@ Self sign-up is on by default (`SIGNUP_ENABLED`), limited by `SIGNUP_RATE_PER_IP
 
 ## Payment providers
 
+**Paystack is the chosen provider** (owner, 2026-10-20): set `PAYMENT_GATEWAYS=paystack`.
+Bachs is built in for later but not configured.
+
 Configure every provider you may use in `PAYMENT_GATEWAYS` (e.g. `paystack,bachs`) with
 its keys; which one new checkouts use is switched at runtime by a platform admin
 (console: Platform → Providers, or `PUT /api/v1/platform/providers/payment`). With

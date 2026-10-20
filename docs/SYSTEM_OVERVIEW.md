@@ -469,7 +469,8 @@ any other it has, so switching never stops a school taking payments. Payments un
 finish on the gateway they began on (`PaymentIntent.gateway`), and transfers into
 students' account numbers keep arriving from the gateway that issued them.
 
-**Bachs** (`gateways/bachs.py`). A school is a Bachs *connected account*, set up on
+**Bachs** (`gateways/bachs.py`; built but not in use: the owner chose Paystack on
+2026-10-20, because only Paystack gives each pupil their own account number). A school is a Bachs *connected account*, set up on
 Bachs' hosted onboarding (`POST /payment-settings/bachs/onboarding` returns the link;
 Bachs collects the business, identity and payout bank details). Checkouts are checkout
 sessions charged as *destination charges* to the school's account with our
