@@ -4,6 +4,7 @@ import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-d
 
 import { api, unwrap, type Schemas } from '../api/client';
 import { saveBlob } from '../lib/download';
+import { FeeList } from '../lib/FeeBreakdown';
 import { PlanSchedule } from '../lib/PlanSchedule';
 import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
@@ -171,6 +172,7 @@ function ChildCard({ child }: { child: Child }) {
         )}
         {child.credit_kobo > 0 && <span className="small">{formatKobo(child.credit_kobo)} credit towards next term</span>}
       </div>
+      <FeeList fees={child.fees} earlierKobo={child.earlier_left_kobo} />
       {child.pay_in && <TransferDetails account={child.pay_in} />}
       {child.owed_kobo > 0 && (
         <button className="block secondary" onClick={() => setPaying(true)}>

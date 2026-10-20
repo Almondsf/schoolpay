@@ -90,3 +90,38 @@ def test_fixed_number_of_queries(db, world, connection):
     with QueryCounter(connection) as big:
         report_for(db, world)
     assert big.count == small.count
+
+
+async def test_a_pupils_breakdown_for_staff(client, world, db):
+    bayo = world["students"]["bayo"]
+    response = await client.get(f"/api/v1/reports/students/{bayo.id}/fee-breakdown", headers=world["admin"])
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["term_label"] == "2026/2027 First term"
+    fees = {f["name"]: f for f in body["fees"]}
+    assert fees["PTA"] == {"name": "PTA", "billed_kobo": 5_000 * NAIRA, "paid_kobo": 5_000 * NAIRA, "left_kobo": 0,
+                           "status": "Paid"}  # fmt: skip
+    assert fees["Tuition"]["left_kobo"] == 135_000 * NAIRA and fees["Tuition"]["status"] == "Part paid"
+    assert body["total_left_kobo"] == 135_000 * NAIRA and body["earlier_left_kobo"] == 0
+
+    chidi = (await client.get(f"/api/v1/reports/students/{world['students']['chidi'].id}/fee-breakdown",
+                              headers=world["bursar"])).json()  # fmt: skip
+    assert chidi["earlier_left_kobo"] == 40_000 * NAIRA and chidi["total_left_kobo"] == 245_000 * NAIRA
+
+    other = make_user(db, make_school(db), Role.BURSAR)
+    db.commit()
+    stranger = await client.get(f"/api/v1/reports/students/{bayo.id}/fee-breakdown", headers=headers_for(db, other))
+    assert stranger.status_code == 404
+
+
+async def test_one_off_charges_show_by_their_own_name(client, world):
+    ada = world["students"]["ada"]
+    charge = await client.post(
+        f"/api/v1/students/{ada.id}/charges",
+        headers=world["bursar"],
+        json={"description": "School uniform", "unit_kobo": 12_000 * NAIRA},
+    )
+    assert charge.status_code in (200, 201), charge.text
+    body = (await client.get(f"/api/v1/reports/students/{ada.id}/fee-breakdown", headers=world["bursar"])).json()
+    names = [f["name"] for f in body["fees"]]
+    assert "School uniform" in names and "Other charges" not in names

@@ -24,6 +24,7 @@ from app.modules.fees.invoicing import paid_subquery, totals_subquery
 from app.modules.fees.models import Invoice
 from app.modules.fees.plans import plan_views
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
+from app.modules.reports.fee_status import FeeBreakdown, fee_breakdowns
 from app.modules.schools.models import Arm, ClassLevel, School, Term
 from app.modules.students.models import Enrollment, Guardian, GuardianStudent, Student, StudentStatus
 
@@ -48,6 +49,7 @@ class FamilyChild:
     suggested_kobo: int  # everything owed, but only up to the next instalment on a payment plan
     on_plan: bool
     account: VirtualAccount | None
+    breakdown: FeeBreakdown
 
 
 @dataclass(frozen=True)
@@ -105,6 +107,7 @@ def family_page(session: Session, found: Resolved) -> FamilyPage:
     students = _children(session, guardian.id)
     ids = [s.id for s in students]
     owed = _owed(session, ids)
+    breakdowns = fee_breakdowns(session, ids)
     classes = (
         dict(
             session.execute(
@@ -134,7 +137,8 @@ def family_page(session: Session, found: Resolved) -> FamilyPage:
         school_name=school.name,
         card_payments=payment_account(session) is not None,
         children=[
-            FamilyChild(s.id, s.first_name, classes.get(s.id), *owed[s.id], accounts.get(s.id)) for s in students
+            FamilyChild(s.id, s.first_name, classes.get(s.id), *owed[s.id], accounts.get(s.id), breakdowns[s.id])
+            for s in students
         ],
     )
     session.commit()

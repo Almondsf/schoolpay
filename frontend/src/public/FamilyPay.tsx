@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { api, unwrap, type Schemas } from '../api/client';
 import { BRAND } from '../lib/brand';
 import { formatKobo, koboToInput, parseNairaToKobo } from '../lib/format';
+import { FeeList } from '../lib/FeeBreakdown';
 import { ErrorAlert, Field, Loading } from '../lib/ui';
 
 type Child = Schemas['FamilyChildOut'];
@@ -155,6 +156,7 @@ function ChildCard({
           <span className="small">Paying in instalments: {formatKobo(child.suggested_kobo)} is due next</span>
         )}
       </div>
+      <FeeList fees={child.fees} earlierKobo={child.earlier_left_kobo} />
       {payOnline && child.owed_kobo > 0 && (
         <Field label={`Amount for ${child.first_name} now (₦)`} error={problem}>
           <input inputMode="decimal" value={amount} onChange={(e) => onAmount(e.target.value)} placeholder="0" />

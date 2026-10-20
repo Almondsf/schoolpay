@@ -1232,3 +1232,32 @@ table.lines {
   width: 9em;
   text-align: right;
 }
+
+.fee-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.fee-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.fee-list li:last-child {
+  border-bottom: 0;
+}
+
+.fee-list li.paid > span:first-child {
+  color: var(--muted);
+}
+
+.fee-amount {
+  text-align: right;
+  white-space: nowrap;
+}

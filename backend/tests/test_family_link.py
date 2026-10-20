@@ -105,6 +105,8 @@ async def test_parent_sees_only_their_children_with_first_names(client, world):
     assert set(kids) == {"Ada", "Bayo"}  # never Chidi
     assert kids["Ada"]["owed_kobo"] == kids["Ada"]["suggested_kobo"] == 155_000 * NAIRA
     assert kids["Bayo"]["class_name"] == "JSS 2 A"
+    ada_fees = {f["name"]: f["left_kobo"] for f in kids["Ada"]["fees"]}  # what the 155,000 is made of
+    assert ada_fees == {"PTA": 5_000 * NAIRA, "Tuition": 150_000 * NAIRA} and kids["Ada"]["earlier_left_kobo"] == 0
     assert "Adeyemi" not in response.text  # first names only (the parent's own name is shown to them)
 
 

@@ -1715,6 +1715,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/students/{student_id}/fee-breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A pupil's fees for a term one by one (charged, paid, left), plus earlier debts */
+        get: operations["reports_student_fee_breakdown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/school": {
         parameters: {
             query?: never;
@@ -2762,6 +2779,16 @@ export interface components {
             class_name: string | null;
             /** Credit Kobo */
             credit_kobo: number;
+            /**
+             * Earlier Left Kobo
+             * @description Still owed from earlier terms
+             */
+            earlier_left_kobo: number;
+            /**
+             * Fees
+             * @description This term's fees one by one, in bill order
+             */
+            fees: components["schemas"]["FeeLineOut"][];
             /** First Name */
             first_name: string;
             /** Full Name */
@@ -3294,6 +3321,16 @@ export interface components {
             bank_name: string | null;
             /** Class Name */
             class_name: string | null;
+            /**
+             * Earlier Left Kobo
+             * @description Still owed from earlier terms
+             */
+            earlier_left_kobo: number;
+            /**
+             * Fees
+             * @description This term's fees one by one, in bill order
+             */
+            fees: components["schemas"]["FeeLineOut"][];
             /** First Name */
             first_name: string;
             /** On Plan */
@@ -3354,6 +3391,26 @@ export interface components {
              */
             student_id: string;
         };
+        /** FeeBreakdownOut */
+        FeeBreakdownOut: {
+            /**
+             * Earlier Left Kobo
+             * @description Still owed from earlier terms, balances brought forward and one-offs
+             */
+            earlier_left_kobo: number;
+            /**
+             * Fees
+             * @description This term's fees in bill order (a bill's payments cover them in order)
+             */
+            fees: components["schemas"]["FeeLineOut"][];
+            /**
+             * Term Label
+             * @description The term the fees are for; null when no term is current
+             */
+            term_label: string | null;
+            /** Total Left Kobo */
+            total_left_kobo: number;
+        };
         /**
          * FeeCategory
          * @enum {string}
@@ -3398,6 +3455,22 @@ export interface components {
             is_active?: boolean | null;
             /** Name */
             name?: string | null;
+        };
+        /** FeeLineOut */
+        FeeLineOut: {
+            /** Billed Kobo */
+            billed_kobo: number;
+            /** Left Kobo */
+            left_kobo: number;
+            /** Name */
+            name: string;
+            /** Paid Kobo */
+            paid_kobo: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "Paid" | "Part paid" | "Unpaid";
         };
         /**
          * GatewayCode
@@ -15072,6 +15145,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverviewOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_student_fee_breakdown: {
+        parameters: {
+            query?: {
+                /** @description Defaults to the current term */
+                term_id?: string | null;
+            };
+            header?: never;
+            path: {
+                student_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeeBreakdownOut"];
                 };
             };
             /** @description Bad Request */

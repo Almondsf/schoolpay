@@ -22,6 +22,11 @@ const child = (overrides: Record<string, unknown>) => ({
     account_name: 'DMC/ADEYEMI TOLU',
     bank_name: 'Wema Bank',
   },
+  fees: [
+    { name: 'Tuition', billed_kobo: 15_000_000, paid_kobo: 0, left_kobo: 15_000_000, status: 'Unpaid' },
+    { name: 'PTA', billed_kobo: 500_000, paid_kobo: 0, left_kobo: 500_000, status: 'Unpaid' },
+  ],
+  earlier_left_kobo: 0,
   ...overrides,
 });
 const home = {
@@ -160,7 +165,7 @@ describe('parent portal', () => {
       card_payments: true,
       min_part_kobo: 100_000,
       children: [
-        { student_id: 'c1', first_name: 'Tolu', class_name: 'JSS 1 A', owed_kobo: 5_000_000, suggested_kobo: 5_000_000, on_plan: false, account_number: null, bank_name: null },
+        { student_id: 'c1', first_name: 'Tolu', class_name: 'JSS 1 A', owed_kobo: 5_000_000, suggested_kobo: 5_000_000, on_plan: false, account_number: null, bank_name: null, fees: [], earlier_left_kobo: 0 },
       ],
     };
     const calls = mockApi({

@@ -734,6 +734,19 @@
             "title": "Credit Kobo",
             "type": "integer"
           },
+          "earlier_left_kobo": {
+            "description": "Still owed from earlier terms",
+            "title": "Earlier Left Kobo",
+            "type": "integer"
+          },
+          "fees": {
+            "description": "This term's fees one by one, in bill order",
+            "items": {
+              "$ref": "#/components/schemas/FeeLineOut"
+            },
+            "title": "Fees",
+            "type": "array"
+          },
           "first_name": {
             "title": "First Name",
             "type": "string"
@@ -775,7 +788,9 @@
           "owed_kobo",
           "paid_kobo",
           "credit_kobo",
-          "pay_in"
+          "pay_in",
+          "fees",
+          "earlier_left_kobo"
         ],
         "title": "ChildOut",
         "type": "object"
@@ -2062,6 +2077,19 @@
             ],
             "title": "Class Name"
           },
+          "earlier_left_kobo": {
+            "description": "Still owed from earlier terms",
+            "title": "Earlier Left Kobo",
+            "type": "integer"
+          },
+          "fees": {
+            "description": "This term's fees one by one, in bill order",
+            "items": {
+              "$ref": "#/components/schemas/FeeLineOut"
+            },
+            "title": "Fees",
+            "type": "array"
+          },
           "first_name": {
             "title": "First Name",
             "type": "string"
@@ -2093,7 +2121,9 @@
           "suggested_kobo",
           "on_plan",
           "account_number",
-          "bank_name"
+          "bank_name",
+          "fees",
+          "earlier_left_kobo"
         ],
         "title": "FamilyChildOut",
         "type": "object"
@@ -2171,6 +2201,47 @@
           "amount_kobo"
         ],
         "title": "FamilyPartIn",
+        "type": "object"
+      },
+      "FeeBreakdownOut": {
+        "properties": {
+          "earlier_left_kobo": {
+            "description": "Still owed from earlier terms, balances brought forward and one-offs",
+            "title": "Earlier Left Kobo",
+            "type": "integer"
+          },
+          "fees": {
+            "description": "This term's fees in bill order (a bill's payments cover them in order)",
+            "items": {
+              "$ref": "#/components/schemas/FeeLineOut"
+            },
+            "title": "Fees",
+            "type": "array"
+          },
+          "term_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The term the fees are for; null when no term is current",
+            "title": "Term Label"
+          },
+          "total_left_kobo": {
+            "title": "Total Left Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "term_label",
+          "fees",
+          "earlier_left_kobo",
+          "total_left_kobo"
+        ],
+        "title": "FeeBreakdownOut",
         "type": "object"
       },
       "FeeCategory": {
@@ -2311,6 +2382,44 @@
           }
         },
         "title": "FeeItemUpdateIn",
+        "type": "object"
+      },
+      "FeeLineOut": {
+        "properties": {
+          "billed_kobo": {
+            "title": "Billed Kobo",
+            "type": "integer"
+          },
+          "left_kobo": {
+            "title": "Left Kobo",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paid_kobo": {
+            "title": "Paid Kobo",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "Paid",
+              "Part paid",
+              "Unpaid"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "billed_kobo",
+          "paid_kobo",
+          "left_kobo",
+          "status"
+        ],
+        "title": "FeeLineOut",
         "type": "object"
       },
       "GatewayCode": {
@@ -20330,6 +20439,133 @@
           }
         ],
         "summary": "Billed, collected and outstanding for a term",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/students/{student_id}/fee-breakdown": {
+      "get": {
+        "operationId": "reports_student_fee_breakdown",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Defaults to the current term",
+            "in": "query",
+            "name": "term_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Defaults to the current term",
+              "title": "Term Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeeBreakdownOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A pupil's fees for a term one by one (charged, paid, left), plus earlier debts",
         "tags": [
           "reports"
         ]

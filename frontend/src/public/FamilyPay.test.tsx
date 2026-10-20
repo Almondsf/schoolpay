@@ -24,6 +24,12 @@ const page = {
       on_plan: false,
       account_number: '9900000001',
       bank_name: 'Wema Bank',
+      fees: [
+        { name: 'Tuition', billed_kobo: 15_000_000, paid_kobo: 0, left_kobo: 15_000_000, status: 'Unpaid' },
+        { name: 'WAEC', billed_kobo: 400_000, paid_kobo: 0, left_kobo: 400_000, status: 'Unpaid' },
+        { name: 'PTA', billed_kobo: 300_000, paid_kobo: 200_000, left_kobo: 100_000, status: 'Part paid' },
+      ],
+      earlier_left_kobo: 0,
     },
     {
       student_id: 's2',
@@ -34,6 +40,8 @@ const page = {
       on_plan: true,
       account_number: null,
       bank_name: null,
+      fees: [{ name: 'Tuition', billed_kobo: 18_500_000, paid_kobo: 0, left_kobo: 18_500_000, status: 'Unpaid' }],
+      earlier_left_kobo: 2_000_000,
     },
     {
       student_id: 's3',
@@ -44,6 +52,8 @@ const page = {
       on_plan: false,
       account_number: '9900000003',
       bank_name: 'Wema Bank',
+      fees: [{ name: 'Tuition', billed_kobo: 20_000_000, paid_kobo: 20_000_000, left_kobo: 0, status: 'Paid' }],
+      earlier_left_kobo: 0,
     },
   ],
 };
@@ -71,6 +81,10 @@ describe('family payment page', () => {
     renderPage();
     const ada = await screen.findByRole('region', { name: 'Ada' });
     expect(within(ada).getByText('9900000001')).toBeInTheDocument();
+    const adaFees = within(ada).getByRole('list', { name: 'Fees' });
+    expect(within(adaFees).getByText('WAEC')).toBeInTheDocument();
+    expect(within(adaFees).getByText(/₦1,000.00 left/)).toBeInTheDocument(); // PTA part paid
+    expect(within(screen.getByRole('region', { name: 'Bayo' })).getByText('From earlier terms')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Bayo' })).getByText(/₦50,000.00 is due next/)).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Chidi' })).getByText('All paid')).toBeInTheDocument();
     expect(screen.queryByLabelText(/Amount for Chidi/)).not.toBeInTheDocument();

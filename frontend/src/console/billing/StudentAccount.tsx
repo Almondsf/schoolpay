@@ -9,6 +9,7 @@ import { INVOICE_KIND_LABELS, formatKobo, koboToInput, parseNairaToKobo } from '
 import { ErrorAlert, Field, Loading, Modal, StatusBadge, fieldError } from '../../lib/ui';
 import { describeDiscount } from '../fees/FeeSetup';
 import { useCurrentTerm } from '../hooks';
+import { FeeTable } from '../../lib/FeeBreakdown';
 
 /** A student's fees: balance across all invoices (arrears included), each invoice, and their discounts. */
 export function StudentAccount({ studentId }: { studentId: string }) {
@@ -21,6 +22,11 @@ export function StudentAccount({ studentId }: { studentId: string }) {
   const given = useQuery({ queryKey: ['student-discounts', studentId], queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/discounts', path)) });
   const discounts = useQuery({ queryKey: ['discounts'], enabled: manageFees, queryFn: async () => unwrap(await api.GET('/api/v1/discounts')) });
   const items = useQuery({ queryKey: ['fee-items'], queryFn: async () => unwrap(await api.GET('/api/v1/fee-items')) });
+  // Under the 'account' key so everything that refreshes the account refreshes this too
+  const breakdown = useQuery({
+    queryKey: ['account', studentId, 'fee-breakdown'],
+    queryFn: async () => unwrap(await api.GET('/api/v1/reports/students/{student_id}/fee-breakdown', path)),
+  });
   const [adding, setAdding] = useState<'opening_balance' | 'charge' | 'exempt' | null>(null);
   const [discountId, setDiscountId] = useState('');
   const refreshDiscounts = () => void queryClient.invalidateQueries({ queryKey: ['student-discounts', studentId] });
@@ -73,6 +79,13 @@ export function StudentAccount({ studentId }: { studentId: string }) {
           <div className="stat-value">{formatKobo(a.paid_kobo)}</div>
         </div>
       </div>
+      {breakdown.data && (
+        <>
+          <h3>{breakdown.data.term_label ? `${breakdown.data.term_label} fees` : 'Fees'}</h3>
+          <FeeTable breakdown={breakdown.data} />
+          <h3>Bills</h3>
+        </>
+      )}
       {a.invoices.length === 0 ? (
         <p className="muted">No invoices yet.</p>
       ) : (

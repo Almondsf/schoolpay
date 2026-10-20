@@ -183,6 +183,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['20 Oct 2026', 'Fee breakdowns everywhere: each fee charged, paid and left, for staff, in the portal and on the payment page'],
   ['20 Oct 2026', 'School admins can now do everything the bursar does, with two-factor sign-in'],
   ['20 Oct 2026', 'Payment provider switchable at any time (Paystack or Bachs), with Bachs checkout and onboarding'],
   ['20 Oct 2026', 'Fee status by pupil: every fee paid, part paid or unpaid, for the school or one class (Excel and PDF)'],

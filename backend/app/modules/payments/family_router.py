@@ -19,6 +19,7 @@ from app.core.tenancy import scope_to_school
 from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
+from app.modules.reports.router import FeeLineOut, breakdown_out
 
 from . import family, family_links
 
@@ -39,6 +40,8 @@ class FamilyChildOut(BaseModel):
     on_plan: bool
     account_number: str | None = Field(description="The child's own account number for transfers")
     bank_name: str | None
+    fees: list[FeeLineOut] = Field(description="This term's fees one by one, in bill order")
+    earlier_left_kobo: int = Field(description="Still owed from earlier terms")
 
 
 class FamilyPageOut(BaseModel):
@@ -102,6 +105,8 @@ def page_out(page: family.FamilyPage) -> FamilyPageOut:
                 on_plan=c.on_plan,
                 account_number=c.account.account_number if c.account else None,
                 bank_name=c.account.bank_name if c.account else None,
+                fees=breakdown_out(c.breakdown).fees,
+                earlier_left_kobo=c.breakdown.earlier_left_kobo,
             )
             for c in page.children
         ],

@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -17,7 +17,7 @@ from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
 from app.modules.payments.models import PaymentMethod
 from app.modules.schools.models import ClassLevel, School
-from app.modules.students.models import StudentStatus
+from app.modules.students.models import Student, StudentStatus
 
 from . import exports, fee_status, service
 from .service import AgingBucket, DebtorFilters, DebtorSort
@@ -274,3 +274,42 @@ def export_fee_status(
     db.commit()
     slug = "all-classes" if class_level_id is None else report.scope.lower().replace(" ", "-")
     return _download(content, format, f"fee-status-{slug}-{service.lagos_today().isoformat()}")
+
+
+class FeeLineOut(BaseModel):
+    name: str
+    billed_kobo: int
+    paid_kobo: int
+    left_kobo: int
+    status: Literal["Paid", "Part paid", "Unpaid"]
+
+
+class FeeBreakdownOut(BaseModel):
+    term_label: str | None = Field(description="The term the fees are for; null when no term is current")
+    fees: list[FeeLineOut] = Field(description="This term's fees in bill order (a bill's payments cover them in order)")
+    earlier_left_kobo: int = Field(description="Still owed from earlier terms, balances brought forward and one-offs")
+    total_left_kobo: int
+
+
+def breakdown_out(breakdown: fee_status.FeeBreakdown) -> FeeBreakdownOut:
+    return FeeBreakdownOut(
+        term_label=breakdown.term_label,
+        fees=[FeeLineOut.model_validate(f, from_attributes=True) for f in breakdown.fees],
+        earlier_left_kobo=breakdown.earlier_left_kobo,
+        total_left_kobo=breakdown.total_left_kobo,
+    )
+
+
+@router.get(
+    "/students/{student_id}/fee-breakdown",
+    response_model=FeeBreakdownOut,
+    summary="A pupil's fees for a term one by one (charged, paid, left), plus earlier debts",
+)
+def student_fee_breakdown(
+    student_id: uuid.UUID,
+    term_id: uuid.UUID | None = Query(default=None, description="Defaults to the current term"),
+    ctx: StaffContext = Depends(require(Capability.FEES_VIEW)),
+    db: Session = Depends(get_db),
+) -> FeeBreakdownOut:
+    get_or_404(db, Student, student_id, label="Student")
+    return breakdown_out(fee_status.fee_breakdowns(db, [student_id], term_id)[student_id])

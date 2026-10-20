@@ -22,6 +22,7 @@ from app.modules.payments.family_router import FamilyCheckoutIn, FamilyCheckoutO
 from app.modules.payments.models import PaymentKind, PaymentMethod
 from app.modules.receipts.pdf import render_receipt
 from app.modules.receipts.service import is_reversed, receipts_for_payments
+from app.modules.reports.router import FeeLineOut, breakdown_out
 
 from . import auth_service, portal
 from .deps import ParentContext, get_parent
@@ -88,6 +89,8 @@ class ChildOut(BaseModel):
     paid_kobo: int
     credit_kobo: int
     pay_in: PayInAccount | None
+    fees: list[FeeLineOut] = Field(description="This term's fees one by one, in bill order")
+    earlier_left_kobo: int = Field(description="Still owed from earlier terms")
 
 
 class HomeOut(BaseModel):
@@ -252,6 +255,8 @@ def _child_out(child: portal.ChildOverview) -> ChildOut:
         pay_in=PayInAccount(account_number=va.account_number, account_name=va.account_name, bank_name=va.bank_name)
         if va
         else None,
+        fees=breakdown_out(child.breakdown).fees,
+        earlier_left_kobo=child.breakdown.earlier_left_kobo,
     )
 
 

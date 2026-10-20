@@ -17,6 +17,7 @@ from app.modules.payments.allocation import credit_by_student
 from app.modules.payments.checkout import checkout_email
 from app.modules.payments.models import VirtualAccount, VirtualAccountStatus
 from app.modules.receipts.models import Receipt
+from app.modules.reports.fee_status import FeeBreakdown, fee_breakdowns
 from app.modules.schools.models import Arm, ClassLevel, School, Term
 from app.modules.students.models import Enrollment, Guardian, GuardianStudent, Student
 
@@ -60,6 +61,7 @@ class ChildOverview:
     summary: AccountSummary
     credit_kobo: int
     virtual_account: VirtualAccount | None
+    breakdown: FeeBreakdown
 
 
 @dataclass(frozen=True)
@@ -111,11 +113,13 @@ def household(session: Session, ctx: ParentContext) -> Household:
         else {}
     )
     summaries, credits = account_summaries(session, ids), credit_by_student(session, ids)
+    breakdowns = fee_breakdowns(session, ids)
     return Household(
         guardian_name=guardian.full_name,
         school_name=school.name,
         children=[
-            ChildOverview(s, classes.get(s.id), summaries[s.id], credits[s.id], accounts.get(s.id)) for s in students
+            ChildOverview(s, classes.get(s.id), summaries[s.id], credits[s.id], accounts.get(s.id), breakdowns[s.id])
+            for s in students
         ],
     )
 

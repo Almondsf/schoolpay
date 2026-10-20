@@ -173,6 +173,8 @@ async def test_home_shows_my_children_with_balances_and_account_numbers(client, 
     assert children["Tolu"]["owed_kobo"] == 155_000 * 100
     assert children["Tolu"]["pay_in"]["account_number"].isdigit()
     assert children["Tolu"]["class_name"] == "JSS 1 A"
+    assert sum(f["left_kobo"] for f in children["Tolu"]["fees"]) == 155_000 * 100  # the fees that make it up
+    assert all(f["status"] == "Unpaid" for f in children["Tolu"]["fees"])
 
 
 async def test_child_account_payments_receipts_and_card_checkout(client, world):
