@@ -20,13 +20,13 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core import outbox
+from app.core.clock import LAGOS
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.email import OutgoingEmail
@@ -48,7 +48,6 @@ from .models import Channel, MessageKind, MessageLog, MessageStatus, MessageTemp
 from .sms import Sms, SmsError, send_sms
 
 logger = logging.getLogger(__name__)
-LAGOS = ZoneInfo("Africa/Lagos")
 DELIVER_TASK = "notifications.deliver"
 MAX_ATTEMPTS = 3
 CALL_KINDS = (MessageKind.CALL_REMINDER, MessageKind.CALL_RECEIPT)

@@ -27,8 +27,10 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.core.clock import LAGOS
+
 from .fee_status import FeeCell, FeeStatusReport, PupilStatus
-from .service import LAGOS, CollectedPayment, Collections, Debtor
+from .service import CollectedPayment, Collections, Debtor
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PDF = "application/pdf"

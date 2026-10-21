@@ -7,12 +7,13 @@ ever see the caller's school.
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import case, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.clock import lagos_today
 from app.core.errors import Conflict, DomainError
 from app.core.repo import get_or_404
 from app.modules.accounts.deps import StaffContext
@@ -74,8 +75,9 @@ def create_session(
     start_date: date,
     end_date: date,
     terms: list[TermDates],
-    make_first_term_current: bool,
+    current_term: int | None = None,
 ) -> AcademicSession:
+    """Create a session with its three terms; `current_term` (1-3) also makes that term the current one."""
     if start_date >= end_date:
         raise DomainError("The session must end after it starts.", field="end_date")
     _check_terms(start_date, end_date, terms)
@@ -100,10 +102,50 @@ def create_session(
         target=academic_session,
         changes={"name": academic_session.name},
     )
-    if make_first_term_current:
-        _make_current(session, ctx, new_terms[0])
+    if current_term is not None:
+        _make_current(session, ctx, new_terms[current_term - 1])
     session.commit()
     return _reload_session(session, academic_session.id)
+
+
+@dataclass(frozen=True)
+class SuggestedSession:
+    name: str
+    start_date: date
+    end_date: date
+    terms: list[TermDates]
+    current_term: int | None  # the term today falls in (or the next one, in a holiday); None if not this year
+
+
+def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
+    first = date(year, month, 1)
+    return first + timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
+
+
+def _last_weekday(year: int, month: int, weekday: int) -> date:
+    last = date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)
+    return last - timedelta(days=(last.weekday() - weekday) % 7)
+
+
+def suggest_session(session: Session, today: date | None = None) -> SuggestedSession:
+    """
+    The usual Nigerian school year, so a school only checks the dates: the session after the
+    latest one it has (or the one running now), September to July, three terms starting on a
+    Monday and ending on a Friday. Schools adjust the dates to their own calendar.
+    """
+    today = today or lagos_today()
+    latest_end = session.scalar(select(func.max(AcademicSession.end_date)))
+    year = latest_end.year if latest_end else (today.year if today.month >= 8 else today.year - 1)
+    monday, friday = 0, 4
+    terms = [
+        TermDates(_nth_weekday(year, 9, monday, 2), _nth_weekday(year, 12, friday, 2)),
+        TermDates(_nth_weekday(year + 1, 1, monday, 2), _nth_weekday(year + 1, 4, friday, 1)),
+        TermDates(_last_weekday(year + 1, 4, monday), _nth_weekday(year + 1, 7, friday, 3)),
+    ]
+    start, end = date(year, 9, 1), date(year + 1, 7, 31)
+    running = start - timedelta(days=45) <= today <= end  # from the August holiday on
+    current = next((n for n, t in enumerate(terms, start=1) if today <= t.end_date), 3) if running else None
+    return SuggestedSession(f"{year}/{year + 1}", start, end, terms, current)
 
 
 def _reload_session(session: Session, session_id: uuid.UUID) -> AcademicSession:

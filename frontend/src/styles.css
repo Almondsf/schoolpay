@@ -2030,3 +2030,46 @@ td a:hover {
   clear: both;
   margin: 6px 0;
 }
+
+/* A session's name and dates, then its three terms, one row each */
+.session-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .session-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+.term-rows {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 8px;
+  padding: 12px 14px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.term-row {
+  display: grid;
+  grid-template-columns: 120px repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: center;
+}
+
+.term-row > strong {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 560px) {
+  .term-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

@@ -64,7 +64,15 @@ class AcademicSessionIn(BaseModel):
     start_date: date
     end_date: date
     terms: list[TermDatesIn] = Field(min_length=3, max_length=3)
-    make_first_term_current: bool = False
+    current_term: int | None = Field(default=None, ge=1, le=3, description="Make this term (1-3) the current one")
+
+
+class SuggestedSessionOut(BaseModel):
+    name: str
+    start_date: date
+    end_date: date
+    terms: list[TermDatesIn]
+    current_term: int | None = Field(description="The term today falls in, to make current; null if not this year")
 
 
 class AcademicSessionUpdateIn(BaseModel):
@@ -152,9 +160,25 @@ def create_session(
         start_date=body.start_date,
         end_date=body.end_date,
         terms=[service.TermDates(t.start_date, t.end_date) for t in body.terms],
-        make_first_term_current=body.make_first_term_current,
+        current_term=body.current_term,
     )
     return AcademicSessionOut.of(created)
+
+
+@router.get(
+    "/academic-sessions/suggested",
+    response_model=SuggestedSessionOut,
+    summary="The next school year with the usual term dates, to check and create",
+)
+def suggested_session(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> SuggestedSessionOut:
+    s = service.suggest_session(db)
+    return SuggestedSessionOut(
+        name=s.name,
+        start_date=s.start_date,
+        end_date=s.end_date,
+        terms=[TermDatesIn(start_date=t.start_date, end_date=t.end_date) for t in s.terms],
+        current_term=s.current_term,
+    )
 
 
 @router.patch("/academic-sessions/{session_id}", response_model=AcademicSessionOut, summary="Rename or re-date")

@@ -30,11 +30,11 @@ import uuid
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.orm import Session
 
+from app.core.clock import LAGOS
 from app.core.config import get_settings
 from app.core.crypto import blind_index
 from app.core.http import RequestMeta
@@ -84,7 +84,6 @@ from app.modules.students.models import (
     StudentStatus,
 )
 
-LAGOS = ZoneInfo("Africa/Lagos")
 BILLED_ON = datetime(2026, 9, 7, 8, 0, tzinfo=LAGOS)
 DUE = date(2026, 9, 30)
 REMINDER_DAYS = [DUE - timedelta(days=7), DUE - timedelta(days=1), DUE + timedelta(days=3), DUE + timedelta(days=14)]

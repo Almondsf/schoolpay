@@ -6,6 +6,7 @@ import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Pager, StatusBadge, fieldError } from '../../lib/ui';
 import { armOptions, useClassLevels, useCurrentTerm, useSessions } from '../hooks';
+import { PrintPayCards } from '../payments/PayCards';
 
 const PAGE = 50;
 type Status = NonNullable<Schemas['StudentListItem']['status']>;
@@ -34,6 +35,7 @@ export function Students() {
   const [status, setStatus] = useState<Status>('active');
   const [offset, setOffset] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const effectiveTerm = termId || current.data?.id || '';
   const students = useQuery({
@@ -80,14 +82,21 @@ export function Students() {
         title="Students"
         subtitle={students.data ? `${students.data.total} ${status} student${students.data.total === 1 ? '' : 's'}` : undefined}
         actions={
-          manage && (
-            <>
-              <Link className="button secondary" to="/console/students/import">
-                Import from spreadsheet
-              </Link>
-              <button onClick={() => setAdding(true)}>Add student</button>
-            </>
-          )
+          <>
+            {can('payments.record') && (
+              <button className="secondary" onClick={() => setPrinting(true)}>
+                Print pay cards
+              </button>
+            )}
+            {manage && (
+              <>
+                <Link className="button secondary" to="/console/students/import">
+                  Import from spreadsheet
+                </Link>
+                <button onClick={() => setAdding(true)}>Add student</button>
+              </>
+            )}
+          </>
         }
       />
       <div className="filters">
@@ -160,6 +169,7 @@ export function Students() {
         </div>
       )}
       {adding && <AddStudent onClose={() => setAdding(false)} />}
+      {printing && <PrintPayCards classId={levelId} onClose={() => setPrinting(false)} />}
     </>
   );
 }

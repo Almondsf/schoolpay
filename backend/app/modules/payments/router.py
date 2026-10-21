@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
@@ -10,18 +10,21 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.core.errors import ERROR_RESPONSES, NotFound
+from app.core.errors import ERROR_RESPONSES, DomainError, NotFound
 from app.core.http import RequestMeta, request_meta
 from app.core.pagination import Page, PageParams, page_params, paginate_rows
 from app.core.ratelimit import get_limiter
 from app.core.repo import get_or_404
 from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
+from app.modules.audit.models import AuditAction
+from app.modules.audit.service import record
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.receipts.service import receipts_for_payments
+from app.modules.schools.models import School
 from app.modules.students.models import Student
 
-from . import accounts, checkout, manual, providers, service, webhooks
+from . import accounts, checkout, manual, paycards, providers, service, webhooks
 from .allocation import credit_by_student
 from .gateways import FakeGateway, GatewayCode, InvalidSignature, enabled_gateways
 from .models import (
@@ -321,6 +324,54 @@ def get_virtual_account(
         select(VirtualAccount).where(
             VirtualAccount.student_id == student_id, VirtualAccount.status == VirtualAccountStatus.ACTIVE
         )
+    )
+
+
+PDF_ONLY: dict[int | str, dict[str, Any]] = {200: {"content": {"application/pdf": {}}, "description": "A PDF to print"}}
+
+
+@router.get(
+    "/students/{student_id}/pay-card",
+    response_class=Response,
+    responses=PDF_ONLY,
+    summary="A printable pay card for one pupil: account number and a QR code to the parent's payment page",
+)
+def student_pay_card(student_id: uuid.UUID, ctx: StaffContext = RECORD, db: Session = Depends(get_db)) -> Response:
+    student = get_or_404(db, Student, student_id, label="Student")
+    return _pay_cards(db, ctx, f"pay-card-{student.admission_number}", student_id=student_id)
+
+
+@router.get(
+    "/pay-cards",
+    response_class=Response,
+    responses=PDF_ONLY,
+    summary="Printable pay cards for every current pupil in a class, four to an A4 page",
+)
+def class_pay_cards(class_level_id: uuid.UUID, ctx: StaffContext = RECORD, db: Session = Depends(get_db)) -> Response:
+    return _pay_cards(db, ctx, "pay-cards", class_level_id=class_level_id)
+
+
+def _pay_cards(db: Session, ctx: StaffContext, filename: str, **scope: uuid.UUID) -> Response:
+    get_limiter().hit("pay-cards:school", "30/hour", str(ctx.school_id))
+    cards = paycards.pay_cards(db, **scope)
+    if not cards:
+        raise DomainError("There are no current pupils in that class.", field="class_level_id")
+    content = paycards.render_pay_cards(get_or_404(db, School, ctx.school_id, label="School"), cards)
+    # The cards carry parents' payment links: who printed them is recorded
+    record(
+        db,
+        AuditAction.REPORT_EXPORTED,
+        school_id=ctx.school_id,
+        actor=ctx.actor,
+        meta=ctx.meta,
+        changes={"report": "pay_cards", "cards": len(cards), **{k: str(v) for k, v in scope.items()}},
+    )
+    db.commit()
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in filename)
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe}.pdf"', "Cache-Control": "no-store"},
     )
 
 

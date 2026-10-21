@@ -13,11 +13,11 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.core.clock import LAGOS
 from app.core.errors import NotFound
 from app.core.money import format_naira
 from app.modules.accounts.deps import Principal
@@ -32,8 +32,6 @@ from app.modules.students.models import Enrollment, Student, StudentStatus
 
 from . import billing
 from .models import Plan, SubscriptionInvoice
-
-LAGOS = ZoneInfo("Africa/Lagos")
 
 
 def _pupils_by_school() -> Any:

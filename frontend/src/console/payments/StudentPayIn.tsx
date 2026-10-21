@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { formatDate, formatKobo, parseNairaToKobo } from '../../lib/format';
 import { METHOD_LABELS } from '../Dashboard';
 import { ErrorAlert, Field, Modal } from '../../lib/ui';
+import { PayCardButton } from './PayCards';
 import { ReceiptLink } from './ReceiptLink';
 
 /** How a student's fees can be paid: their own account number, or a card payment link for the parent. */
@@ -21,9 +22,12 @@ export function StudentPayIn({ studentId }: { studentId: string }) {
       <div className="row between">
         <h2>Paying in</h2>
         {can('payments.record') && (
-          <button className="secondary small" onClick={() => setLinking(true)}>
-            Card payment link
-          </button>
+          <div className="row">
+            <PayCardButton studentId={studentId} />
+            <button className="secondary small" onClick={() => setLinking(true)}>
+              Card payment link
+            </button>
+          </div>
         )}
       </div>
       {account.data ? (

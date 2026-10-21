@@ -16,12 +16,12 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import Date, Select, and_, case, cast, func, literal, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.selectable import CTE, SelectBase
 
+from app.core.clock import lagos_today
 from app.core.errors import Conflict, DomainError
 from app.core.pagination import PageParams, paginate_rows
 from app.core.repo import get_or_404
@@ -42,7 +42,6 @@ from app.modules.receipts.models import Receipt
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, Term
 from app.modules.students.models import Enrollment, Guardian, GuardianStudent, Student, StudentStatus
 
-LAGOS = ZoneInfo("Africa/Lagos")
 MAX_RANGE_DAYS = 366
 EXPORT_ROW_LIMIT = 5000
 
@@ -53,10 +52,6 @@ class AgingBucket(StrEnum):
     DAYS_31_60 = "31_60"
     DAYS_61_90 = "61_90"
     OVER_90 = "over_90"
-
-
-def lagos_today() -> date:
-    return datetime.now(LAGOS).date()
 
 
 def _lagos_date(column: Any) -> Any:

@@ -61,6 +61,32 @@ describe('students', () => {
     expect(new URL(listCall.url).searchParams.get('term_id')).toBe('t1');
   });
 
+  it("prints a class's pay cards, starting from the class being viewed", async () => {
+    const bursar = me({ capabilities: ['school.view', 'students.view', 'payments.record'] });
+    const calls = mockApi({
+      ...base,
+      'POST /api/v1/auth/refresh': () => json(signedIn(bursar)),
+      'GET /api/v1/students': () => json({ items: [], total: 0, limit: 50, offset: 0 }),
+      'GET /api/v1/pay-cards': () => new Response('pdf', { headers: { 'Content-Type': 'application/pdf' } }),
+    });
+    const saved: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    renderAt('/console/students?class=l1');
+    expect(screen.queryByRole('button', { name: 'Add student' })).not.toBeInTheDocument(); // can't manage pupils
+    await userEvent.click(await screen.findByRole('button', { name: 'Print pay cards' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('combobox')).toHaveValue('l1');
+    await userEvent.click(within(dialog).getByRole('button', { name: /Download cards/ }));
+    await vi.waitFor(() => expect(saved).toEqual(['pay-cards-jss-1.pdf']));
+    const asked = new URL(calls.find((c) => c.url.includes('/api/v1/pay-cards'))!.url);
+    expect(asked.searchParams.get('class_level_id')).toBe('l1');
+  });
+
   it('opens filtered from the school overview links', async () => {
     const calls = mockApi({ ...base, 'GET /api/v1/students': () => json({ items: [], total: 0, limit: 50, offset: 0 }) });
     renderAt('/console/students?show=parent&class=l1');

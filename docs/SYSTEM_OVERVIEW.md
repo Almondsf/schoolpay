@@ -217,6 +217,16 @@ overlap. Exactly one term per school is **current** (a partial unique index
 enforces it). The console defaults to it, new students are enrolled into it,
 and later chunks bill it.
 
+Schools don't work out term dates from scratch: `GET /academic-sessions/suggested`
+(`suggest_session`) proposes the session after the latest one the school has (or
+the one running now, by the Lagos date from `app/core/clock.py`), September to
+July, with the usual term dates: the second Monday of September to the second
+Friday of December, the second Monday of January to the first Friday of April,
+and the last Monday of April to the third Friday of July. It also says which term
+today falls in (or the next to start). The Calendar page shows it ready to create
+when the school has no session, and "New session" opens it filled in; creating
+takes `current_term` (1-3) to make that term current in the same transaction.
+
 **Classes.** A `ClassLevel` ("JSS 1", "Primary 4") has one or more `Arm`s
 ("A", "Gold"). `rank` orders levels for promotion and can be changed
 (`PUT /class-levels/order`). Levels and arms are retired (`is_active`), never
@@ -350,7 +360,8 @@ invoices take about 0.4 s.
 - **Catching bills up with the fee grid** (`POST /terms/{id}/bills/sync`, dry run first;
   `charges.sync_bills`). A fee set in the grid after the term's bills went out (WAEC for
   SSS 3) isn't on those bills. The Fees page checks for the gap whenever the grid loads or
-  is saved and offers to add the missing fees, skipping exempt pupils and optional fees a
+  is saved: right after a save it asks in a dialog ("Add to the bills already sent?"), and
+  otherwise a notice stays above the grid. Adding skips exempt pupils and optional fees a
   pupil hasn't taken. Fees already on a bill keep their amount. Credit paid ahead covers
   the new lines.
 - **Class charges** (`POST /terms/{id}/class-charges`, with a dry run that
@@ -478,6 +489,19 @@ carries the same link until it expires (`FAMILY_LINK_DAYS`, default 120; a new
 one is made on the next message). Staff can replace it
 (`POST /guardians/{id}/pay-link/replace`, audited), and erasing the parent ends
 it. Unknown, expired and replaced links get the same answer.
+
+**Pay cards** (`paycards.py`) are for parents who don't use apps: a printable card
+per child with the school, the child's name and class, their own account number in
+large type (bank and account name, "pay any amount, any time, from your bank app, a
+POS agent or any bank"), a QR code to the main parent's family link with the date
+it stops working, and the school's phone number. `GET /students/{id}/pay-card` makes
+one; `GET /pay-cards?class_level_id=` makes every current pupil in a class, four to
+an A4 page with cut lines (`payments.record`, rate limited, audited as a
+`reports.exported` with `report: "pay_cards"`, `no-store`). Links come from
+`live_links`, which makes or reuses every parent's link in three statements, so a
+class costs the same few queries as one pupil. Pupils without an account number get
+a card that points to the code instead. Schools print new cards each term, since
+the code expires with the link.
 
 Paying online from the link (`POST /public/pay/{token}/checkout`), or signed in
 (`GET /parent/family`, `POST /parent/family/checkout`, through the parent's own
@@ -973,7 +997,7 @@ production.
 | School | `GET/PATCH /school` |
 | Audit | `GET /audit` |
 | Platform | `GET/POST /platform/schools`; `POST /platform/schools/{id}/suspend`, `/reactivate`; `GET /platform/audit` |
-| Calendar | `GET/POST /academic-sessions`; `PATCH /academic-sessions/{id}`; `GET /terms/current`; `PATCH /terms/{id}`; `POST /terms/{id}/make-current` |
+| Calendar | `GET/POST /academic-sessions`; `GET /academic-sessions/suggested`; `PATCH /academic-sessions/{id}`; `GET /terms/current`; `PATCH /terms/{id}`; `POST /terms/{id}/make-current` |
 | Classes | `GET/POST /class-levels`; `GET /class-levels/standard`; `POST /class-levels/batch`; `PUT /class-levels/order`; `PATCH /class-levels/{id}`; `POST /class-levels/{id}/arms`; `PATCH /arms/{id}` |
 | Students | `GET /school/roll`; `GET/POST /students` (`missing=`, `unplaced=`); `GET/PATCH /students/{id}`; `PUT /students/{id}/class`; `POST /students/{id}/withdraw`, `/reinstate` |
 | Guardians | `POST /students/{id}/guardians`; `DELETE /students/{id}/guardians/{gid}`; `POST /students/{id}/guardians/{gid}/primary`; `GET /guardians`; `PATCH /guardians/{id}` |
@@ -982,7 +1006,7 @@ production.
 | Fee setup | `GET/POST /fee-items`; `PATCH /fee-items/{id}`; `GET/PUT /terms/{id}/fee-schedule`; `POST /terms/{id}/fee-schedule/copy`; `GET/PUT /terms/{id}/optional-fees` |
 | Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
 | Payment setup | `GET/PUT /payment-settings`; `GET /payment-settings/banks`; `POST /virtual-accounts/provision`; `GET /students/{id}/virtual-account` |
-| Payments | `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
+| Payments | `GET /students/{id}/pay-card`; `GET /pay-cards`; `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
 | Payment providers | `GET /platform/providers`, `PUT /platform/providers/payment` (platform admin); `POST /payment-settings/bachs/onboarding`; webhook `POST /webhooks/bachs` |
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |

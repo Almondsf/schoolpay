@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.clock import lagos_today
 from app.core.db import get_db
 from app.core.errors import ERROR_RESPONSES
 from app.core.pagination import PageParams, page_params
@@ -129,7 +130,7 @@ def date_range(
     start: date | None = Query(default=None, description="Lagos date; default: 30 days ago"),
     end: date | None = Query(default=None, description="Lagos date, inclusive; default: today"),
 ) -> tuple[date, date]:
-    end = end or service.lagos_today()
+    end = end or lagos_today()
     return start or end - timedelta(days=29), end
 
 
@@ -210,7 +211,7 @@ def export_debtors(
         changes={"report": "debtors", "format": format, "rows": len(rows), "scope": scope},
     )
     db.commit()
-    return _download(content, format, f"debtors-{service.lagos_today().isoformat()}")
+    return _download(content, format, f"debtors-{lagos_today().isoformat()}")
 
 
 @router.get(
@@ -273,7 +274,7 @@ def export_fee_status(
     )
     db.commit()
     slug = "all-classes" if class_level_id is None else report.scope.lower().replace(" ", "-")
-    return _download(content, format, f"fee-status-{slug}-{service.lagos_today().isoformat()}")
+    return _download(content, format, f"fee-status-{slug}-{lagos_today().isoformat()}")
 
 
 class FeeLineOut(BaseModel):

@@ -94,6 +94,7 @@ function Schedule() {
   });
   const invalid = changed.filter((k) => cells[k]?.amount && parseNairaToKobo(cells[k]!.amount) === null);
 
+  const [ask, setAsk] = useState(false); // after saving, offer to add new fees to bills already sent
   const save = useMutation({
     mutationFn: async () => {
       const entries = changed.map((k) => {
@@ -107,6 +108,7 @@ function Schedule() {
     onSuccess: (data) => {
       queryClient.setQueryData(['fee-schedule', term], data);
       void queryClient.invalidateQueries({ queryKey: ['bill-sync', term] });
+      setAsk(true);
     },
   });
   // Fees on the list that the term's bills (already sent) don't have yet
@@ -121,6 +123,7 @@ function Schedule() {
     mutationFn: async () =>
       unwrap(await api.POST('/api/v1/terms/{term_id}/bills/sync', { params: { path: { term_id: term } }, body: { dry_run: false } })),
     onSuccess: () => {
+      setAsk(false);
       void queryClient.invalidateQueries({ queryKey: ['bill-sync', term] });
       void queryClient.invalidateQueries({ queryKey: ['account'] });
       void queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -181,6 +184,29 @@ function Schedule() {
           </button>{' '}
           <span className="hint">Pupils exempted from a fee, and optional fees a pupil hasn’t taken, are left out.</span>
         </section>
+      )}
+      {ask && !missing.isFetching && missing.data && missing.data.bills_changed > 0 && (
+        <Modal title="Add to the bills already sent?" onClose={() => setAsk(false)}>
+          <p>This term's bills have already gone out, so what you just saved isn't on them yet:</p>
+          <ul>
+            {missing.data.fees.map((f) => (
+              <li key={f.item_name}>
+                <strong>{f.item_name}</strong> for {f.class_names.join(', ')}: {f.bills} {f.bills === 1 ? 'pupil' : 'pupils'},{' '}
+                {formatKobo(f.total_kobo)}
+              </li>
+            ))}
+          </ul>
+          <p className="hint">Pupils exempted from a fee, and optional fees a pupil hasn't taken, are left out. Parents see the new amount on their bill.</p>
+          <ErrorAlert error={addToBills.error} />
+          <div className="row end">
+            <button type="button" className="secondary" onClick={() => setAsk(false)}>
+              Not now
+            </button>
+            <button onClick={() => addToBills.mutate()} disabled={addToBills.isPending}>
+              {addToBills.isPending ? 'Adding…' : `Add to ${missing.data.bills_changed} ${missing.data.bills_changed === 1 ? 'bill' : 'bills'}`}
+            </button>
+          </div>
+        </Modal>
       )}
       {addToBills.data && (
         <Notice>

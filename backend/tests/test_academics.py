@@ -38,7 +38,7 @@ def setup(db):
 
 async def test_create_session_with_terms_and_make_current(client, setup):
     response = await client.post(
-        "/api/v1/academic-sessions", headers=setup["admin"], json={**SESSION_BODY, "make_first_term_current": True}
+        "/api/v1/academic-sessions", headers=setup["admin"], json={**SESSION_BODY, "current_term": 1}
     )
     assert response.status_code == 201
     body = response.json()
@@ -246,3 +246,46 @@ def test_a_fixed_number_of_statements(db, connection, setup):
             db, ctx, [(name, ["A", "B"]) for name in STANDARD if name not in ("Primary 1", "Primary 3")]
         )
     assert many.count == few.count
+
+
+@pytest.mark.parametrize(
+    ("today", "name", "current"),
+    [
+        ("2026-10-21", "2026/2027", 1),  # mid first term
+        ("2026-08-10", "2026/2027", 1),  # the long holiday before the year starts
+        ("2027-01-02", "2026/2027", 2),  # Christmas holiday: the next term
+        ("2027-05-03", "2026/2027", 3),
+        ("2027-07-30", "2026/2027", 3),  # after the last term, before the year ends
+    ],
+)
+def test_suggested_school_year(db, setup, today, name, current):
+    from datetime import date
+
+    from app.core.tenancy import scope_to_school
+    from app.modules.schools.academics_service import suggest_session
+
+    scope_to_school(db, setup["a"].id)
+    s = suggest_session(db, date.fromisoformat(today))
+    assert (s.name, s.current_term) == (name, current)
+    assert (s.start_date, s.end_date) == (date(2026, 9, 1), date(2027, 7, 31))
+    assert [(t.start_date.isoformat(), t.end_date.isoformat()) for t in s.terms] == [
+        ("2026-09-14", "2026-12-11"),  # 2nd Monday of September to 2nd Friday of December
+        ("2027-01-11", "2027-04-02"),
+        ("2027-04-26", "2027-07-16"),
+    ]
+    assert all(t.start_date.weekday() == 0 and t.end_date.weekday() == 4 for t in s.terms)
+
+
+async def test_set_up_the_school_year_in_one_click(client, setup):
+    h = setup["admin"]
+    suggested = (await client.get("/api/v1/academic-sessions/suggested", headers=h)).json()
+    body = {k: suggested[k] for k in ("name", "start_date", "end_date", "terms")}
+    created = await client.post("/api/v1/academic-sessions", headers=h, json={**body, "current_term": 2})
+    assert created.status_code == 201, created.text
+    assert [t["is_current"] for t in created.json()["terms"]] == [False, True, False]
+    # Then the next one is offered, not the same again, and nothing would be made current
+    following = (await client.get("/api/v1/academic-sessions/suggested", headers=h)).json()
+    start = int(suggested["name"][:4])
+    assert following["name"] == f"{start + 1}/{start + 2}" and following["current_term"] is None
+    bad = await client.post("/api/v1/academic-sessions", headers=h, json={**following, "current_term": 4})
+    assert bad.status_code == 422

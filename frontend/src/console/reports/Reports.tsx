@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
-import { filenameFrom, saveBlob } from '../../lib/download';
+import { errorMessage, filenameFrom, saveBlob } from '../../lib/download';
 import { formatDate, formatKobo, parseNairaToKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Loading, PageHeader, Pager } from '../../lib/ui';
 import { METHOD_LABELS } from '../Dashboard';
@@ -380,10 +380,4 @@ function FeeStatus() {
       <p className="hint">Money paid for particular fees shows against those fees; the rest covers a bill’s fees in the order they appear on it.</p>
     </section>
   );
-}
-
-/** The API's error message from a failed download (the body is JSON even though we asked for a file). */
-function errorMessage(error: unknown): string | null {
-  const message = (error as { error?: { message?: unknown } } | undefined)?.error?.message;
-  return typeof message === 'string' ? message : null;
 }

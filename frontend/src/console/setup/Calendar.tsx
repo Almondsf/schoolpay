@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 
-import { api, unwrap } from '../../api/client';
+import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate } from '../../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, Notice, PageHeader, fieldError } from '../../lib/ui';
@@ -31,7 +31,7 @@ export function Calendar() {
       <PageHeader
         title="School calendar"
         subtitle="Sessions run September to July in three terms. Fees are billed per term."
-        actions={manage && <button onClick={() => setCreating(true)}>New session</button>}
+        actions={manage && (sessions.data?.length ?? 0) > 0 && <button onClick={() => setCreating(true)}>New session</button>}
       />
       <ErrorAlert error={makeCurrent.error} />
       {sessions.isPending ? (
@@ -39,7 +39,17 @@ export function Calendar() {
       ) : sessions.isError ? (
         <ErrorAlert error={sessions.error} />
       ) : sessions.data.length === 0 ? (
-        <Empty>No sessions yet. Create the current session to start adding students.</Empty>
+        manage ? (
+          <section className="card">
+            <h2>Set up your school year</h2>
+            <p className="muted">
+              We've filled in this session with the usual term dates. Change any date to match your school's calendar, then create it.
+            </p>
+            <SessionForm hasCurrent={false} />
+          </section>
+        ) : (
+          <Empty>No sessions yet. The school admin or proprietor sets up the school year here.</Empty>
+        )
       ) : (
         sessions.data.map((session) => (
           <div className="card section" key={session.id}>
@@ -88,32 +98,56 @@ export function Calendar() {
   );
 }
 
-function suggestedSession(): { name: string; start: number } {
-  const now = new Date();
-  const start = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1; // from August, it's the new year
-  return { name: `${start}/${start + 1}`, start };
-}
+const TERM_NAMES = ['first', 'second', 'third'];
 
 function NewSession({ onClose, hasCurrent }: { onClose: () => void; hasCurrent: boolean }) {
-  const queryClient = useQueryClient();
-  const { name, start } = suggestedSession();
-  const [form, setForm] = useState({
-    name,
-    start_date: `${start}-09-01`,
-    end_date: `${start + 1}-07-31`,
-    terms: [
-      { start_date: `${start}-09-08`, end_date: `${start}-12-12` },
-      { start_date: `${start + 1}-01-05`, end_date: `${start + 1}-04-02` },
-      { start_date: `${start + 1}-04-20`, end_date: `${start + 1}-07-24` },
-    ],
-    make_first_term_current: !hasCurrent,
+  return (
+    <Modal title="New session" onClose={onClose}>
+      <SessionForm hasCurrent={hasCurrent} onDone={onClose} onCancel={onClose} />
+    </Modal>
+  );
+}
+
+/** A session and its three terms, filled in with the usual dates for the next school year (from the server). */
+function SessionForm({ hasCurrent, onDone, onCancel }: { hasCurrent: boolean; onDone?: () => void; onCancel?: () => void }) {
+  const suggested = useQuery({
+    queryKey: ['academic-sessions', 'suggested'],
+    queryFn: async () => unwrap(await api.GET('/api/v1/academic-sessions/suggested')),
   });
+  if (suggested.isPending) return <Loading />;
+  if (suggested.isError) return <ErrorAlert error={suggested.error} />;
+  return <SessionFields suggested={suggested.data} hasCurrent={hasCurrent} onDone={onDone} onCancel={onCancel} />;
+}
+
+function SessionFields({
+  suggested,
+  hasCurrent,
+  onDone,
+  onCancel,
+}: {
+  suggested: Schemas['SuggestedSessionOut'];
+  hasCurrent: boolean;
+  onDone?: () => void;
+  onCancel?: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const currentTerm = suggested.current_term ?? 1;
+  const [form, setForm] = useState({
+    name: suggested.name,
+    start_date: suggested.start_date,
+    end_date: suggested.end_date,
+    terms: suggested.terms,
+  });
+  // A school with no current term needs one; otherwise only when the new session is the one running now
+  const [makeCurrent, setMakeCurrent] = useState(!hasCurrent || suggested.current_term !== null);
   const create = useMutation({
-    mutationFn: async () => unwrap(await api.POST('/api/v1/academic-sessions', { body: form })),
+    mutationFn: async () =>
+      unwrap(await api.POST('/api/v1/academic-sessions', { body: { ...form, current_term: makeCurrent ? currentTerm : null } })),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['academic-sessions'] });
       void queryClient.invalidateQueries({ queryKey: ['current-term'] });
-      onClose();
+      void queryClient.invalidateQueries({ queryKey: ['onboarding'] });
+      onDone?.();
     },
   });
   const setTerm = (index: number, key: 'start_date' | 'end_date', value: string) =>
@@ -125,23 +159,24 @@ function NewSession({ onClose, hasCurrent }: { onClose: () => void; hasCurrent: 
   }
 
   return (
-    <Modal title="New session" onClose={onClose}>
-      <form onSubmit={submit}>
-        <ErrorAlert error={create.error} />
-        <Field label="Name" hint="Like 2026/2027" error={fieldError(create.error, 'name')}>
+    <form onSubmit={submit}>
+      <ErrorAlert error={create.error} />
+      <div className="session-row">
+        <Field label="Session" hint="Like 2026/2027" error={fieldError(create.error, 'name')}>
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} pattern="\d{4}/\d{4}" required />
         </Field>
-        <div className="grid-2 tight">
-          <Field label="Session starts">
-            <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} required />
-          </Field>
-          <Field label="Session ends">
-            <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
-          </Field>
-        </div>
+        <Field label="Starts">
+          <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} required />
+        </Field>
+        <Field label="Ends">
+          <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
+        </Field>
+      </div>
+      <div className="term-rows">
         {form.terms.map((term, i) => (
-          <div className="grid-2 tight" key={i}>
-            <Field label={`${['First', 'Second', 'Third'][i]} term starts`}>
+          <div className="term-row" key={i}>
+            <strong>{['First', 'Second', 'Third'][i]} term</strong>
+            <Field label="Starts">
               <input type="date" value={term.start_date} onChange={(e) => setTerm(i, 'start_date', e.target.value)} required />
             </Field>
             <Field label="Ends">
@@ -149,24 +184,25 @@ function NewSession({ onClose, hasCurrent }: { onClose: () => void; hasCurrent: 
             </Field>
           </div>
         ))}
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={form.make_first_term_current}
-            onChange={(e) => setForm({ ...form, make_first_term_current: e.target.checked })}
-          />
-          Make the first term the current term
-        </label>
-        <div className="row end">
-          <button type="button" className="secondary" onClick={onClose}>
+      </div>
+      <label className="checkbox">
+        <input type="checkbox" checked={makeCurrent} onChange={(e) => setMakeCurrent(e.target.checked)} />
+        <span>
+          Make the {TERM_NAMES[currentTerm - 1]} term the current term
+          {suggested.current_term !== null && <span className="muted"> (today falls in it, or it's the next to start)</span>}
+        </span>
+      </label>
+      <div className="row end">
+        {onCancel && (
+          <button type="button" className="secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button type="submit" disabled={create.isPending}>
-            Create session
-          </button>
-        </div>
-      </form>
-    </Modal>
+        )}
+        <button type="submit" disabled={create.isPending}>
+          Create {form.name || 'session'}
+        </button>
+      </div>
+    </form>
   );
 }
 

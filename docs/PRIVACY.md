@@ -54,6 +54,13 @@ class, what's owed and the account number, nothing else (no surnames, no
 admission numbers, no parent details). It expires after about a term, the school
 can replace it at once, and erasing the parent ends it.
 
+## Pay cards
+Schools can print a card per child to send home: the school, the child's full name,
+class and admission number, the child's account number, and a code that opens the
+family payment page above. It carries no parent details. The code stops working when
+the link expires (the date is printed on the card), so schools print new cards each
+term.
+
 ## Messages to parents
 Receipts, bill notices and reminders go to the child's main parent only. Each
 message's text is kept in the school's message log so staff can see what was

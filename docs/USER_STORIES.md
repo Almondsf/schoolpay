@@ -17,12 +17,13 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## Bursar
 - ✅ When taking cash or a teller, note which fees it’s for, so it goes to those fees (even if older debts are owed).
-- ✅ Add a fee to a class in the fee grid after the bills have gone out, and add it to those pupils’ bills with one click (exempt pupils and optional fees left out).
+- ✅ Add a fee to a class in the fee grid after the bills have gone out, and be asked straight away whether to add it to those pupils’ bills (one click; exempt pupils and optional fees left out).
 - ✅ See each pupil’s fees for the term one by one (charged, paid, left) on the pupil’s page, plus earlier debts.
 - ✅ (Proprietor) Set the school up on Bachs through Bachs’ own onboarding, beside Paystack.
 - ✅ Download every pupil’s fees for a term, for the whole school or one class, each fee marked paid, part paid or unpaid with what was paid and what’s left. Each class shows only its own fees: a PDF with a page per class to print, or Excel with a sheet per class.
 - ✅ Switch on phone calls for parents who prefer them, with a cap per bill, and mark those parents (and their language) on each pupil's page.
 - ✅ Copy a parent's family payment link to send by hand, or replace it if it went to the wrong person.
+- ✅ Print pay cards for a class (four to a page) or one pupil: the child's account number in large type and a code the parent scans to see what's owed and pay, for parents who don't use apps.
 - ✅ Sign in safely with a password and a code from my phone.
 - ✅ Set what each class pays per term in one grid, copy last term's fees, and mark fees like the bus as optional.
 - ✅ Set up discounts: automatic sibling discounts, and scholarships or staff-child discounts I give to chosen students.
@@ -53,6 +54,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ See the school at a glance on the dashboard: pupils on roll, who joined or left this term, pupils per class and arm, and which pupils still need a class, a parent, consent or an account number (each a link to those pupils).
 - ✅ Keep the school's profile (name, address, phone, email) up to date.
 - ✅ Set up the session and its three terms, and say which term is current.
+- ✅ Get the school year filled in with the usual term dates (and today's term made current), check the dates and create it in one click; the next session is filled in the same way.
 - ✅ Set up classes and arms in promotion order, and retire ones no longer used.
 - ✅ Set up all classes in one go from the usual list (Creche to SSS 3, all ticked): untick what the school doesn't run, add its own, choose the arms; later, add any missing ones and they slot into the right place.
 - ✅ Load the student list from the school's existing spreadsheet (Excel or CSV), see every problem by row number before saving, and re-import safely.

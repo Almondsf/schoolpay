@@ -36,6 +36,8 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 21 Oct | Fee status download per class: each class lists only its own fees, part-paid fees show paid and left, the PDF has a page per class | `reports/exports.py` (`fee_status_pdf`) |
 | 21 Oct | **Redesign**: design tokens + Plus Jakarta Sans + lucide icons, a fixed sidebar (Setup always open), a one-screen dashboard with a tabbed panel, the pupil page as a profile header with tabs; shared `Tabs`, `Stat`, `Menu`, `BackLink` in `lib/ui.tsx` | `frontend/src/styles.css`, `console/ConsoleApp.tsx` |
 | 21 Oct | **Classes from the usual list**: Creche to SSS 3 ticked for a new school, untick/add own, one batch; missing ones slot into the promotion order later | `schools/academics_service.py` (`STANDARD_CLASSES`, `add_class_levels`), `console/setup/ClassSetup.tsx` |
+| 21 Oct | **School year filled in** (usual Nigerian term dates from the Lagos date, today's term made current) | `schools/academics_service.py` (`suggest_session`), `console/setup/Calendar.tsx` |
+| 21 Oct | **Printable pay cards** (one pupil or a class, four to an A4 page: account number + QR to the family link); `live_links` batches parents' links; Lagos time in one place (`core/clock.py`) | `payments/paycards.py`, `console/payments/PayCards.tsx` |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:
@@ -95,9 +97,8 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in
    (`ConsentMethod.PORTAL` already exists).
 3. **The "later" list in PLAN.md** (step 5): only when the owner says so.
-4. Ideas the owner liked but hasn't scheduled, from the low-literacy discussion: a **printable pay card
-   per child** (big account number, bank, QR to the family link, "show this to any POS agent"), and a
-   short "number-first" text style.
+4. From the low-literacy discussion, still open: a short "number-first" text style for messages
+   (the printable pay card is done).
 5. **Comment cleanup**: the owner asked to remove unnecessary comments and trim long docstrings
    (choice: "noise + trim docstrings"), then said "abort" after section dividers were removed. That
    pass is saved in `git stash` ("comment cleanup pass 1 … aborted 2026-10-19"); it predates a lot of

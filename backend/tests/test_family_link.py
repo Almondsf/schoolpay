@@ -5,11 +5,11 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import func, select, update
 
+from app.core.clock import lagos_today
 from app.core.config import get_settings
 from app.core.tenancy import scope_to_school
 from app.modules.accounts.models import Role
 from app.modules.audit.models import AuditLog
-from app.modules.fees.plans import lagos_today
 from app.modules.notifications import whatsapp
 from app.modules.payments.gateways import FakeGateway
 from app.modules.payments.models import FamilyPayLink, Payment

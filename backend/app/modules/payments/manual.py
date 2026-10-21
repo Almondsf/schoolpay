@@ -9,11 +9,11 @@ also a database check constraint.
 
 import uuid
 from datetime import UTC, date, datetime, time
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
+from app.core.clock import LAGOS
 from app.core.errors import Conflict, DomainError, PermissionDenied
 from app.core.repo import get_or_404
 from app.modules.accounts.deps import StaffContext
@@ -25,8 +25,6 @@ from app.modules.students.models import Student
 from .earmarks import Earmark, choose
 from .models import MANUAL_METHODS, ManualPayment, ManualPaymentStatus, PaymentMethod
 from .service import NewPayment, record_payment
-
-LAGOS = ZoneInfo("Africa/Lagos")
 
 
 def record_manual(

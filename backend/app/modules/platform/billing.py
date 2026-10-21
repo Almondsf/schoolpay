@@ -19,13 +19,13 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import Select, and_, case, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Subquery
 
 from app.core import outbox
+from app.core.clock import LAGOS
 from app.core.config import get_settings
 from app.core.errors import Conflict, DomainError, NotFound
 from app.core.money import format_naira
@@ -38,7 +38,6 @@ from app.modules.students.models import Enrollment, Student, StudentStatus
 
 from .models import Plan, SubscriptionInvoice, SubscriptionLine, SubscriptionLineKind, SubscriptionPayment
 
-LAGOS = ZoneInfo("Africa/Lagos")
 SEQUENCE = "subscription_invoice"
 TERM_NAMES = ("First", "Second", "Third")
 EMAIL_TASK = "platform.send_subscription_invoice"

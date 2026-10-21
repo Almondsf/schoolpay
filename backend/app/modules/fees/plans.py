@@ -19,12 +19,12 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from itertools import pairwise
 from typing import Literal
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import case, func, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.selectable import CTE
 
+from app.core.clock import lagos_today
 from app.core.errors import Conflict, DomainError
 from app.core.money import format_naira
 from app.core.repo import get_or_404
@@ -35,13 +35,8 @@ from app.modules.audit.service import record
 from .ledger import paid_subquery
 from .models import Invoice, PaymentPlan, PlanInstalment
 
-LAGOS = ZoneInfo("Africa/Lagos")
 MIN_INSTALMENTS, MAX_INSTALMENTS = 2, 12
 InstalmentStatus = Literal["paid", "part_paid", "overdue", "due_today", "upcoming"]
-
-
-def lagos_today() -> date:
-    return datetime.now(LAGOS).date()
 
 
 # --- Views -------------------------------------------------------------------------------------------
