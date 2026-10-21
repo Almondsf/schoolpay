@@ -2001,3 +2001,32 @@ td a:hover {
   flex-wrap: wrap;
   margin-top: 6px;
 }
+
+/* Setting up classes from the usual list */
+.class-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin: 8px 0 20px;
+}
+
+.class-group {
+  padding: 12px 14px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.class-group legend {
+  width: 100%;
+  float: left;
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.class-group .checkbox {
+  clear: both;
+  margin: 6px 0;
+}

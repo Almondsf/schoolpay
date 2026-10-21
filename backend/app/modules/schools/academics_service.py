@@ -242,6 +242,88 @@ def create_class_level(session: Session, ctx: StaffContext, *, name: str, arms: 
     return _reload_level(session, level.id)
 
 
+# The classes most Nigerian private schools run, youngest first. New schools start from this list
+# (all ticked) and untick what they don't have, instead of typing every class (owner, 2026-10-21).
+STANDARD_CLASSES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Preparatory", ("Creche", "Pre-Nursery", "Nursery 1", "Nursery 2", "Nursery 3")),
+    ("Primary", tuple(f"Primary {n}" for n in range(1, 7))),
+    ("Junior secondary", ("JSS 1", "JSS 2", "JSS 3")),
+    ("Senior secondary", ("SSS 1", "SSS 2", "SSS 3")),
+)
+_STANDARD_POSITION = {
+    name.lower(): position for position, name in enumerate(name for _, names in STANDARD_CLASSES for name in names)
+}
+
+
+@dataclass(frozen=True)
+class StandardClass:
+    group: str
+    name: str
+    exists: bool
+
+
+def standard_classes(session: Session) -> list[StandardClass]:
+    """The standard list, marking the classes this school already has (by name, ignoring case)."""
+    have = {name.lower() for name in session.scalars(select(ClassLevel.name))}
+    return [StandardClass(group, name, name.lower() in have) for group, names in STANDARD_CLASSES for name in names]
+
+
+def add_class_levels(session: Session, ctx: StaffContext, classes: list[tuple[str, list[str]]]) -> list[ClassLevel]:
+    """
+    Add several classes at once. Standard classes go where they belong in the promotion order
+    (Nursery 3 before Primary 1, JSS 1 after Primary 6) among the school's existing classes;
+    other classes go after them, in the order given. A fixed number of statements, however many.
+    """
+    wanted = [(name.strip(), _clean_arm_names(arms or ["A"])) for name, arms in classes]
+    lowered = [name.lower() for name, _ in wanted]
+    if len(set(lowered)) != len(lowered):
+        raise DomainError("Each class can only be listed once.", field="classes")
+    # Lock the school's classes so two people adding at once can't hand out the same rank
+    existing = session.execute(select(ClassLevel.id, ClassLevel.name).order_by(ClassLevel.rank).with_for_update()).all()
+    taken = sorted(name for name, _ in wanted if name.lower() in {row.name.lower() for row in existing})
+    if taken:
+        raise Conflict(f"You already have {', '.join(taken)}.", field="classes")
+
+    # The new order: existing classes keep theirs; each standard class goes before the first class
+    # that comes after it in the standard list; anything else goes at the end
+    order: list[uuid.UUID] = [row.id for row in existing]
+    position = {row.id: _STANDARD_POSITION.get(row.name.lower()) for row in existing}
+    new_levels = [ClassLevel(id=uuid.uuid4(), name=name, rank=0) for name, _ in wanted]
+    standard = sorted(
+        (level for level in new_levels if level.name.lower() in _STANDARD_POSITION),
+        key=lambda level: _STANDARD_POSITION[level.name.lower()],
+    )
+    for level in standard:
+        mine = _STANDARD_POSITION[level.name.lower()]
+        later = next((i for i, lid in enumerate(order) if (position[lid] or -1) > mine), len(order))
+        order.insert(later, level.id)
+        position[level.id] = mine
+    order += [level.id for level in new_levels if level.name.lower() not in _STANDARD_POSITION]
+    rank = {level_id: n for n, level_id in enumerate(order, start=1)}
+
+    if existing:  # out of the way first: (school, rank) is unique row by row
+        session.execute(update(ClassLevel).values(rank=-ClassLevel.rank - 1000))
+    for level in new_levels:
+        level.rank = rank[level.id]
+    session.add_all(new_levels)
+    session.add_all(
+        Arm(id=uuid.uuid4(), class_level_id=level.id, name=arm)
+        for level, (_, arms) in zip(new_levels, wanted, strict=True)
+        for arm in arms
+    )
+    _flush_unique(session, "Those classes were just changed by someone else. Try again.", "classes")
+    if existing:
+        session.execute(
+            update(ClassLevel)
+            .where(ClassLevel.id.in_([row.id for row in existing]))
+            .values(rank=case({row.id: rank[row.id] for row in existing}, value=ClassLevel.id))
+        )
+    _audit_structure(session, ctx, None, {"added": [name for name, _ in wanted]})
+    session.commit()
+    session.expire_all()
+    return list_class_levels(session)
+
+
 def _clean_arm_names(names: list[str]) -> list[str]:
     cleaned = [n.strip() for n in names if n.strip()]
     if len({n.lower() for n in cleaned}) != len(cleaned):

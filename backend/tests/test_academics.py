@@ -3,7 +3,7 @@
 import pytest
 
 from app.modules.accounts.models import Role
-from tests.factories import headers_for, make_calendar, make_levels, make_school, make_user
+from tests.factories import QueryCounter, headers_for, make_calendar, make_levels, make_school, make_user
 
 SESSION_BODY = {
     "name": "2027/2028",
@@ -165,3 +165,84 @@ async def test_school_isolation_for_calendar_and_classes(client, setup):
         assert response.status_code == 404, url
     reorder = await client.put("/api/v1/class-levels/order", headers=h, json={"class_level_ids": [str(b_level.id)]})
     assert reorder.status_code == 400
+
+
+STANDARD = [
+    *("Creche", "Pre-Nursery", "Nursery 1", "Nursery 2", "Nursery 3"),
+    *(f"Primary {n}" for n in range(1, 7)),
+    *("JSS 1", "JSS 2", "JSS 3", "SSS 1", "SSS 2", "SSS 3"),
+]
+
+
+async def test_a_new_school_sets_up_its_classes_in_one_go(client, setup):
+    h = setup["admin"]
+    offered = (await client.get("/api/v1/class-levels/standard", headers=h)).json()
+    assert [c["name"] for c in offered] == STANDARD and not any(c["exists"] for c in offered)
+    assert offered[0]["group"] == "Preparatory" and offered[-1]["group"] == "Senior secondary"
+
+    # Untick the preparatory classes, add an extra one of their own, two arms each
+    chosen = [{"name": n, "arms": ["A", "B"]} for n in STANDARD[5:]] + [{"name": "A-level"}]
+    created = await client.post("/api/v1/class-levels/batch", headers=h, json={"classes": chosen})
+    assert created.status_code == 201, created.text
+    levels = created.json()
+    assert [lv["name"] for lv in levels] == [*STANDARD[5:], "A-level"]
+    assert [lv["rank"] for lv in levels] == list(range(1, 14))
+    assert [a["name"] for a in levels[0]["arms"]] == ["A", "B"] and [a["name"] for a in levels[-1]["arms"]] == ["A"]
+    marked = (await client.get("/api/v1/class-levels/standard", headers=h)).json()
+    assert [c["name"] for c in marked if c["exists"]] == STANDARD[5:]
+
+
+async def test_classes_added_later_take_their_usual_place(client, setup):
+    h = setup["admin"]
+    await client.post(
+        "/api/v1/class-levels/batch", headers=h, json={"classes": [{"name": "Primary 1"}, {"name": "JSS 1"}]}
+    )
+    later = await client.post(
+        "/api/v1/class-levels/batch",
+        headers=h,
+        json={"classes": [{"name": "Primary 2"}, {"name": "Nursery 2"}, {"name": "sss 1"}, {"name": "Year 13"}]},
+    )
+    assert later.status_code == 201, later.text
+    assert [lv["name"] for lv in later.json()] == ["Nursery 2", "Primary 1", "Primary 2", "JSS 1", "sss 1", "Year 13"]
+
+
+async def test_batch_is_checked(client, setup):
+    h = setup["admin"]
+    await client.post("/api/v1/class-levels/batch", headers=h, json={"classes": [{"name": "JSS 1"}]})
+    clash = await client.post(
+        "/api/v1/class-levels/batch", headers=h, json={"classes": [{"name": "jss 1"}, {"name": "JSS 2"}]}
+    )
+    assert clash.status_code == 409 and "JSS 1" not in clash.json()["error"]["message"]  # names the one they sent
+    twice = await client.post("/api/v1/class-levels/batch", headers=h, json={"classes": [{"name": "X"}, {"name": "x"}]})
+    assert twice.status_code == 400
+    assert (await client.post("/api/v1/class-levels/batch", headers=h, json={"classes": []})).status_code == 422
+    bursar = await client.post("/api/v1/class-levels/batch", headers=setup["bursar"], json={"classes": [{"name": "Y"}]})
+    assert bursar.status_code == 403
+    # School B's classes don't count as taken, and aren't touched
+    other = await client.post("/api/v1/class-levels/batch", headers=h, json={"classes": [{"name": "JSS 3"}]})
+    assert other.status_code == 201
+    assert all(lv["name"] != "Hacked" for lv in other.json())
+
+
+def test_a_fixed_number_of_statements(db, connection, setup):
+    import uuid
+
+    from app.core.http import RequestMeta
+    from app.core.tenancy import scope_to_school
+    from app.modules.accounts.deps import StaffContext
+    from app.modules.schools import academics_service as service
+
+    school = setup["a"]
+    ctx = StaffContext(
+        user=make_user(db, school, Role.SCHOOL_ADMIN), session_id=uuid.uuid4(), meta=RequestMeta(), school_id=school.id
+    )
+    db.commit()
+    scope_to_school(db, school.id)
+    service.add_class_levels(db, ctx, [("Primary 3", ["A"])])
+    with QueryCounter(connection) as few:
+        service.add_class_levels(db, ctx, [("Primary 1", ["A"])])
+    with QueryCounter(connection) as many:
+        service.add_class_levels(
+            db, ctx, [(name, ["A", "B"]) for name in STANDARD if name not in ("Primary 1", "Primary 3")]
+        )
+    assert many.count == few.count

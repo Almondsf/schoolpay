@@ -222,6 +222,18 @@ and later chunks bill it.
 (`PUT /class-levels/order`). Levels and arms are retired (`is_active`), never
 deleted, because enrolment history refers to them.
 
+Schools don't type their classes: `STANDARD_CLASSES` in `academics_service.py`
+is the usual Nigerian list, youngest first (Preparatory: Creche, Pre-Nursery,
+Nursery 1–3; Primary 1–6; JSS 1–3; SSS 1–3). `GET /class-levels/standard`
+returns it with the ones the school already has marked, and
+`POST /class-levels/batch` creates several classes (with the same arms) in one
+go. A new school's Classes page shows the list with everything ticked; later,
+"Add from the usual list" offers only the missing ones. Each standard class is
+slotted into its usual place among the existing classes (Nursery 3 before
+Primary 1), the school's own extras go last, and the whole batch is a fixed
+number of statements (existing ranks are moved aside, then reset in one
+`CASE` update).
+
 **Students** (`app/modules/students`). A `Student` has an admission number
 (unique per school), names, and optional gender and date of birth; `status`
 is `active`, `withdrawn` or `graduated`. Where a student is each term is an
@@ -962,7 +974,7 @@ production.
 | Audit | `GET /audit` |
 | Platform | `GET/POST /platform/schools`; `POST /platform/schools/{id}/suspend`, `/reactivate`; `GET /platform/audit` |
 | Calendar | `GET/POST /academic-sessions`; `PATCH /academic-sessions/{id}`; `GET /terms/current`; `PATCH /terms/{id}`; `POST /terms/{id}/make-current` |
-| Classes | `GET/POST /class-levels`; `PUT /class-levels/order`; `PATCH /class-levels/{id}`; `POST /class-levels/{id}/arms`; `PATCH /arms/{id}` |
+| Classes | `GET/POST /class-levels`; `GET /class-levels/standard`; `POST /class-levels/batch`; `PUT /class-levels/order`; `PATCH /class-levels/{id}`; `POST /class-levels/{id}/arms`; `PATCH /arms/{id}` |
 | Students | `GET /school/roll`; `GET/POST /students` (`missing=`, `unplaced=`); `GET/PATCH /students/{id}`; `PUT /students/{id}/class`; `POST /students/{id}/withdraw`, `/reinstate` |
 | Guardians | `POST /students/{id}/guardians`; `DELETE /students/{id}/guardians/{gid}`; `POST /students/{id}/guardians/{gid}/primary`; `GET /guardians`; `PATCH /guardians/{id}` |
 | Import | `GET /students/import-template`; `POST /students/import` (multipart) |

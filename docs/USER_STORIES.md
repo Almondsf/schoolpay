@@ -54,6 +54,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Keep the school's profile (name, address, phone, email) up to date.
 - ✅ Set up the session and its three terms, and say which term is current.
 - ✅ Set up classes and arms in promotion order, and retire ones no longer used.
+- ✅ Set up all classes in one go from the usual list (Creche to SSS 3, all ticked): untick what the school doesn't run, add its own, choose the arms; later, add any missing ones and they slot into the right place.
 - ✅ Load the student list from the school's existing spreadsheet (Excel or CSV), see every problem by row number before saving, and re-import safely.
 - ✅ Add a student by hand with their parent, change their class, withdraw or reinstate them.
 - ✅ Link parents to children; brothers and sisters share one parent record.

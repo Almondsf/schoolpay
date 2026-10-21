@@ -35,6 +35,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 21 Oct | Production logs leave out database query values; startup refuses a malformed Redis address and never echoes a rejected setting's value | `core/db.py`, `core/config.py` |
 | 21 Oct | Fee status download per class: each class lists only its own fees, part-paid fees show paid and left, the PDF has a page per class | `reports/exports.py` (`fee_status_pdf`) |
 | 21 Oct | **Redesign**: design tokens + Plus Jakarta Sans + lucide icons, a fixed sidebar (Setup always open), a one-screen dashboard with a tabbed panel, the pupil page as a profile header with tabs; shared `Tabs`, `Stat`, `Menu`, `BackLink` in `lib/ui.tsx` | `frontend/src/styles.css`, `console/ConsoleApp.tsx` |
+| 21 Oct | **Classes from the usual list**: Creche to SSS 3 ticked for a new school, untick/add own, one batch; missing ones slot into the promotion order later | `schools/academics_service.py` (`STANDARD_CLASSES`, `add_class_levels`), `console/setup/ClassSetup.tsx` |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:

@@ -1175,6 +1175,24 @@
         "title": "ClassLevelUpdateIn",
         "type": "object"
       },
+      "ClassLevelsIn": {
+        "properties": {
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/ClassLevelIn"
+            },
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Classes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "classes"
+        ],
+        "title": "ClassLevelsIn",
+        "type": "object"
+      },
       "ClassOrderIn": {
         "properties": {
           "class_level_ids": {
@@ -6877,6 +6895,31 @@
         "title": "StaffUpdateIn",
         "type": "object"
       },
+      "StandardClassOut": {
+        "properties": {
+          "exists": {
+            "description": "The school already has a class by this name",
+            "title": "Exists",
+            "type": "boolean"
+          },
+          "group": {
+            "description": "Preparatory, Primary, Junior secondary or Senior secondary",
+            "title": "Group",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "name",
+          "exists"
+        ],
+        "title": "StandardClassOut",
+        "type": "object"
+      },
       "StudentBrief": {
         "properties": {
           "admission_number": {
@@ -10123,6 +10166,116 @@
         ]
       }
     },
+    "/api/v1/class-levels/batch": {
+      "post": {
+        "operationId": "academics_create_levels",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassLevelsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClassLevelOut"
+                  },
+                  "title": "Response Academics Create Levels",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add several classes at once; standard ones take their usual place in the order",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
     "/api/v1/class-levels/order": {
       "put": {
         "operationId": "academics_reorder_levels",
@@ -10228,6 +10381,106 @@
           }
         ],
         "summary": "Set the promotion order (lowest class first)",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/api/v1/class-levels/standard": {
+      "get": {
+        "operationId": "academics_standard_levels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StandardClassOut"
+                  },
+                  "title": "Response Academics Standard Levels",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The usual classes (Creche to SSS 3), marking the ones the school already has",
         "tags": [
           "academics"
         ]

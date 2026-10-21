@@ -96,6 +96,16 @@ class ClassLevelIn(BaseModel):
     arms: list[ArmName] = Field(default_factory=lambda: ["A"], max_length=20)
 
 
+class ClassLevelsIn(BaseModel):
+    classes: list[ClassLevelIn] = Field(min_length=1, max_length=60)
+
+
+class StandardClassOut(BaseModel):
+    group: str = Field(description="Preparatory, Primary, Junior secondary or Senior secondary")
+    name: str
+    exists: bool = Field(description="The school already has a class by this name")
+
+
 class ClassLevelUpdateIn(BaseModel):
     name: Name | None = None
     is_active: bool | None = None
@@ -196,6 +206,25 @@ def list_levels(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> list
 )
 def create_level(body: ClassLevelIn, ctx: StaffContext = MANAGE, db: Session = Depends(get_db)) -> ClassLevel:
     return service.create_class_level(db, ctx, name=body.name, arms=body.arms)
+
+
+@router.get(
+    "/class-levels/standard",
+    response_model=list[StandardClassOut],
+    summary="The usual classes (Creche to SSS 3), marking the ones the school already has",
+)
+def standard_levels(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> list[service.StandardClass]:
+    return service.standard_classes(db)
+
+
+@router.post(
+    "/class-levels/batch",
+    response_model=list[ClassLevelOut],
+    status_code=status.HTTP_201_CREATED,
+    summary="Add several classes at once; standard ones take their usual place in the order",
+)
+def create_levels(body: ClassLevelsIn, ctx: StaffContext = MANAGE, db: Session = Depends(get_db)) -> list[ClassLevel]:
+    return service.add_class_levels(db, ctx, [(c.name, c.arms) for c in body.classes])
 
 
 @router.put(

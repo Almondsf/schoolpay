@@ -5,6 +5,7 @@ import { api, unwrap } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { Empty, ErrorAlert, Field, Loading, Modal, PageHeader } from '../../lib/ui';
 import { useClassLevels, type ClassLevel } from '../hooks';
+import { ClassSetup } from './ClassSetup';
 
 export function Classes() {
   const { can } = useAuth();
@@ -12,6 +13,7 @@ export function Classes() {
   const levels = useClassLevels();
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
+  const [fromList, setFromList] = useState(false);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['class-levels'] });
 
   const reorder = useMutation({
@@ -56,7 +58,17 @@ export function Classes() {
       <PageHeader
         title="Classes"
         subtitle="In promotion order: at the end of a session students move to the next class down this list, and the last class graduates."
-        actions={manage && <button onClick={() => setAdding(true)}>Add class</button>}
+        actions={
+          manage &&
+          (levels.data?.length ?? 0) > 0 && (
+            <>
+              <button className="secondary" onClick={() => setFromList(true)}>
+                Add from the usual list
+              </button>
+              <button onClick={() => setAdding(true)}>Add class</button>
+            </>
+          )
+        }
       />
       <ErrorAlert error={reorder.error ?? updateLevel.error ?? addArm.error ?? updateArm.error} />
       {levels.isPending ? (
@@ -64,7 +76,17 @@ export function Classes() {
       ) : levels.isError ? (
         <ErrorAlert error={levels.error} />
       ) : levels.data.length === 0 ? (
-        <Empty>No classes yet. Add them in order, from the youngest (e.g. Primary 1) to the oldest.</Empty>
+        manage ? (
+          <section className="card">
+            <h2>Set up your classes</h2>
+            <p className="muted">
+              We've ticked the usual classes, from Creche to SSS 3. Untick any your school doesn't run, add your own, and create them all in one go.
+            </p>
+            <ClassSetup firstTime />
+          </section>
+        ) : (
+          <Empty>No classes yet. The school admin or proprietor sets them up here.</Empty>
+        )
       ) : (
         <div className="card table-card">
           <table>
@@ -133,6 +155,12 @@ export function Classes() {
         </div>
       )}
       {adding && <AddClass onClose={() => setAdding(false)} />}
+      {fromList && (
+        <Modal title="Add from the usual list" onClose={() => setFromList(false)}>
+          <p className="muted">The usual classes you don't have yet. Each goes into its place in the promotion order.</p>
+          <ClassSetup firstTime={false} onDone={() => setFromList(false)} />
+        </Modal>
+      )}
     </>
   );
 }
