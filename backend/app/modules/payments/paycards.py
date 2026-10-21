@@ -1,16 +1,13 @@
 """
 Printable pay cards: one per child, for parents who don't use apps. The card carries
 the child's own account number in large type (pay any amount from a bank app, a POS
-agent or a bank branch) and a QR code to the parent's family payment page. Schools
-print a class at a time (four cards to an A4 page) and send them home.
-
-The QR code is the parent's family payment link, so the card says when it stops
-working (`FAMILY_LINK_DAYS`): schools reprint cards each term with the bills.
+agent or a bank branch) and this term's fees, each with what's left to pay, then the
+total (owner, 2026-10-21: a fee list rather than a QR code). Schools print a class at
+a time (four cards to an A4 page) and send them home with the bills each term.
 """
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
 from io import BytesIO
 
 from reportlab.lib import colors
@@ -22,17 +19,23 @@ from reportlab.pdfgen.canvas import Canvas
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.clock import LAGOS
 from app.core.errors import DomainError
 from app.core.repo import get_or_404
-from app.modules.receipts.pdf import qr_drawing
+from app.modules.reports.fee_status import FeeLine, fee_breakdowns
 from app.modules.schools.models import Arm, ClassLevel, School, Term
-from app.modules.students.models import Enrollment, Guardian, GuardianStudent, Student, StudentStatus
+from app.modules.students.models import Enrollment, Student, StudentStatus
 
-from .family_links import link_url, live_links
 from .models import VirtualAccount, VirtualAccountStatus
 
 GREEN = colors.HexColor("#0b2a21")
+
+
+def ngn(kobo: int) -> str:
+    """The standard PDF fonts have no naira sign; whole naira when there are no kobo."""
+    naira, rest = divmod(abs(kobo), 100)
+    return f"NGN {naira:,}" + (f".{rest:02d}" if rest else "")
+
+
 ACCENT = colors.HexColor("#0b9467")
 MUTED = colors.HexColor("#687890")
 
@@ -46,8 +49,13 @@ class PayCard:
     account_number: str | None
     bank_name: str
     account_name: str
-    link: str | None
-    link_expires: date | None
+    term_label: str | None
+    fees: list[FeeLine]  # this term's, in bill order
+    earlier_left_kobo: int  # earlier terms and balances brought forward
+
+    @property
+    def total_left_kobo(self) -> int:
+        return sum(f.left_kobo for f in self.fees) + self.earlier_left_kobo
 
 
 def pay_cards(
@@ -55,8 +63,7 @@ def pay_cards(
 ) -> list[PayCard]:
     """
     Cards for one pupil or every current pupil in a class (this term), in class order.
-    A fixed number of queries however many pupils; makes parents' payment links where
-    needed (the caller commits).
+    A fixed number of queries however many pupils.
     """
     term_id = session.scalar(select(Term.id).where(Term.is_current.is_(True)))
     placement = (
@@ -101,22 +108,12 @@ def pay_cards(
             )
         )
     }
-    main_parent: dict[uuid.UUID, Guardian] = dict(
-        session.execute(
-            select(GuardianStudent.student_id, Guardian)
-            .join(Guardian, Guardian.id == GuardianStudent.guardian_id)
-            .where(
-                GuardianStudent.student_id.in_(ids), GuardianStudent.is_primary.is_(True), Guardian.erased_at.is_(None)
-            )
-        ).all()
-    )
-    links = live_links(session, list({g.id: g for g in main_parent.values()}.values()))
+    owed = fee_breakdowns(session, ids, term_id)
 
     cards = []
     for student, level, arm in rows:
         account = accounts.get(student.id)
-        parent = main_parent.get(student.id)
-        link = links.get(parent.id) if parent else None
+        breakdown = owed.get(student.id)
         cards.append(
             PayCard(
                 first_name=student.first_name,
@@ -126,8 +123,9 @@ def pay_cards(
                 account_number=account.account_number if account else None,
                 bank_name=account.bank_name if account else "",
                 account_name=account.account_name if account else "",
-                link=link_url(link.token) if link else None,
-                link_expires=link.expires_at.astimezone(LAGOS).date() if link else None,
+                term_label=breakdown.term_label if breakdown else None,
+                fees=breakdown.fees if breakdown else [],
+                earlier_left_kobo=breakdown.earlier_left_kobo if breakdown else 0,
             )
         )
     return cards
@@ -188,53 +186,71 @@ def _card(canvas: Canvas, x: float, y: float, school: School, card: PayCard) -> 
     canvas.drawString(x + pad, top - 5 * mm, _fit(who, "Helvetica", 8.5, inner))
 
     # How to pay
-    cursor = top - 14 * mm
+    cursor = top - 13 * mm
     if card.account_number:
         canvas.setFont("Helvetica-Bold", 7)
         canvas.drawString(x + pad, cursor, "PAY BY BANK TRANSFER TO")
         canvas.setFillColor(colors.black)
-        canvas.setFont("Courier-Bold", 21)
-        canvas.drawString(x + pad, cursor - 9 * mm, card.account_number)
-        canvas.setFont("Helvetica-Bold", 9.5)
-        canvas.drawString(x + pad, cursor - 15 * mm, _fit(card.bank_name, "Helvetica-Bold", 9.5, inner))
-        canvas.setFillColor(MUTED)
-        canvas.setFont("Helvetica", 8)
-        canvas.drawString(x + pad, cursor - 19.5 * mm, _fit(card.account_name, "Helvetica", 8, inner))
-        note = (
-            f"This number is only for {card.first_name}. Pay any amount, any time: from your bank app, "
-            "a POS agent or any bank. You get a receipt by text."
-        )
-        cursor = _paragraph(canvas, note, x + pad, cursor - 26 * mm, inner, "Helvetica", 8, colors.black)
+        canvas.setFont("Courier-Bold", 20)
+        canvas.drawString(x + pad, cursor - 8.5 * mm, card.account_number)
+        canvas.setFont("Helvetica-Bold", 9)
+        bank = " · ".join(part for part in (card.bank_name, card.account_name) if part)
+        canvas.drawString(x + pad, cursor - 13.5 * mm, _fit(bank, "Helvetica-Bold", 9, inner))
+        note = f"Only for {card.first_name}. Pay any amount, any time, from your bank app, a POS agent or any bank."
+        cursor = _paragraph(canvas, note, x + pad, cursor - 18.5 * mm, inner, "Helvetica", 7.5, MUTED)
     else:
-        canvas.setFillColor(colors.black)
         cursor = _paragraph(
             canvas,
-            "Scan the code with your phone camera to see what is owed and pay by bank transfer, card or USSD.",
+            "Pay at the school's bursary. Ask the school for the account to pay into.",
             x + pad,
             cursor,
             inner,
             "Helvetica",
-            9,
+            8.5,
             colors.black,
         )
 
-    # The QR code to the family payment page
-    if card.link:
-        size = 30 * mm
-        qx, qy = x + pad, y + 13 * mm
-        drawing = qr_drawing(card.link, size)
-        drawing.drawOn(canvas, qx - 2 * mm, qy)
-        text_x = qx + size + 2 * mm
-        width = CARD_W - pad - (text_x - x)
-        lines = ["Scan to see what's owed", "and pay online"]
+    # What is to be paid this term
+    cursor -= 3 * mm
+    canvas.setStrokeColor(colors.HexColor("#e6eaf0"))
+    canvas.line(x + pad, cursor + 2.5 * mm, x + CARD_W - pad, cursor + 2.5 * mm)
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica-Bold", 7)
+    heading = f"FEES FOR {card.term_label.upper()}" if card.term_label else "FEES"
+    canvas.drawString(x + pad, cursor - 1 * mm, _fit(heading, "Helvetica-Bold", 7, inner))
+    canvas.drawRightString(x + CARD_W - pad, cursor - 1 * mm, "TO PAY")
+    cursor -= 6 * mm
+    rows = [(f.name, f.left_kobo, f.billed_kobo) for f in card.fees]
+    if card.earlier_left_kobo:
+        rows.append(("Earlier terms", card.earlier_left_kobo, card.earlier_left_kobo))
+    room = max(int((cursor - (y + 22 * mm)) // (4.6 * mm)), 1)  # lines that fit above the total
+    shown = rows if len(rows) <= room else rows[: room - 1]
+    for name, left, billed in shown:
+        canvas.setFillColor(colors.black if left > 0 else MUTED)
+        canvas.setFont("Helvetica", 8.5)
+        amount = ngn(left) if left > 0 else ("Paid" if billed > 0 else "-")
+        canvas.drawString(x + pad, cursor, _fit(name, "Helvetica", 8.5, inner - 28 * mm))
+        canvas.drawRightString(x + CARD_W - pad, cursor, amount)
+        cursor -= 4.6 * mm
+    if len(shown) < len(rows):
+        rest = rows[len(shown) :]
         canvas.setFillColor(colors.black)
-        canvas.setFont("Helvetica-Bold", 8.5)
-        for n, line in enumerate(lines):
-            canvas.drawString(text_x, qy + size - 6 * mm - n * 4 * mm, _fit(line, "Helvetica-Bold", 8.5, width))
-        if card.link_expires:
-            canvas.setFillColor(MUTED)
-            canvas.setFont("Helvetica", 7.5)
-            canvas.drawString(text_x, qy + size - 16 * mm, f"Code works until {card.link_expires:%d %b %Y}")
+        canvas.drawString(x + pad, cursor, f"{len(rest)} more")
+        canvas.drawRightString(x + CARD_W - pad, cursor, ngn(sum(left for _, left, _ in rest)))
+    if not rows:
+        canvas.setFillColor(MUTED)
+        canvas.drawString(x + pad, cursor, "No bill for this term yet.")
+
+    # The total
+    total_y = y + 15 * mm
+    canvas.setStrokeColor(colors.black)
+    canvas.line(x + pad, total_y + 5 * mm, x + CARD_W - pad, total_y + 5 * mm)
+    canvas.setFillColor(colors.black)
+    canvas.setFont("Helvetica-Bold", 10.5)
+    canvas.drawString(x + pad, total_y, "Total to pay")
+    canvas.drawRightString(
+        x + CARD_W - pad, total_y, ngn(card.total_left_kobo) if card.total_left_kobo > 0 else "Nothing"
+    )
 
     # Footer: who to ask
     if school.phone:

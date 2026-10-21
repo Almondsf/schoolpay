@@ -9,7 +9,7 @@ import { useClassLevels } from '../hooks';
 
 /**
  * Printable pay cards for parents who don't use apps: the child's own account number in large
- * type and a QR code to the parent's payment page. One pupil, or a class at four to a page.
+ * type and this term's fees with what's left to pay. One pupil, or a class at four to a page.
  */
 export function PayCardButton({ studentId }: { studentId: string }) {
   const download = useMutation({
@@ -53,9 +53,8 @@ export function PrintPayCards({ classId, onClose }: { classId: string; onClose: 
     <Modal title="Print pay cards" onClose={onClose}>
       <form onSubmit={submit}>
         <p className="muted">
-          A card for each pupil in the class, four to an A4 page: their own account number in large type, and a code parents scan with their
-          phone to see what's owed and pay. Send them home with the bills; print new ones each term, as the code stops working after a few
-          months.
+          A card for each pupil in the class, four to an A4 page: their own account number in large type, and this term's fees with what's
+          left to pay on each. Print them after the bills are ready and send them home; the amounts are as they stand today.
         </p>
         <ErrorAlert error={download.error} />
         <Field label="Class">

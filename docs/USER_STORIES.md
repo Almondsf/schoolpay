@@ -23,7 +23,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Download every pupil’s fees for a term, for the whole school or one class, each fee marked paid, part paid or unpaid with what was paid and what’s left. Each class shows only its own fees: a PDF with a page per class to print, or Excel with a sheet per class.
 - ✅ Switch on phone calls for parents who prefer them, with a cap per bill, and mark those parents (and their language) on each pupil's page.
 - ✅ Copy a parent's family payment link to send by hand, or replace it if it went to the wrong person.
-- ✅ Print pay cards for a class (four to a page) or one pupil: the child's account number in large type and a code the parent scans to see what's owed and pay, for parents who don't use apps.
+- ✅ Print pay cards for a class (four to a page) or one pupil: the child's account number in large type and this term's fees with what's left to pay, for parents who don't use apps.
 - ✅ Sign in safely with a password and a code from my phone.
 - ✅ Set what each class pays per term in one grid, copy last term's fees, and mark fees like the bus as optional.
 - ✅ Set up discounts: automatic sibling discounts, and scholarships or staff-child discounts I give to chosen students.

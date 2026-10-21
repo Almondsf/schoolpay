@@ -493,15 +493,14 @@ it. Unknown, expired and replaced links get the same answer.
 **Pay cards** (`paycards.py`) are for parents who don't use apps: a printable card
 per child with the school, the child's name and class, their own account number in
 large type (bank and account name, "pay any amount, any time, from your bank app, a
-POS agent or any bank"), a QR code to the main parent's family link with the date
-it stops working, and the school's phone number. `GET /students/{id}/pay-card` makes
-one; `GET /pay-cards?class_level_id=` makes every current pupil in a class, four to
-an A4 page with cut lines (`payments.record`, rate limited, audited as a
-`reports.exported` with `report: "pay_cards"`, `no-store`). Links come from
-`live_links`, which makes or reuses every parent's link in three statements, so a
-class costs the same few queries as one pupil. Pupils without an account number get
-a card that points to the code instead. Schools print new cards each term, since
-the code expires with the link.
+POS agent or any bank"), this term's fees each with what's left to pay ("Paid" when
+cleared), earlier debts, the total to pay, and the school's phone number. The fee
+list comes from `fee_breakdowns`, so it matches the pupil's page. There's no QR code
+or payment link on it (owner, 2026-10-21). `GET /students/{id}/pay-card` makes one;
+`GET /pay-cards?class_level_id=` makes every current pupil in a class, four to an A4
+page with cut lines (`payments.record`, rate limited, audited as a `reports.exported`
+with `report: "pay_cards"`, `no-store`), in a fixed number of queries. The amounts
+are as they stand when printed, so schools print after the bills are ready.
 
 Paying online from the link (`POST /public/pay/{token}/checkout`), or signed in
 (`GET /parent/family`, `POST /parent/family/checkout`, through the parent's own

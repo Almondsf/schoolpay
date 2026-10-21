@@ -51,20 +51,17 @@ def new_link_row(guardian: Guardian, created_by: uuid.UUID | None) -> dict[str, 
     }
 
 
-def live_links(session: Session, guardians: list[Guardian]) -> dict[uuid.UUID, FamilyPayLink]:
+def live_link(session: Session, guardian: Guardian) -> FamilyPayLink:
     """
-    Each parent's current link, made for those with none or an expired one: three statements
-    however many parents. Safe when two requests ask at once (one live link per parent,
-    enforced by the database). The caller commits.
+    The parent's current link, made if they have none or theirs has expired. Safe when
+    two messages ask at once (one live link per parent, enforced by the database).
+    The caller commits.
     """
-    if not guardians:
-        return {}
-    ids = [g.id for g in guardians]
     now = datetime.now(UTC)
     session.execute(
         update(FamilyPayLink)
         .where(
-            FamilyPayLink.guardian_id.in_(ids),
+            FamilyPayLink.guardian_id == guardian.id,
             FamilyPayLink.revoked_at.is_(None),
             FamilyPayLink.expires_at <= now,
         )
@@ -72,18 +69,12 @@ def live_links(session: Session, guardians: list[Guardian]) -> dict[uuid.UUID, F
     )
     session.execute(
         insert(FamilyPayLink)
-        .values([new_link_row(g, None) for g in guardians])
+        .values(new_link_row(guardian, None))
         .on_conflict_do_nothing(index_elements=["guardian_id"], index_where=text("revoked_at IS NULL"))
     )
-    links = session.scalars(
-        select(FamilyPayLink).where(FamilyPayLink.guardian_id.in_(ids), FamilyPayLink.revoked_at.is_(None))
+    link = session.scalar(
+        select(FamilyPayLink).where(FamilyPayLink.guardian_id == guardian.id, FamilyPayLink.revoked_at.is_(None))
     )
-    return {link.guardian_id: link for link in links}
-
-
-def live_link(session: Session, guardian: Guardian) -> FamilyPayLink:
-    """One parent's current link (see `live_links`). The caller commits."""
-    link = live_links(session, [guardian]).get(guardian.id)
     if link is None:  # inserted or found a moment ago in this transaction
         raise RuntimeError("Family link not visible in this session's school scope.")
     return link

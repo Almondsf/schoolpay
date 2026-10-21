@@ -37,8 +37,7 @@ def _naira(kobo: int) -> str:
     return f"{sign}NGN {naira:,}.{rest:02d}"
 
 
-def qr_drawing(text: str, size: float) -> Drawing:
-    """A QR code of `size` points square (reportlab's own widget, so no image library)."""
+def _qr(text: str, size: float) -> Drawing:
     widget = QrCodeWidget(text)
     x1, y1, x2, y2 = widget.getBounds()
     drawing = Drawing(size, size, transform=[size / (x2 - x1), 0, 0, size / (y2 - y1), 0, 0])
@@ -126,7 +125,7 @@ def render_receipt(receipt: Receipt, *, reversed_: bool = False) -> bytes:
     verify = Table(
         [
             [
-                qr_drawing(link, 32 * mm),
+                _qr(link, 32 * mm),
                 Paragraph(
                     f"<b>Check this receipt is genuine</b><br/>Scan the code or visit<br/>{escape(link)}",
                     styles["Normal"],

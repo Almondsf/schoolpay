@@ -8,9 +8,8 @@ from app.modules.audit.models import AuditAction, AuditLog
 from app.modules.payments import paycards
 from app.modules.payments.models import FamilyPayLink
 from tests.factories import QueryCounter, headers_for, make_levels, make_school, make_student, make_user
-from tests.test_reports import (
-    world as world,
-)  # the fixture: Ada (JSS 1), Bayo (JSS 2), Chidi (JSS 3), each with a parent
+from tests.test_reports import NAIRA
+from tests.test_reports import world as world  # Ada paid in full, Bayo paid 50k of 185k, Chidi owes all + 40k earlier
 
 
 async def test_one_pupils_card(client, world, db):
@@ -28,23 +27,21 @@ async def test_one_pupils_card(client, world, db):
     [card] = paycards.pay_cards(db, student_id=bayo.id)
     assert card.full_name == "Bayo Ojo" and card.class_name.startswith("JSS 2")
     assert card.account_number and card.account_number.startswith("9") and card.bank_name == "Fake Bank"
-    assert card.link and "/pay/f/" in card.link and card.link_expires
-    # The card's code is the parent's one family link: printing again doesn't make another
-    await client.get(f"/api/v1/students/{bayo.id}/pay-card", headers=world["bursar"])
-    links = db.scalar(
-        select(func.count()).where(
-            FamilyPayLink.guardian_id == world["bayo_parent"].id, FamilyPayLink.revoked_at.is_(None)
-        )
-    )
-    assert links == 1
+    # What's to be paid: each fee this term with what's left on it, then the total
+    assert card.term_label == "2026/2027 First term"
+    assert {f.name: f.left_kobo for f in card.fees} == {"PTA": 0, "Tuition": 135_000 * NAIRA}
+    assert card.earlier_left_kobo == 0 and card.total_left_kobo == 135_000 * NAIRA
+    # Printing makes no payment links (the card carries no code)
+    assert db.scalar(select(func.count()).select_from(FamilyPayLink)) == 0
     audited = db.scalars(select(AuditLog).where(AuditLog.action == AuditAction.REPORT_EXPORTED)).all()
-    assert [e.changes["report"] for e in audited] == ["pay_cards", "pay_cards"]
+    assert [e.changes["report"] for e in audited] == ["pay_cards"]
 
 
-async def test_without_an_account_number_the_card_points_to_the_code(client, world, db):
+async def test_earlier_debts_and_no_account_number(client, world, db):
     scope_to_school(db, world["school"].id)
     [card] = paycards.pay_cards(db, student_id=world["students"]["chidi"].id)
-    assert card.account_number is None and card.link
+    assert card.account_number is None
+    assert card.earlier_left_kobo == 40_000 * NAIRA and card.total_left_kobo == 245_000 * NAIRA
     assert paycards.render_pay_cards(world["school"], [card]).startswith(b"%PDF")
 
 

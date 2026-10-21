@@ -124,10 +124,8 @@ It is updated with every change that affects security.
   (HMAC-SHA256 over `timestamp.body`, constant-time, 5-minute window, rotation-aware
   `X-Bachs-Signature-V2`), and every Bachs payment is re-read from its API; a payment
   id that answers with another checkout's reference is parked for review.
-- **Pay cards** print a parent's family link as a QR code, so a lost card works like a
-  forwarded link until it expires: it shows the same first names, classes and amounts,
-  and lets someone pay, nothing more. The card says when the code stops working;
-  staff can replace the link at once if a card goes astray. Printing is limited to
+- **Pay cards** carry a child's name, class, account number and what's owed, on paper that
+  goes home with the child; no payment link or code. Printing is limited to
   `payments.record`, rate limited and recorded in the activity log.
 - **Family payment links** are bearer tokens (192 bits). They're stored as a keyed
   hash (lookup) and encrypted (to resend), expire after `FAMILY_LINK_DAYS`, can be

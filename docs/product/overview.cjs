@@ -190,7 +190,7 @@ const CHANGES = [
   ['20 Oct 2026', 'Payment provider switchable at any time (Paystack or Bachs), with Bachs checkout and onboarding'],
   ['20 Oct 2026', 'Fee status by pupil: every fee paid, part paid or unpaid, for the school or one class (Excel and PDF)'],
   ['21 Oct 2026', 'Fee status download: each class with only its own fees, what was paid on part-paid fees, a printable page per class'],
-  ['21 Oct 2026', 'Printable pay cards: each child’s account number in large type and a code to scan and pay, a class at a time'],
+  ['21 Oct 2026', 'Printable pay cards: each child’s account number in large type and this term’s fees with what’s left to pay, a class at a time'],
   ['21 Oct 2026', 'The school year comes filled in with the usual term dates; check them and create it in one click'],
   ['21 Oct 2026', 'Classes set up in one click: the usual list from Creche to SSS 3 comes ticked; untick what you don’t run and add your own'],
   ['21 Oct 2026', 'New look: a sidebar for every page, calmer colours and type, a dashboard that fits on one screen, and the pupil page split into tabs'],
