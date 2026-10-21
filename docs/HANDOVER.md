@@ -32,6 +32,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 20 Oct | Fees added to the fee grid after billing can be added to the bills already sent (Fees page offers it) | `charges.sync_bills` |
 | 20 Oct | **Pay for particular fees** (tick WAEC on the payment page or the cash form); earmarked money goes to those fees first, even before older debts | `payments/earmarks.py`, `PaymentEarmark` |
 | 20 Oct | **Deployed**: API, worker, Postgres and Redis on Render (https://schoolpay-a97t.onrender.com), web app on Netlify (https://parentpay.netlify.app), which forwards `/api` to Render | `docs/DEPLOYMENT.md` ("On Render and Netlify"), `frontend/public/_redirects` |
+| 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:
 https://claude.ai/artifact/U8F5XpU55wtrACtihHp2oH; the dashboard figures and contact details are
