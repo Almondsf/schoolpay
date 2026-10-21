@@ -95,6 +95,9 @@ It is updated with every change that affects security.
   reason, and generation, adjustments and voids are audited.
 - Balances are computed from the ledger, never stored, so they can't be edited
   or drift.
+- Marking which fees a payment was for (at payment time or afterwards) is append-only:
+  a payment can be marked once and never re-marked, needs `payments.record`, is audited,
+  and only changes which fees show as paid, never amounts or balances.
 - Invoice numbers are gapless per school (row-locked counter).
 
 ## Payments

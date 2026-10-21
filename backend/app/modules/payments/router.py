@@ -24,7 +24,7 @@ from app.modules.receipts.service import receipts_for_payments
 from app.modules.schools.models import School
 from app.modules.students.models import Student
 
-from . import accounts, checkout, manual, paycards, providers, service, webhooks
+from . import accounts, checkout, earmarks, manual, paycards, providers, service, webhooks
 from .allocation import credit_by_student
 from .gateways import FakeGateway, GatewayCode, InvalidSignature, enabled_gateways
 from .models import (
@@ -131,10 +131,15 @@ class PaymentOut(BaseModel):
     unapplied_kobo: int = Field(description="Kept as credit for the student's next invoices")
     receipt_id: uuid.UUID | None
     receipt_number: int | None
+    for_fees: list[str] = Field(description="The fees it was marked for; empty: tuition first, then the rest")
 
 
 class ReverseIn(BaseModel):
     reason: Reason
+
+
+class MarkFeesIn(BaseModel):
+    fees: list[Annotated[str, StringConstraints(max_length=200)]] = Field(min_length=1, max_length=30)
 
 
 class ManualIn(BaseModel):
@@ -205,6 +210,7 @@ def _payments_out(db: Session, rows: list[tuple[Payment, Student]]) -> list[Paym
     ids = [p.id for p, _ in rows]
     applied, reversed_ = service.applied_to(db, ids), service.reversed_ids(db, ids)
     receipts = receipts_for_payments(db, ids)
+    marked = earmarks.marked_fees(db, ids)
     out = []
     for payment, student in rows:
         used = [AppliedOut(**a.__dict__) for a in applied[payment.id]]
@@ -227,6 +233,7 @@ def _payments_out(db: Session, rows: list[tuple[Payment, Student]]) -> list[Paym
                 unapplied_kobo=payment.amount_kobo - sum(a.amount_kobo for a in used),
                 receipt_id=receipt.id if receipt else None,
                 receipt_number=receipt.number if receipt else None,
+                for_fees=marked[payment.id],
             )
         )
     return out
@@ -417,6 +424,18 @@ def reverse(
 ) -> PaymentOut:
     reversal = service.reverse_payment(db, ctx, payment_id, body.reason)
     return get_payment(reversal.id, ctx, db)
+
+
+@router.post(
+    "/payments/{payment_id}/fees",
+    response_model=PaymentOut,
+    summary="Say what a payment was for after it arrived (once): which fees show it as paid",
+)
+def mark_for_fees(
+    payment_id: uuid.UUID, body: MarkFeesIn, ctx: StaffContext = RECORD, db: Session = Depends(get_db)
+) -> PaymentOut:
+    earmarks.mark_payment(db, ctx, payment_id, body.fees)
+    return get_payment(payment_id, ctx, db)
 
 
 @router.get(

@@ -460,6 +460,17 @@ fee-status report and receipt ("Paid for: WAEC") show those fees paid. A reverse
 earmarks stop counting. Transfers into a child's own account number can't say what they're
 for, so they cover tuition first, then the bill's other fees in order.
 
+**Marking a payment afterwards** (`POST /payments/{id}/fees`, `payments.record`,
+`earmarks.mark_payment`). When a parent tells the school what an unmarked payment was for
+("that transfer was for PTA"), staff tick the fees on the Payments page ("Mark for fees").
+The money the payment put on each bill is placed against those fees, in the order ticked, up
+to what each is still open for after other payments' marks; the rest stays unmarked (tuition
+first). Allocation and balances don't change, only which fees show as paid. Marks are
+append-only, so a payment is marked once, and only if it had no marks when it arrived;
+reversals and reversed payments can't be marked. Audited as `payments.marked_for_fees`.
+Payments list their marks (`for_fees`, one batched query). The receipt keeps what it said
+when issued.
+
 **Allocation** (`allocation.py`). A student's unallocated money pays their
 oldest debt first: the opening balance, then invoices in issue order. Whatever
 is left is the student's **credit** (payments minus allocations, never stored),

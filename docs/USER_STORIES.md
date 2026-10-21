@@ -66,6 +66,8 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## Parent
 - ✅ Pay for a particular fee (say WAEC) rather than the bill in general, by ticking it on the payment page; the receipt says what it was for.
+- ✅ When a parent says what a transfer was for after it arrived ("that was for PTA"), mark the payment for that fee on the Payments page, once; the fees then show it as paid.
+- ✅ Money that doesn't say what it's for covers tuition first, then the bill's other fees.
 - ✅ See what each child’s balance is made of (tuition, levies, WAEC, bus…), with what’s paid and what’s left on each, on my portal and on the payment page.
 - ✅ If I find messages hard to read, get a phone call in English or Pidgin that tells me what's owed and reads my child's account number slowly, twice, and another when my payment arrives.
 - ✅ Open one link from my bill or reminder, no sign-in, and see all my children's balances and account numbers.

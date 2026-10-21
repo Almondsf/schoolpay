@@ -38,6 +38,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 21 Oct | **Classes from the usual list**: Creche to SSS 3 ticked for a new school, untick/add own, one batch; missing ones slot into the promotion order later | `schools/academics_service.py` (`STANDARD_CLASSES`, `add_class_levels`), `console/setup/ClassSetup.tsx` |
 | 21 Oct | **School year filled in** (usual Nigerian term dates from the Lagos date, today's term made current) | `schools/academics_service.py` (`suggest_session`), `console/setup/Calendar.tsx` |
 | 21 Oct | **Printable pay cards** (one pupil or a class, four to an A4 page: account number + this term's fees with what's left, total to pay; no QR code); Lagos time in one place (`core/clock.py`) | `payments/paycards.py`, `console/payments/PayCards.tsx` |
+| 21 Oct | **Tuition first** for money not marked for a fee; **mark a payment for fees afterwards** (once, audited) from the Payments page | `reports/fee_status.py` (`_fill`), `payments/earmarks.py` (`mark_payment`) |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:

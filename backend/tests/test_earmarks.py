@@ -3,8 +3,10 @@
 from sqlalchemy import select
 
 from app.core.tenancy import scope_to_school
+from app.modules.accounts.models import Role
 from app.modules.payments.gateways import FakeGateway
 from app.modules.receipts.models import Receipt
+from tests.factories import headers_for, make_school, make_user
 from tests.test_reports import NAIRA
 from tests.test_reports import world as world  # the fixture: Chidi owes 205,000 this term and 40,000 from last
 
@@ -107,3 +109,42 @@ async def test_online_payment_for_chosen_fees(client, world):
     fees, body = await fees_of(client, world, bayo)
     assert fees["Tuition"]["status"] == "Paid"  # the 50,000 paid earlier went to tuition first; this paid the rest
     assert fees["PTA"]["status"] == "Unpaid" and body["total_left_kobo"] == 5_000 * NAIRA
+
+
+async def test_marking_a_payment_after_it_arrived(client, world, db):
+    """A parent says the transfer they sent was for the PTA levy: the bursar marks it."""
+    bayo = world["students"]["bayo"]
+    payment = await record_cash(client, world, bayo, 5_000, [])  # not marked: tuition first
+    fees, _ = await fees_of(client, world, bayo)
+    assert fees["PTA"]["status"] == "Unpaid" and fees["Tuition"]["left_kobo"] == 125_000 * NAIRA
+
+    url = f"/api/v1/payments/{payment['payment_id']}/fees"
+    marked = await client.post(url, headers=world["bursar"], json={"fees": ["PTA"]})
+    assert marked.status_code == 200, marked.text
+    assert marked.json()["for_fees"] == ["PTA"]
+    fees, body = await fees_of(client, world, bayo)
+    assert fees["PTA"]["status"] == "Paid" and fees["Tuition"]["left_kobo"] == 130_000 * NAIRA
+    assert body["total_left_kobo"] == 130_000 * NAIRA  # what's owed overall doesn't change
+
+    again = await client.post(url, headers=world["bursar"], json={"fees": ["Tuition"]})
+    assert again.status_code == 409  # marks are permanent
+    listed = (await client.get("/api/v1/payments", headers=world["bursar"], params={"student_id": str(bayo.id)})).json()
+    assert next(p for p in listed["items"] if p["id"] == payment["payment_id"])["for_fees"] == ["PTA"]
+
+
+async def test_marking_is_checked(client, world, db):
+    bayo = world["students"]["bayo"]
+    payment = await record_cash(client, world, bayo, 5_000, [])
+    url = f"/api/v1/payments/{payment['payment_id']}/fees"
+    unknown = await client.post(url, headers=world["bursar"], json={"fees": ["Swimming"]})
+    assert unknown.status_code == 400 and "not on the bills" in unknown.json()["error"]["message"]
+
+    other = make_user(db, make_school(db), Role.BURSAR)
+    db.commit()
+    assert (await client.post(url, headers=headers_for(db, other), json={"fees": ["PTA"]})).status_code == 404
+
+    reversed_ = await client.post(
+        f"/api/v1/payments/{payment['payment_id']}/reverse", headers=world["bursar"], json={"reason": "Wrong pupil"}
+    )
+    assert reversed_.status_code in (200, 201), reversed_.text
+    assert (await client.post(url, headers=world["bursar"], json={"fees": ["PTA"]})).status_code == 400

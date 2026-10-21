@@ -1219,6 +1219,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/{payment_id}/fees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Say what a payment was for after it arrived (once): which fees show it as paid */
+        post: operations["payments_mark_for_fees"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/{payment_id}/receipt": {
         parameters: {
             query?: never;
@@ -3513,7 +3530,7 @@ export interface components {
             amount_kobo: number;
             /**
              * Fees
-             * @description Pay for these fees (from the breakdown); empty: bill order
+             * @description Pay for these fees (from the breakdown); empty: tuition first, then the rest
              */
             fees?: string[];
             /**
@@ -3531,7 +3548,7 @@ export interface components {
             earlier_left_kobo: number;
             /**
              * Fees
-             * @description This term's fees in bill order (a bill's payments cover them in order)
+             * @description This term's fees in bill order (payments not marked for a fee cover tuition first)
              */
             fees: components["schemas"]["FeeLineOut"][];
             /**
@@ -3976,7 +3993,7 @@ export interface components {
             amount_kobo: number;
             /**
              * Fees
-             * @description What it's for (fee names); empty: the bill order
+             * @description What it's for (fee names); empty: tuition first, then the rest
              */
             fees?: string[];
             /**
@@ -4053,6 +4070,11 @@ export interface components {
          * @enum {string}
          */
         ManualPaymentStatus: "pending" | "approved" | "rejected";
+        /** MarkFeesIn */
+        MarkFeesIn: {
+            /** Fees */
+            fees: string[];
+        };
         /** Me */
         Me: {
             /** Capabilities */
@@ -4603,6 +4625,11 @@ export interface components {
             amount_kobo: number;
             /** Applied */
             applied: components["schemas"]["AppliedOut"][];
+            /**
+             * For Fees
+             * @description The fees it was marked for; empty: tuition first, then the rest
+             */
+            for_fees: string[];
             gateway: components["schemas"]["GatewayCode"] | null;
             /** Gateway Reference */
             gateway_reference: string | null;
@@ -12541,6 +12568,95 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    payments_mark_for_fees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkFeesIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -2260,7 +2260,7 @@
             "type": "integer"
           },
           "fees": {
-            "description": "Pay for these fees (from the breakdown); empty: bill order",
+            "description": "Pay for these fees (from the breakdown); empty: tuition first, then the rest",
             "items": {
               "maxLength": 200,
               "type": "string"
@@ -2290,7 +2290,7 @@
             "type": "integer"
           },
           "fees": {
-            "description": "This term's fees in bill order (a bill's payments cover them in order)",
+            "description": "This term's fees in bill order (payments not marked for a fee cover tuition first)",
             "items": {
               "$ref": "#/components/schemas/FeeLineOut"
             },
@@ -3403,7 +3403,7 @@
             "type": "integer"
           },
           "fees": {
-            "description": "What it's for (fee names); empty: the bill order",
+            "description": "What it's for (fee names); empty: tuition first, then the rest",
             "items": {
               "maxLength": 200,
               "type": "string"
@@ -3561,6 +3561,25 @@
         ],
         "title": "ManualPaymentStatus",
         "type": "string"
+      },
+      "MarkFeesIn": {
+        "properties": {
+          "fees": {
+            "items": {
+              "maxLength": 200,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Fees",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fees"
+        ],
+        "title": "MarkFeesIn",
+        "type": "object"
       },
       "Me": {
         "properties": {
@@ -5025,6 +5044,14 @@
             "title": "Applied",
             "type": "array"
           },
+          "for_fees": {
+            "description": "The fees it was marked for; empty: tuition first, then the rest",
+            "items": {
+              "type": "string"
+            },
+            "title": "For Fees",
+            "type": "array"
+          },
           "gateway": {
             "anyOf": [
               {
@@ -5134,7 +5161,8 @@
           "applied",
           "unapplied_kobo",
           "receipt_id",
-          "receipt_number"
+          "receipt_number",
+          "for_fees"
         ],
         "title": "PaymentOut",
         "type": "object"
@@ -16821,6 +16849,124 @@
           }
         ],
         "summary": "A payment and where it was applied",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/{payment_id}/fees": {
+      "post": {
+        "operationId": "payments_mark_for_fees",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkFeesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Say what a payment was for after it arrived (once): which fees show it as paid",
         "tags": [
           "payments"
         ]

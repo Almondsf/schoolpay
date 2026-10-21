@@ -59,6 +59,35 @@ describe('payments', () => {
     expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/manual-payments/theirs/approve'))).toBe(true);
   });
 
+  it('marks a transfer for the fee the parent says it was for', async () => {
+    const transfer = {
+      id: 'p1', student, kind: 'receipt', amount_kobo: 500_000, method: 'virtual_account', gateway: 'fake', gateway_reference: 'FAKE_1',
+      reference: '', note: '', received_at: '2026-10-17T10:00:00Z', reversed: false, reverses_payment_id: null,
+      applied: [{ invoice_id: 'i1', invoice_number: 7, amount_kobo: 500_000 }], unapplied_kobo: 0, receipt_id: null, receipt_number: null, for_fees: [],
+    };
+    const calls = mockApi({
+      ...base,
+      'GET /api/v1/payments': () => json({ items: [transfer], total: 1, limit: 50, offset: 0 }),
+      'GET /api/v1/reports/students/st1/fee-breakdown': () =>
+        json({
+          term_label: '2026/2027 First term', earlier_left_kobo: 0, total_left_kobo: 130_000_00,
+          fees: [
+            { name: 'PTA levy', billed_kobo: 500_000, paid_kobo: 0, left_kobo: 500_000, status: 'Unpaid' },
+            { name: 'Tuition', billed_kobo: 180_000_00, paid_kobo: 50_000_00, left_kobo: 130_000_00, status: 'Part paid' },
+          ],
+        }),
+      'POST /api/v1/payments/p1/fees': () => json({ ...transfer, for_fees: ['PTA levy'] }),
+    });
+    renderAt('/console/payments');
+    await userEvent.click(await screen.findByRole('button', { name: 'Mark for fees' }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /PTA levy/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark for PTA levy' }));
+    await vi.waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/payments/p1/fees'))).toBe(true));
+    const sent = calls.find((c) => c.method === 'POST' && c.url.endsWith('/payments/p1/fees'))!;
+    expect(await sent.json()).toEqual({ fees: ['PTA levy'] });
+  });
+
   it('records cash in kobo for the chosen student', async () => {
     const posted: unknown[] = [];
     mockApi({

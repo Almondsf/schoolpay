@@ -83,6 +83,7 @@ class AuditAction(enum.StrEnum):
     VIRTUAL_ACCOUNTS_ISSUED = "payments.virtual_accounts_issued"
     PAYMENT_RECORDED = "payments.recorded"
     PAYMENT_REVERSED = "payments.reversed"
+    PAYMENT_MARKED_FOR_FEES = "payments.marked_for_fees"
     PAYMENT_NEEDS_REVIEW = "payments.needs_review"
     PAYMENT_LINK_CREATED = "payments.link_created"
     FAMILY_LINK_ISSUED = "payments.family_link_issued"

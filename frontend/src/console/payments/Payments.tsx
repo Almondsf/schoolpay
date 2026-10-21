@@ -46,6 +46,7 @@ function Received() {
   const [offset, setOffset] = useState(0);
   const [search, setSearch] = useState('');
   const [reversing, setReversing] = useState<Payment | null>(null);
+  const [marking, setMarking] = useState<Payment | null>(null);
   const payments = useQuery({
     queryKey: ['payments', search, offset],
     queryFn: async () => unwrap(await api.GET('/api/v1/payments', { params: { query: { search: search || undefined, limit: PAGE, offset } } })),
@@ -79,7 +80,7 @@ function Received() {
                 <th>How</th>
                 <th className="num">Amount</th>
                 <th>Applied to</th>
-                {can('payments.reverse') && <th aria-label="Actions" />}
+                {(can('payments.reverse') || can('payments.record')) && <th aria-label="Actions" />}
               </tr>
             </thead>
             <tbody>
@@ -93,6 +94,7 @@ function Received() {
                   <td>
                     {p.kind === 'reversal' ? 'Reversal' : METHOD_LABELS[p.method]}
                     {(p.reference || p.gateway_reference) && <div className="muted small">{p.reference || p.gateway_reference}</div>}
+                    {p.for_fees.length > 0 && <div className="small">For: {p.for_fees.join(', ')}</div>}
                     {p.reversed && <span className="badge danger">Reversed</span>}
                     {p.receipt_id && p.receipt_number && (
                       <div>
@@ -109,9 +111,14 @@ function Received() {
                     ))}
                     {p.unapplied_kobo !== 0 && <div className="muted">{formatKobo(p.unapplied_kobo)} as credit</div>}
                   </td>
-                  {can('payments.reverse') && (
-                    <td className="actions">
-                      {p.kind === 'receipt' && !p.reversed && (
+                  {(can('payments.reverse') || can('payments.record')) && (
+                    <td className="actions nowrap">
+                      {can('payments.record') && p.kind === 'receipt' && !p.reversed && p.for_fees.length === 0 && p.applied.length > 0 && (
+                        <button className="secondary small" onClick={() => setMarking(p)} title="Say which fees this payment was for">
+                          Mark for fees
+                        </button>
+                      )}{' '}
+                      {can('payments.reverse') && p.kind === 'receipt' && !p.reversed && (
                         <button className="secondary small" onClick={() => setReversing(p)}>
                           Reverse
                         </button>
@@ -126,6 +133,7 @@ function Received() {
         </div>
       )}
       {reversing && <Reverse payment={reversing} onClose={() => setReversing(null)} />}
+      {marking && <MarkForFees payment={marking} onClose={() => setMarking(null)} />}
     </>
   );
 }
@@ -309,6 +317,74 @@ function RecordManual({ onClose, onDone }: { onClose: () => void; onDone: () => 
           </button>
           <button type="submit" disabled={!student || !kobo || save.isPending}>
             Record
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Say what a payment was for after it arrived (a parent says their transfer was for the PTA levy).
+ * Only which fees show as paid changes; marks are permanent, so a payment is marked once.
+ */
+function MarkForFees({ payment, onClose }: { payment: Payment; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [picked, setPicked] = useState<string[]>([]);
+  const breakdown = useQuery({
+    queryKey: ['account', payment.student.id, 'fee-breakdown'],
+    queryFn: async () =>
+      unwrap(await api.GET('/api/v1/reports/students/{student_id}/fee-breakdown', { params: { path: { student_id: payment.student.id } } })),
+  });
+  const save = useMutation({
+    mutationFn: async () =>
+      unwrap(await api.POST('/api/v1/payments/{payment_id}/fees', { params: { path: { payment_id: payment.id } }, body: { fees: picked } })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['payments'] });
+      void queryClient.invalidateQueries({ queryKey: ['account', payment.student.id] });
+      onClose();
+    },
+  });
+  const fees = (breakdown.data?.fees ?? []).filter((f) => f.billed_kobo > 0);
+  return (
+    <Modal title={`What was ${formatKobo(payment.amount_kobo)} from ${payment.student.full_name} for?`} onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          save.mutate();
+        }}
+      >
+        <p className="muted">
+          Tick the fees the parent says this payment was for. Those fees then show it as paid; what's owed in total doesn't change. This can only
+          be done once for each payment.
+        </p>
+        <ErrorAlert error={breakdown.error ?? save.error} />
+        {breakdown.isPending ? (
+          <Loading />
+        ) : (
+          <fieldset className="fee-picker">
+            <legend>Fees on this term's bill</legend>
+            {fees.map((f) => (
+              <label key={f.name} className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={picked.includes(f.name)}
+                  onChange={(e) => setPicked(e.target.checked ? [...picked, f.name] : picked.filter((n) => n !== f.name))}
+                />
+                {f.name}{' '}
+                <span className="muted small">
+                  {formatKobo(f.billed_kobo)} · {f.left_kobo > 0 ? `${formatKobo(f.left_kobo)} left` : 'paid'}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        <div className="row end">
+          <button type="button" className="secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" disabled={picked.length === 0 || save.isPending}>
+            Mark for {picked.length === 1 ? picked[0] : `${picked.length || ''} fees`.trim()}
           </button>
         </div>
       </form>
