@@ -33,6 +33,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 20 Oct | **Pay for particular fees** (tick WAEC on the payment page or the cash form); earmarked money goes to those fees first, even before older debts | `payments/earmarks.py`, `PaymentEarmark` |
 | 20 Oct | **Deployed**: API, worker, Postgres and Redis on Render (https://schoolpay-a97t.onrender.com), web app on Netlify (https://parentpay.netlify.app), which forwards `/api` to Render | `docs/DEPLOYMENT.md` ("On Render and Netlify"), `frontend/public/_redirects` |
 | 21 Oct | Production logs leave out database query values; startup refuses a malformed Redis address and never echoes a rejected setting's value | `core/db.py`, `core/config.py` |
+| 21 Oct | Fee status download per class: each class lists only its own fees, part-paid fees show paid and left, the PDF has a page per class | `reports/exports.py` (`fee_status_pdf`) |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:

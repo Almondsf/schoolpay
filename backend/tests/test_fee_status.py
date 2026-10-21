@@ -55,14 +55,15 @@ async def test_excel_has_a_sheet_per_class_and_colours_the_status(client, world)
     sheet = book["All pupils"]
     header = [c.value for c in sheet[5]]
     assert header[:3] == ["Student", "Admission no.", "Class"]
-    tuition = header.index("Tuition") + 1
-    assert header[tuition] == "Tuition: left (NGN)"
+    tuition, pta = header.index("Tuition") + 1, header.index("PTA") + 1  # 1-based columns
+    assert header[tuition : tuition + 2] == ["Tuition: paid (NGN)", "Tuition: left (NGN)"]
     rows = {sheet.cell(row=r, column=1).value: r for r in range(6, 9)}
-    bayo = rows["Bayo Ojo"]
+    bayo = rows["Bayo Ojo"]  # paid 50,000: the PTA levy, then part of tuition
     assert sheet.cell(row=bayo, column=tuition).value == "Part paid"
-    assert sheet.cell(row=bayo, column=tuition + 1).value == 135_000
+    assert sheet.cell(row=bayo, column=tuition + 2).value == 135_000
+    assert sheet.cell(row=bayo, column=tuition + 1).value + sheet.cell(row=bayo, column=pta + 1).value == 50_000
     assert sheet.cell(row=bayo, column=tuition).fill.fgColor.rgb.endswith("FCEBC7")
-    assert "covering its fees in the order" in str(sheet.cell(row=sheet.max_row, column=1).value)
+    assert "in the order they appear on the bill" in str(sheet.cell(row=sheet.max_row, column=1).value)
 
 
 async def test_pdf_for_one_class(client, world):
@@ -125,3 +126,67 @@ async def test_one_off_charges_show_by_their_own_name(client, world):
     body = (await client.get(f"/api/v1/reports/students/{ada.id}/fee-breakdown", headers=world["bursar"])).json()
     names = [f["name"] for f in body["fees"]]
     assert "School uniform" in names and "Other charges" not in names
+
+
+def _two_classes():
+    """JSS 1 pays tuition and a uniform; SSS 3 pays tuition and WAEC. A made-up report, no database."""
+    from app.modules.reports.fee_status import FeeCell, FeeStatusReport, PupilStatus
+
+    def pupil(name, klass, fees, earlier=0):
+        return PupilStatus(name, name[:3].upper(), klass, {k: FeeCell(*v) for k, v in fees.items()}, {}, earlier)
+
+    pupils = [
+        pupil("Ada Eze", "JSS 1 A", {"Tuition": (100_000_00, 0), "Uniform": (15_000_00, 0)}),
+        pupil("Bayo Ojo", "JSS 1 A", {"Tuition": (100_000_00, 60_000_00), "Uniform": (15_000_00, 15_000_00)}),
+        pupil(
+            "Chidi Okafor", "SSS 3 A", {"Tuition": (150_000_00, 150_000_00), "WAEC": (30_000_00, 30_000_00)}, 5_000_00
+        ),
+        pupil("Dayo Bello", "SSS 3 A", {"Tuition": (150_000_00, 0), "WAEC": (30_000_00, 10_000_00)}),
+    ]
+    return FeeStatusReport("2026/2027 First term", "All classes", ["Tuition", "Uniform", "WAEC"], pupils)
+
+
+def _texts(table):
+    return [[getattr(cell, "text", cell) for cell in row] for row in table._cellvalues]
+
+
+def test_each_class_lists_only_its_own_fees_with_what_was_paid():
+    from app.modules.reports.exports import _by_class, _fee_status_class_table
+
+    report = _two_classes()
+    jss1, sss3 = (_texts(_fee_status_class_table(report.columns, ps)) for ps in _by_class(report.pupils).values())
+    assert jss1[0] == ["Pupil", "Tuition", "Uniform", "Paid this term", "Total owed", "Status"]
+    assert jss1[2] == [
+        "Bayo Ojo",
+        "40,000 paid, 60,000 left",
+        "Unpaid 15,000",
+        "NGN 40,000.00",
+        "NGN 75,000.00",
+        "Part paid",
+    ]
+    assert sss3[0] == ["Pupil", "Tuition", "WAEC", "Paid this term", "Earlier debts", "Total owed", "Status"]
+    assert sss3[2][1:3] == ["Paid", "20,000 paid, 10,000 left"]
+    assert sss3[-1][0] == "Total" and sss3[-1][-2] == "NGN 195,000.00"
+
+
+def test_pdf_has_a_page_per_class_and_excel_a_sheet_per_class_with_its_fees():
+    from reportlab.platypus import PageBreak
+
+    from app.modules.reports import exports
+
+    report = _two_classes()
+    assert exports.fee_status_pdf("Demo College", report).startswith(b"%PDF")
+    seen = []
+    real = exports._pdf
+    exports._pdf = lambda school, title, subtitle, blocks: seen.extend(blocks) or real(school, title, subtitle, blocks)
+    try:
+        exports.fee_status_pdf("Demo College", report)
+    finally:
+        exports._pdf = real
+    assert sum(isinstance(b, PageBreak) for b in seen) == 1  # two classes, two pages
+
+    book = load_workbook(BytesIO(exports.fee_status_xlsx("Demo College", report)))
+    assert book.sheetnames == ["All pupils", "JSS 1 A", "SSS 3 A"]
+    sss3 = [c.value for c in book["SSS 3 A"][5]]
+    assert "WAEC" in sss3 and "Uniform" not in sss3
+    assert "Uniform" in [c.value for c in book["All pupils"][5]]

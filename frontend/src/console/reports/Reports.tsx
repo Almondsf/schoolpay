@@ -354,7 +354,8 @@ function FeeStatus() {
     <section className="card section" aria-label="Fee status by pupil">
       <p>
         Each pupil’s fees for the term (tuition, bus, levies and the rest) as <strong>paid</strong>, <strong>part paid</strong> or{' '}
-        <strong>unpaid</strong>, with the amount left on each, earlier debts and the total owed. Excel has a sheet for every class too.
+        <strong>unpaid</strong>, with what was paid and what’s left on each, earlier debts and the total owed. Each class lists only
+        its own fees: the PDF puts every class on its own page, ready to print, and Excel has a sheet per class.
       </p>
       <div className="filters">
         <select aria-label="Term" value={termId} onChange={(e) => setTermId(e.target.value)}>
@@ -376,7 +377,7 @@ function FeeStatus() {
         </select>
       </div>
       <Downloads onDownload={(f) => download.mutate(f)} pending={download.isPending} error={download.error} />
-      <p className="hint">A bill’s payments are shown covering its fees in the order they appear on the bill.</p>
+      <p className="hint">Money paid for particular fees shows against those fees; the rest covers a bill’s fees in the order they appear on it.</p>
     </section>
   );
 }

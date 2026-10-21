@@ -20,7 +20,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Add a fee to a class in the fee grid after the bills have gone out, and add it to those pupils’ bills with one click (exempt pupils and optional fees left out).
 - ✅ See each pupil’s fees for the term one by one (charged, paid, left) on the pupil’s page, plus earlier debts.
 - ✅ (Proprietor) Set the school up on Bachs through Bachs’ own onboarding, beside Paystack.
-- ✅ Download every pupil’s fees for a term, for the whole school or one class, each fee marked paid, part paid or unpaid with what’s left (Excel with a sheet per class, or PDF to print).
+- ✅ Download every pupil’s fees for a term, for the whole school or one class, each fee marked paid, part paid or unpaid with what was paid and what’s left. Each class shows only its own fees: a PDF with a page per class to print, or Excel with a sheet per class.
 - ✅ Switch on phone calls for parents who prefer them, with a cap per bill, and mark those parents (and their language) on each pupil's page.
 - ✅ Copy a parent's family payment link to send by hand, or replace it if it went to the wrong person.
 - ✅ Sign in safely with a password and a code from my phone.
