@@ -94,7 +94,6 @@ function Schedule() {
   });
   const invalid = changed.filter((k) => cells[k]?.amount && parseNairaToKobo(cells[k]!.amount) === null);
 
-  const [ask, setAsk] = useState(false); // after saving, offer to add new fees to bills already sent
   const save = useMutation({
     mutationFn: async () => {
       const entries = changed.map((k) => {
@@ -106,9 +105,13 @@ function Schedule() {
       return unwrap(await api.PUT('/api/v1/terms/{term_id}/fee-schedule', { params: { path: { term_id: term } }, body: { entries } }));
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['fee-schedule', term], data);
+      queryClient.setQueryData(['fee-schedule', term], data.entries);
       void queryClient.invalidateQueries({ queryKey: ['bill-sync', term] });
-      setAsk(true);
+      if (data.bills.bills_changed > 0) {
+        // A fee added to a class goes onto that class's bills already sent (owner, 2026-10-21)
+        void queryClient.invalidateQueries({ queryKey: ['account'] });
+        void queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      }
     },
   });
   // Fees on the list that the term's bills (already sent) don't have yet
@@ -123,7 +126,6 @@ function Schedule() {
     mutationFn: async () =>
       unwrap(await api.POST('/api/v1/terms/{term_id}/bills/sync', { params: { path: { term_id: term } }, body: { dry_run: false } })),
     onSuccess: () => {
-      setAsk(false);
       void queryClient.invalidateQueries({ queryKey: ['bill-sync', term] });
       void queryClient.invalidateQueries({ queryKey: ['account'] });
       void queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -185,28 +187,12 @@ function Schedule() {
           <span className="hint">Pupils exempted from a fee, and optional fees a pupil hasn’t taken, are left out.</span>
         </section>
       )}
-      {ask && !missing.isFetching && missing.data && missing.data.bills_changed > 0 && (
-        <Modal title="Add to the bills already sent?" onClose={() => setAsk(false)}>
-          <p>This term's bills have already gone out, so what you just saved isn't on them yet:</p>
-          <ul>
-            {missing.data.fees.map((f) => (
-              <li key={f.item_name}>
-                <strong>{f.item_name}</strong> for {f.class_names.join(', ')}: {f.bills} {f.bills === 1 ? 'pupil' : 'pupils'},{' '}
-                {formatKobo(f.total_kobo)}
-              </li>
-            ))}
-          </ul>
-          <p className="hint">Pupils exempted from a fee, and optional fees a pupil hasn't taken, are left out. Parents see the new amount on their bill.</p>
-          <ErrorAlert error={addToBills.error} />
-          <div className="row end">
-            <button type="button" className="secondary" onClick={() => setAsk(false)}>
-              Not now
-            </button>
-            <button onClick={() => addToBills.mutate()} disabled={addToBills.isPending}>
-              {addToBills.isPending ? 'Adding…' : `Add to ${missing.data.bills_changed} ${missing.data.bills_changed === 1 ? 'bill' : 'bills'}`}
-            </button>
-          </div>
-        </Modal>
+      {save.data && save.data.bills.bills_changed > 0 && (
+        <Notice>
+          Saved, and added to the bills already sent:{' '}
+          {save.data.bills.fees.map((f) => `${f.item_name} for ${f.class_names.join(', ')} (${f.bills} ${f.bills === 1 ? 'pupil' : 'pupils'})`).join('; ')}
+          . Parents see the new amount on their bill.
+        </Notice>
       )}
       {addToBills.data && (
         <Notice>

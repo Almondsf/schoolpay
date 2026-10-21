@@ -359,10 +359,12 @@ invoices take about 0.4 s.
 
 - **Catching bills up with the fee grid** (`POST /terms/{id}/bills/sync`, dry run first;
   `charges.sync_bills`). A fee set in the grid after the term's bills went out (WAEC for
-  SSS 3) isn't on those bills. The Fees page checks for the gap whenever the grid loads or
-  is saved: right after a save it asks in a dialog ("Add to the bills already sent?"), and
-  otherwise a notice stays above the grid. Adding skips exempt pupils and optional fees a
-  pupil hasn't taken. Fees already on a bill keep their amount. Credit paid ahead covers
+  SSS 3) goes onto that class's bills already sent **when the grid is saved**
+  (`charges.save_schedule`: the save and the new bill lines are one transaction, and
+  `PUT /terms/{id}/fee-schedule` returns what was added). Owner's rule, 2026-10-21: a fee
+  added for a class shows on every pupil in that class. Exempt pupils and optional fees a
+  pupil hasn't taken are left out. Bills that somehow still miss a fee (e.g. from before
+  this rule) show as a notice above the grid with "Add them to N bills". Fees already on a bill keep their amount. Credit paid ahead covers
   the new lines.
 - **Class charges** (`POST /terms/{id}/class-charges`, with a dry run that
   lists every pupil). A fee for whole classes, such as WAEC for SSS 3. It's added

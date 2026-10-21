@@ -90,6 +90,7 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 - 2026-10-20 School admins get everything a bursar has, with two-factor sign-in.
 - 2026-10-20 Money a parent marks for a fee goes to that fee even if older debts are owed.
 - 2026-10-21 Pay cards list the term's fees and what's left to pay; no QR code.
+- 2026-10-21 A fee added to a class in the fee grid goes onto every bill in that class already sent, as soon as it's saved (no confirmation).
 
 ## Next: what's open, roughly in order
 

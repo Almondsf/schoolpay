@@ -432,18 +432,41 @@ def get_schedule(
     return [ScheduleEntryOut.model_validate(s) for s in setup_service.schedule_for_term(db, term_id)]
 
 
+class MissingFeeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    item_name: str
+    class_names: list[str]
+    bills: int
+    total_kobo: int
+
+
+class BillSyncOut(BaseModel):
+    dry_run: bool
+    fees: list[MissingFeeOut]
+    bills_changed: int
+    total_kobo: int
+
+
+class ScheduleSavedOut(BaseModel):
+    entries: list[ScheduleEntryOut]
+    bills: BillSyncOut = Field(
+        description="Fees added to the term's bills already sent, because their class now has them"
+    )
+
+
 @router.put(
     "/terms/{term_id}/fee-schedule",
-    response_model=list[ScheduleEntryOut],
-    summary="Set amounts for fee/class pairs (null amount removes one); others are left alone",
+    response_model=ScheduleSavedOut,
+    summary="Set amounts for fee/class pairs (null removes one); new class fees go onto bills already sent",
 )
 def set_schedule(
     term_id: uuid.UUID, body: ScheduleIn, ctx: StaffContext = FEES_MANAGE, db: Session = Depends(get_db)
-) -> list[ScheduleEntryOut]:
+) -> ScheduleSavedOut:
     entries = [
         setup_service.ScheduleEntry(e.fee_item_id, e.class_level_id, e.amount_kobo, e.is_optional) for e in body.entries
     ]
-    return [ScheduleEntryOut.model_validate(s) for s in setup_service.set_schedule(db, ctx, term_id, entries)]
+    saved, report = charges.save_schedule(db, ctx, term_id, entries)
+    return ScheduleSavedOut(entries=[ScheduleEntryOut.model_validate(s) for s in saved], bills=_bill_sync_out(report))
 
 
 @router.post(
@@ -666,21 +689,6 @@ class BillSyncIn(BaseModel):
     dry_run: bool = True
 
 
-class MissingFeeOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    item_name: str
-    class_names: list[str]
-    bills: int
-    total_kobo: int
-
-
-class BillSyncOut(BaseModel):
-    dry_run: bool
-    fees: list[MissingFeeOut]
-    bills_changed: int
-    total_kobo: int
-
-
 @router.post(
     "/terms/{term_id}/bills/sync",
     response_model=BillSyncOut,
@@ -689,7 +697,10 @@ class BillSyncOut(BaseModel):
 def sync_bills(
     term_id: uuid.UUID, body: BillSyncIn, ctx: StaffContext = INVOICES_ISSUE, db: Session = Depends(get_db)
 ) -> BillSyncOut:
-    report = charges.sync_bills(db, ctx, term_id=term_id, dry_run=body.dry_run)
+    return _bill_sync_out(charges.sync_bills(db, ctx, term_id=term_id, dry_run=body.dry_run))
+
+
+def _bill_sync_out(report: charges.BillSyncReport) -> BillSyncOut:
     return BillSyncOut(
         dry_run=report.dry_run,
         fees=[MissingFeeOut.model_validate(f) for f in report.fees],

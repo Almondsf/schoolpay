@@ -133,21 +133,22 @@ async def test_fee_items_and_schedule(client, world):
         },
     )
     assert schedule.status_code == 200
-    assert schedule.json() == [
+    assert schedule.json()["entries"] == [
         {"fee_item_id": lunch["id"], "class_level_id": str(level.id), "amount_kobo": 2_500_000, "is_optional": True}
     ]
+    assert schedule.json()["bills"]["bills_changed"] == 0  # no bills for that term yet
     updated = await client.put(
         f"/api/v1/terms/{term.id}/fee-schedule",
         headers=h,
         json={"entries": [{"fee_item_id": lunch["id"], "class_level_id": str(level.id), "amount_kobo": 3_000_000}]},
     )
-    assert updated.json()[0]["amount_kobo"] == 3_000_000
+    assert updated.json()["entries"][0]["amount_kobo"] == 3_000_000
     removed = await client.put(
         f"/api/v1/terms/{term.id}/fee-schedule",
         headers=h,
         json={"entries": [{"fee_item_id": lunch["id"], "class_level_id": str(level.id), "amount_kobo": None}]},
     )
-    assert removed.json() == []
+    assert removed.json()["entries"] == []
     bad = await client.put(
         f"/api/v1/terms/{term.id}/fee-schedule",
         headers=h,

@@ -144,7 +144,11 @@ def _check_ids(session: Session, model: type[FeeItem] | type[ClassLevel], ids: s
 def set_schedule(
     session: Session, ctx: StaffContext, term_id: uuid.UUID, entries: list[ScheduleEntry]
 ) -> list[FeeSchedule]:
-    """Set (or remove) the amounts for some item/class pairs in a term. Pairs not listed are left alone."""
+    """
+    Set (or remove) the amounts for some item/class pairs in a term. Pairs not listed are left
+    alone. The caller commits (saving the grid also brings the term's bills up to date:
+    `charges.save_schedule`).
+    """
     term = get_or_404(session, Term, term_id, label="Term")
     _check_ids(session, FeeItem, {e.fee_item_id for e in entries}, "fee_item_id")
     _check_ids(session, ClassLevel, {e.class_level_id for e in entries}, "class_level_id")
@@ -184,8 +188,7 @@ def set_schedule(
             )
         )
     _audit(session, ctx, term, {"schedule_set": len(upserts), "schedule_removed": len(removals)})
-    session.commit()
-    session.expire_all()
+    session.flush()
     return schedule_for_term(session, term.id)
 
 

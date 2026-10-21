@@ -6337,6 +6337,27 @@
         "title": "ScheduleIn",
         "type": "object"
       },
+      "ScheduleSavedOut": {
+        "properties": {
+          "bills": {
+            "$ref": "#/components/schemas/BillSyncOut",
+            "description": "Fees added to the term's bills already sent, because their class now has them"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleEntryOut"
+            },
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries",
+          "bills"
+        ],
+        "title": "ScheduleSavedOut",
+        "type": "object"
+      },
       "SchoolCreateIn": {
         "properties": {
           "name": {
@@ -26293,11 +26314,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ScheduleEntryOut"
-                  },
-                  "title": "Response Fees Set Schedule",
-                  "type": "array"
+                  "$ref": "#/components/schemas/ScheduleSavedOut"
                 }
               }
             },
@@ -26379,7 +26396,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Set amounts for fee/class pairs (null amount removes one); others are left alone",
+        "summary": "Set amounts for fee/class pairs (null removes one); new class fees go onto bills already sent",
         "tags": [
           "fees"
         ]

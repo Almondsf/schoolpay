@@ -17,7 +17,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 
 ## Bursar
 - ✅ When taking cash or a teller, note which fees it’s for, so it goes to those fees (even if older debts are owed).
-- ✅ Add a fee to a class in the fee grid after the bills have gone out, and be asked straight away whether to add it to those pupils’ bills (one click; exempt pupils and optional fees left out).
+- ✅ Add a fee to a class in the fee grid after the bills have gone out, and it goes onto every pupil’s bill in that class as soon as it’s saved (exempt pupils and optional fees left out).
 - ✅ See each pupil’s fees for the term one by one (charged, paid, left) on the pupil’s page, plus earlier debts.
 - ✅ (Proprietor) Set the school up on Bachs through Bachs’ own onboarding, beside Paystack.
 - ✅ Download every pupil’s fees for a term, for the whole school or one class, each fee marked paid, part paid or unpaid with what was paid and what’s left. Each class shows only its own fees: a PDF with a page per class to print, or Excel with a sheet per class.

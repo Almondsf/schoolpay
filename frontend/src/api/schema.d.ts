@@ -2461,7 +2461,7 @@ export interface paths {
         };
         /** Fee amounts per class for a term */
         get: operations["fees_get_schedule"];
-        /** Set amounts for fee/class pairs (null amount removes one); others are left alone */
+        /** Set amounts for fee/class pairs (null removes one); new class fees go onto bills already sent */
         put: operations["fees_set_schedule"];
         post?: never;
         delete?: never;
@@ -5173,6 +5173,13 @@ export interface components {
         ScheduleIn: {
             /** Entries */
             entries: components["schemas"]["ScheduleEntryIn"][];
+        };
+        /** ScheduleSavedOut */
+        ScheduleSavedOut: {
+            /** @description Fees added to the term's bills already sent, because their class now has them */
+            bills: components["schemas"]["BillSyncOut"];
+            /** Entries */
+            entries: components["schemas"]["ScheduleEntryOut"][];
         };
         /** SchoolCreateIn */
         SchoolCreateIn: {
@@ -19731,7 +19738,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScheduleEntryOut"][];
+                    "application/json": components["schemas"]["ScheduleSavedOut"];
                 };
             };
             /** @description Bad Request */

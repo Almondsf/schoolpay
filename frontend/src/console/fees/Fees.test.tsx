@@ -14,6 +14,7 @@ const bursar = me({
   capabilities: ['school.view', 'students.view', 'fees.view', 'fees.manage', 'invoices.issue', 'payments.view'],
 });
 const term = { id: 't1', session_id: 's1', number: 1, label: 'First term', start_date: '2026-09-07', end_date: '2026-12-11', is_current: true };
+const noBills = { dry_run: true, fees: [], bills_changed: 0, total_kobo: 0 };
 const base = {
   'POST /api/v1/auth/refresh': () => json(signedIn(bursar)),
   'GET /api/v1/terms/current': () => json({ ...term, session_name: '2026/2027' }),
@@ -45,7 +46,7 @@ describe('fees and billing', () => {
     const calls = mockApi({
       ...base,
       'GET /api/v1/terms/t1/fee-schedule': () => json([{ fee_item_id: 'f1', class_level_id: 'l1', amount_kobo: 15_000_000, is_optional: false }]),
-      'PUT /api/v1/terms/t1/fee-schedule': async (request) => json((await request.json()).entries),
+      'PUT /api/v1/terms/t1/fee-schedule': async (request) => json({ entries: (await request.json()).entries, bills: noBills }),
     });
     renderAt('/console/fees');
     const jss1 = await screen.findByLabelText('Tuition for JSS 1');
@@ -88,33 +89,22 @@ describe('fees and billing', () => {
     expect(await applied[applied.length - 2]!.json()).toEqual({ dry_run: false });
   });
 
-  it('asks straight after saving when the new fee is not on the bills already sent', async () => {
-    let missing = { dry_run: true, fees: [] as object[], bills_changed: 0, total_kobo: 0 };
-    const calls = mockApi({
+  it('a fee saved for a class goes onto the bills already sent, and says so', async () => {
+    mockApi({
       ...base,
       'GET /api/v1/terms/t1/fee-schedule': () => json([]),
-      'PUT /api/v1/terms/t1/fee-schedule': async (request) => {
-        missing = { dry_run: true, fees: [{ item_name: 'Tuition', class_names: ['JSS 2'], bills: 20, total_kobo: 200_000_000 }], bills_changed: 20, total_kobo: 200_000_000 };
-        return json((await request.json()).entries);
-      },
-      'POST /api/v1/terms/t1/bills/sync': async (request) => {
-        const { dry_run } = await request.json();
-        if (dry_run) return json(missing);
-        const done = { ...missing, dry_run: false };
-        missing = { dry_run: true, fees: [], bills_changed: 0, total_kobo: 0 };
-        return json(done);
-      },
+      'PUT /api/v1/terms/t1/fee-schedule': async (request) =>
+        json({
+          entries: (await request.json()).entries,
+          bills: { dry_run: false, fees: [{ item_name: 'Tuition', class_names: ['JSS 2'], bills: 20, total_kobo: 200_000_000 }], bills_changed: 20, total_kobo: 200_000_000 },
+        }),
+      'POST /api/v1/terms/t1/bills/sync': () => json(noBills),
     });
     renderAt('/console/fees');
     await userEvent.type(await screen.findByLabelText('Tuition for JSS 2'), '100000');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Save 1 change' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add to the bills already sent?' });
-    expect(within(dialog).getByText(/for JSS 2: 20 pupils/)).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Add to 20 bills' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(calls.some((c) => c.url.endsWith('/bills/sync') && c.method === 'POST')).toBe(true);
-    expect(await screen.findByText(/Added to 20 bills/)).toBeInTheDocument();
+    expect(await screen.findByText(/added to the bills already sent: Tuition for JSS 2 \(20 pupils\)/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); // nothing to confirm
   });
 
   it('blocks saving an invalid amount', async () => {

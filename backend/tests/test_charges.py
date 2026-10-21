@@ -250,17 +250,22 @@ async def test_only_billing_staff_and_only_their_school(client, world, db):
 # --- Catching bills up with the fee list -------------------------------------------------------
 
 
-async def schedule_waec(client, world, *, optional=False):
-    """What the user did: add WAEC to JSS 3 in the fee grid after the bills went out."""
+async def waec_item(client, world):
     item = await client.post("/api/v1/fee-items", headers=world["bursar"], json={"name": "WAEC"})
     assert item.status_code == 201, item.text
-    entry = {"fee_item_id": item.json()["id"], "class_level_id": str(world["levels"][2].id), "amount_kobo": WAEC,
+    return item.json()["id"]
+
+
+async def schedule_waec(client, world, *, optional=False, item_id=None):
+    """What the user did: add WAEC to JSS 3 in the fee grid after the bills went out. Returns what saving did."""
+    item_id = item_id or await waec_item(client, world)
+    entry = {"fee_item_id": item_id, "class_level_id": str(world["levels"][2].id), "amount_kobo": WAEC,
              "is_optional": optional}  # fmt: skip
     saved = await client.put(
         f"/api/v1/terms/{world['terms'][0].id}/fee-schedule", headers=world["bursar"], json={"entries": [entry]}
     )
     assert saved.status_code == 200, saved.text
-    return item.json()["id"]
+    return saved.json()["bills"]
 
 
 async def sync(client, world, dry_run):
@@ -271,44 +276,36 @@ async def sync(client, world, dry_run):
     return response.json()
 
 
-async def test_fees_added_to_the_grid_after_billing_reach_the_bills(client, world, db):
-    await schedule_waec(client, world)
-    seniors = world["jss3"]
-    assert all([await owed(client, world, s) == 205_000 * NAIRA for s in seniors])  # not on the bills yet
-
-    preview = await sync(client, world, dry_run=True)
-    assert preview["fees"] == [{"item_name": "WAEC", "class_names": ["JSS 3"], "bills": 3, "total_kobo": 3 * WAEC}]
-    assert preview["bills_changed"] == 3
-    assert await owed(client, world, seniors[0]) == 205_000 * NAIRA  # a preview changes nothing
-
-    applied = await sync(client, world, dry_run=False)
-    assert applied["bills_changed"] == 3
-    assert all([await owed(client, world, s) == 205_000 * NAIRA + WAEC for s in seniors])
+async def test_a_fee_added_to_a_class_after_billing_goes_on_every_bill_in_it(client, world, db):
+    """Owner, 2026-10-21: a fee added for a class shows on every pupil in that class, at once."""
+    added = await schedule_waec(client, world)
+    assert added["fees"] == [{"item_name": "WAEC", "class_names": ["JSS 3"], "bills": 3, "total_kobo": 3 * WAEC}]
+    assert added["bills_changed"] == 3 and added["dry_run"] is False
+    assert all([await owed(client, world, s) == 205_000 * NAIRA + WAEC for s in world["jss3"]])
     assert await owed(client, world, world["jss1"]) == 155_000 * NAIRA  # other classes untouched
     assert (await sync(client, world, dry_run=True))["bills_changed"] == 0  # nothing left to add
 
 
-async def test_sync_skips_exempt_pupils_and_untaken_optional_fees(client, world, db):
-    item_id = await schedule_waec(client, world)
+async def test_exempt_pupils_and_untaken_optional_fees_are_left_out(client, world, db):
+    item_id = await waec_item(client, world)
     exempt = await client.post(
         f"/api/v1/students/{world['jss3'][0].id}/exemptions",
         headers=world["bursar"],
         json={"fee_item_id": item_id, "term_id": str(world["terms"][0].id), "reason": "Not sitting"},
     )
     assert exempt.status_code in (200, 201), exempt.text
-    assert (await sync(client, world, dry_run=True))["bills_changed"] == 2
+    assert (await schedule_waec(client, world, item_id=item_id))["bills_changed"] == 2
+    assert await owed(client, world, world["jss3"][0]) == 205_000 * NAIRA
 
 
 async def test_optional_fee_only_for_pupils_who_chose_it(client, world):
-    await schedule_waec(client, world, optional=True)
-    assert (await sync(client, world, dry_run=True))["bills_changed"] == 0
+    assert (await schedule_waec(client, world, optional=True))["bills_changed"] == 0
 
 
 async def test_sync_uses_money_paid_ahead_and_stays_in_the_school(client, world, db):
     senior = world["jss3"][1]
     await pay_cash(client, world, 205_000 + 25_000, student=senior)  # bill + WAEC, ahead of time
     await schedule_waec(client, world)
-    await sync(client, world, dry_run=False)
     assert await owed(client, world, senior) == 0  # the credit covered the new WAEC line
 
     other = make_user(db, make_school(db, "Beta Academy"), Role.BURSAR)
@@ -319,14 +316,16 @@ async def test_sync_uses_money_paid_ahead_and_stays_in_the_school(client, world,
     assert stranger.status_code == 404
 
 
-async def test_sync_is_a_fixed_number_of_statements(client, world, db, connection):
-    await schedule_waec(client, world)
+async def test_saving_the_grid_is_a_fixed_number_of_statements(client, world, db, connection):
+    """Saving a class fee that goes onto 3 bills or 18 costs the same statements."""
+    waec = await waec_item(client, world)
     with QueryCounter(connection) as small:
-        await sync(client, world, dry_run=True)
+        assert (await schedule_waec(client, world, item_id=waec))["bills_changed"] == 3
     for i in range(15):
         make_student(world["school"], world["terms"][0], world["levels"][2].arms[0], first=f"More{i}")
     db.commit()
     await generate(client, world)
+    neco = await client.post("/api/v1/fee-items", headers=world["bursar"], json={"name": "NECO"})
     with QueryCounter(connection) as big:
-        await sync(client, world, dry_run=True)
+        assert (await schedule_waec(client, world, item_id=neco.json()["id"]))["bills_changed"] == 18
     assert big.count == small.count

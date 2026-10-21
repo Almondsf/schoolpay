@@ -52,7 +52,7 @@ from .models import (
     StudentFeeChoice,
     StudentFeeExemption,
 )
-from .setup_service import MAX_AMOUNT_KOBO
+from .setup_service import MAX_AMOUNT_KOBO, ScheduleEntry, schedule_for_term, set_schedule
 
 
 def _term_invoices(session: Session, term_id: uuid.UUID, student_ids: list[uuid.UUID]) -> dict[uuid.UUID, uuid.UUID]:
@@ -259,7 +259,25 @@ class BillSyncReport:
         return sum(f.total_kobo for f in self.fees)
 
 
-def sync_bills(session: Session, ctx: StaffContext, *, term_id: uuid.UUID, dry_run: bool) -> BillSyncReport:
+def save_schedule(
+    session: Session, ctx: StaffContext, term_id: uuid.UUID, entries: list[ScheduleEntry]
+) -> tuple[list[FeeSchedule], BillSyncReport]:
+    """
+    Save fee grid changes and, in the same transaction, add any fee a class now has to that
+    class's bills already sent this term (owner, 2026-10-21: "a fee added for a class shows on
+    every pupil in that class"). Exempt pupils and optional fees a pupil hasn't taken are left
+    out; a changed price isn't re-billed on bills that already carry the fee.
+    """
+    set_schedule(session, ctx, term_id, entries)
+    report = sync_bills(session, ctx, term_id=term_id, dry_run=False, commit=False)
+    session.commit()
+    session.expire_all()
+    return schedule_for_term(session, term_id), report
+
+
+def sync_bills(
+    session: Session, ctx: StaffContext, *, term_id: uuid.UUID, dry_run: bool, commit: bool = True
+) -> BillSyncReport:
     """
     Bring the term's bills up to date with its fee list: a fee set for a class after the bills
     went out (e.g. WAEC added to SSS 3 in the fee grid) is added to the bills that don't have it.
@@ -367,7 +385,8 @@ def sync_bills(session: Session, ctx: StaffContext, *, term_id: uuid.UUID, dry_r
             ]
         },
     )
-    session.commit()
+    if commit:
+        session.commit()
     return report
 
 
