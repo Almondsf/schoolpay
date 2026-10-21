@@ -91,6 +91,7 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 - 2026-10-20 Money a parent marks for a fee goes to that fee even if older debts are owed.
 - 2026-10-21 Pay cards list the term's fees and what's left to pay; no QR code.
 - 2026-10-21 A fee added to a class in the fee grid goes onto every bill in that class already sent, as soon as it's saved (no confirmation).
+- 2026-10-21 Money not marked for particular fees covers tuition first, then the bill's other fees in order.
 
 ## Next: what's open, roughly in order
 
@@ -105,9 +106,7 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
    (choice: "noise + trim docstrings"), then said "abort" after section dividers were removed. That
    pass is saved in `git stash` ("comment cleanup pass 1 … aborted 2026-10-19"); it predates a lot of
    later work, so redo it fresh rather than applying the stash. **Ask before resuming.**
-6. Possible small change: payments currently cover a bill's fees in **bill order** (on the demo bills
-   the levies come before tuition). The owner was offered "tuition first" and hasn't answered.
-7. Yoruba, Hausa and Igbo voice calls need recorded voices (owner to arrange).
+6. Yoruba, Hausa and Igbo voice calls need recorded voices (owner to arrange).
 
 Waiting on the owner (details in `OWNER_TODO.md`): Paystack "Dedicated NUBAN" approval (per-pupil
 account numbers; until then parents pay through checkout), live keys, WhatsApp/SMS/voice accounts,

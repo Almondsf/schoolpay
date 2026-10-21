@@ -148,7 +148,7 @@ class PaymentIntentItem(TenantMixin, Base):
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), primary_key=True)
     position: Mapped[int] = mapped_column(SmallInteger)  # 1, 2, ...: the payment's gateway reference suffix
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
-    # The fees this share is for, when the parent chose some (see PaymentEarmark); [] = in bill order
+    # The fees this share is for, when the parent chose some (see PaymentEarmark); [] = tuition first
     earmarks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
 
 

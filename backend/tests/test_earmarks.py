@@ -40,7 +40,7 @@ async def test_cash_for_tuition_pays_tuition_even_with_older_debts(client, world
 
     payment = await record_cash(client, world, chidi, 200_000, ["Tuition"])
     fees, body = await fees_of(client, world, chidi)
-    assert fees["Tuition"]["status"] == "Paid"  # not spread in bill order (PTA comes first on the bill)
+    assert fees["Tuition"]["status"] == "Paid"
     assert fees["PTA"]["status"] == "Unpaid"
     assert body["earlier_left_kobo"] == 40_000 * NAIRA  # last session's debt is still owed, as chosen
 
@@ -98,12 +98,12 @@ async def test_online_payment_for_chosen_fees(client, world):
     started = await client.post(
         "/api/v1/parent/family/checkout",
         headers=parent,
-        json={"items": [{"student_id": str(bayo.id), "amount_kobo": 135_000 * NAIRA, "fees": ["Tuition"]}]},
+        json={"items": [{"student_id": str(bayo.id), "amount_kobo": 130_000 * NAIRA, "fees": ["Tuition"]}]},
     )
     assert started.status_code == 201, started.text
     reference = started.json()["reference"]
     FakeGateway.shared().complete_checkout(reference)
     assert (await client.post("/api/v1/payments/verify", json={"reference": reference})).json()["status"] == "succeeded"
     fees, body = await fees_of(client, world, bayo)
-    assert fees["Tuition"]["status"] == "Paid"  # what was left of tuition (the 50,000 earlier went in bill order)
-    assert body["total_left_kobo"] == 0
+    assert fees["Tuition"]["status"] == "Paid"  # the 50,000 paid earlier went to tuition first; this paid the rest
+    assert fees["PTA"]["status"] == "Unpaid" and body["total_left_kobo"] == 5_000 * NAIRA

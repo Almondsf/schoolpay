@@ -39,7 +39,7 @@ def record_manual(
     note: str,
     fees: list[str] | None = None,
 ) -> ManualPayment:
-    """Record money taken by hand. `fees`: what it's for (e.g. ["WAEC"]), else it follows the bill order."""
+    """Record money taken by hand. `fees`: what it's for (e.g. ["WAEC"]); else tuition first, then the rest."""
     if method not in MANUAL_METHODS:
         raise DomainError("Choose cash, teller, POS or bank transfer.", field="method")
     if not 0 < amount_kobo <= MAX_AMOUNT_KOBO:

@@ -28,11 +28,11 @@ def test_each_fee_shows_what_is_left(db, world):
     ada = pupils["Ada Eze"]
     assert ada.status == "Paid" and all(c.status == "Paid" for c in ada.fees.values())
 
-    bayo = pupils["Bayo Ojo"]  # paid 50,000 of 185,000: the PTA levy is first on the bill, then tuition
+    bayo = pupils["Bayo Ojo"]  # paid 50,000 of 185,000, not marked for a fee: tuition first (PTA is first on the bill)
     assert bayo.status == "Part paid"
-    assert bayo.fees["PTA"].status == "Paid"
+    assert bayo.fees["PTA"].status == "Unpaid"
     assert bayo.fees["Tuition"].status == "Part paid"
-    assert bayo.fees["Tuition"].left_kobo == 135_000 * NAIRA
+    assert bayo.fees["Tuition"].left_kobo == 130_000 * NAIRA
     assert bayo.term_left_kobo == 135_000 * NAIRA and bayo.term_paid_kobo == 50_000 * NAIRA
 
     chidi = pupils["Chidi Okafor"]  # nothing paid, and owes 40,000 from last session
@@ -58,9 +58,9 @@ async def test_excel_has_a_sheet_per_class_and_colours_the_status(client, world)
     tuition, pta = header.index("Tuition") + 1, header.index("PTA") + 1  # 1-based columns
     assert header[tuition : tuition + 2] == ["Tuition: paid (NGN)", "Tuition: left (NGN)"]
     rows = {sheet.cell(row=r, column=1).value: r for r in range(6, 9)}
-    bayo = rows["Bayo Ojo"]  # paid 50,000: the PTA levy, then part of tuition
+    bayo = rows["Bayo Ojo"]  # paid 50,000: all to tuition first
     assert sheet.cell(row=bayo, column=tuition).value == "Part paid"
-    assert sheet.cell(row=bayo, column=tuition + 2).value == 135_000
+    assert sheet.cell(row=bayo, column=tuition + 2).value == 130_000
     assert sheet.cell(row=bayo, column=tuition + 1).value + sheet.cell(row=bayo, column=pta + 1).value == 50_000
     assert sheet.cell(row=bayo, column=tuition).fill.fgColor.rgb.endswith("FCEBC7")
     assert "in the order they appear on the bill" in str(sheet.cell(row=sheet.max_row, column=1).value)
@@ -100,9 +100,9 @@ async def test_a_pupils_breakdown_for_staff(client, world, db):
     body = response.json()
     assert body["term_label"] == "2026/2027 First term"
     fees = {f["name"]: f for f in body["fees"]}
-    assert fees["PTA"] == {"name": "PTA", "billed_kobo": 5_000 * NAIRA, "paid_kobo": 5_000 * NAIRA, "left_kobo": 0,
-                           "status": "Paid"}  # fmt: skip
-    assert fees["Tuition"]["left_kobo"] == 135_000 * NAIRA and fees["Tuition"]["status"] == "Part paid"
+    assert fees["PTA"] == {"name": "PTA", "billed_kobo": 5_000 * NAIRA, "paid_kobo": 0, "left_kobo": 5_000 * NAIRA,
+                           "status": "Unpaid"}  # fmt: skip
+    assert fees["Tuition"]["left_kobo"] == 130_000 * NAIRA and fees["Tuition"]["status"] == "Part paid"
     assert body["total_left_kobo"] == 135_000 * NAIRA and body["earlier_left_kobo"] == 0
 
     chidi = (await client.get(f"/api/v1/reports/students/{world['students']['chidi'].id}/fee-breakdown",

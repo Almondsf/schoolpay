@@ -145,7 +145,9 @@ class ManualIn(BaseModel):
     reference: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] = ""
     note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
     fees: list[Annotated[str, StringConstraints(max_length=200)]] = Field(
-        default_factory=list, max_length=30, description="What it's for (fee names); empty: the bill order"
+        default_factory=list,
+        max_length=30,
+        description="What it's for (fee names); empty: tuition first, then the rest",
     )
 
 

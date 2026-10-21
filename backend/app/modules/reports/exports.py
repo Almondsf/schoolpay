@@ -374,7 +374,7 @@ UNPAID_FILL = PatternFill("solid", fgColor="F8D7D3")
 STATUS_FILLS = {"Paid": PAID_FILL, "Part paid": PART_FILL, "Unpaid": UNPAID_FILL}
 FEE_STATUS_RULE = (
     "Money paid for particular fees is shown against those fees; the rest of a bill's payments "
-    "cover its fees in the order they appear on the bill."
+    "cover tuition first, then its other fees in the order they appear on the bill."
 )
 PDF_STATUS_COLOURS = {"Paid": "#D8EFE2", "Part paid": "#FCEBC7", "Unpaid": "#F8D7D3"}
 PDF_MAX_FEES = 9  # fee columns that fit across a landscape page; more share an "Other fees" column

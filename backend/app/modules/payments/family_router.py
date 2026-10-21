@@ -57,7 +57,9 @@ class FamilyPartIn(BaseModel):
     student_id: uuid.UUID
     amount_kobo: int = Field(ge=0, le=MAX_AMOUNT_KOBO, description="0: not this time")
     fees: list[Annotated[str, StringConstraints(max_length=200)]] = Field(
-        default_factory=list, max_length=30, description="Pay for these fees (from the breakdown); empty: bill order"
+        default_factory=list,
+        max_length=30,
+        description="Pay for these fees (from the breakdown); empty: tuition first, then the rest",
     )
 
 

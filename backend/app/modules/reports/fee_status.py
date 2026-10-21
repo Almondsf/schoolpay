@@ -5,8 +5,9 @@ the downloadable report (`fee_status`) and by the breakdowns on the payment page
 parent portal and the staff pupil page (`fee_breakdowns`), so they always agree.
 
 Payments are applied to whole bills, not to single fees. Money a payer meant for chosen
-fees (`PaymentEarmark`) covers those fees first; the rest of a bill's payments are shown
-covering its fees in the order they appear on the bill. A discount reduces the fee it is
+fees (`PaymentEarmark`) covers those fees first; the rest of a bill's payments cover its
+tuition first, then its other fees in the order they appear on the bill (owner, 2026-10-21).
+A discount reduces the fee it is
 for; a discount for the whole bill reduces its first fee. A fixed number of queries for
 any number of pupils. The session must be scoped to the school.
 """
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core.repo import get_or_404
 from app.modules.fees.invoicing import paid_subquery, totals_subquery
-from app.modules.fees.models import Discount, FeeItem, Invoice, InvoiceLine, LineKind
+from app.modules.fees.models import Discount, FeeCategory, FeeItem, Invoice, InvoiceLine, LineKind
 from app.modules.payments.models import Payment, PaymentEarmark
 from app.modules.schools.models import AcademicSession, Arm, ClassLevel, Term
 from app.modules.students.models import Enrollment, Student
@@ -133,6 +134,7 @@ def _fill(
             InvoiceLine.description,
             fee_of_line,
             FeeItem.name,
+            FeeItem.category,
         )
         .outerjoin(Discount, Discount.id == InvoiceLine.discount_id)
         .outerjoin(FeeItem, FeeItem.id == fee_of_line)
@@ -142,13 +144,14 @@ def _fill(
     by_bill: dict[uuid.UUID, dict[str, int]] = defaultdict(dict)  # bill -> fee name -> net, in bill order
     identity: dict[tuple[uuid.UUID, str], tuple[uuid.UUID | None, str]] = {}  # (bill, name) -> (fee item, text)
     first_seen: dict[str, int] = {}
+    tuition: set[str] = set()  # fees in the Tuition category
 
     def label(fee_item_id: uuid.UUID | None, fee_name: str | None, description: str) -> str:
         if fee_item_id is not None and fee_name:
             return fee_name
         return description if describe_others and description else OTHER
 
-    for n, (invoice_id, kind, amount, description, fee_item_id, fee_name) in enumerate(lines):
+    for n, (invoice_id, kind, amount, description, fee_item_id, fee_name, category) in enumerate(lines):
         fees = by_bill[invoice_id]
         if kind == LineKind.DISCOUNT and fee_item_id is None and fees:
             name = next(iter(fees))  # a discount on the whole bill reduces its first fee
@@ -157,6 +160,8 @@ def _fill(
             identity.setdefault((invoice_id, name), (fee_item_id, "" if fee_item_id else description))
         fees[name] = fees.get(name, 0) + int(amount)
         first_seen.setdefault(name, n)
+        if category == FeeCategory.TUITION and fee_item_id is not None:
+            tuition.add(name)
 
     # Money the payers meant for particular fees (payments not reversed)
     reversed_ = select(Payment.reverses_payment_id).where(Payment.reverses_payment_id.is_not(None))
@@ -181,7 +186,8 @@ def _fill(
         for name, net in fees.items():  # first what was paid for particular fees
             covered[name] = min(max(net, 0), earmarked.get((invoice_id, name), 0), left_to_spread)
             left_to_spread -= covered[name]
-        for name, net in fees.items():  # then the rest, in bill order
+        # Then the rest: tuition first, then the other fees in bill order (owner, 2026-10-21)
+        for name, net in sorted(fees.items(), key=lambda fee: fee[0] not in tuition):
             more = min(max(net, 0) - covered[name], left_to_spread)
             covered[name] += more
             left_to_spread -= more

@@ -287,7 +287,9 @@ class FeeLineOut(BaseModel):
 
 class FeeBreakdownOut(BaseModel):
     term_label: str | None = Field(description="The term the fees are for; null when no term is current")
-    fees: list[FeeLineOut] = Field(description="This term's fees in bill order (a bill's payments cover them in order)")
+    fees: list[FeeLineOut] = Field(
+        description="This term's fees in bill order (payments not marked for a fee cover tuition first)"
+    )
     earlier_left_kobo: int = Field(description="Still owed from earlier terms, balances brought forward and one-offs")
     total_left_kobo: int
 

@@ -377,7 +377,7 @@ function FeeStatus() {
         </select>
       </div>
       <Downloads onDownload={(f) => download.mutate(f)} pending={download.isPending} error={download.error} />
-      <p className="hint">Money paid for particular fees shows against those fees; the rest covers a bill’s fees in the order they appear on it.</p>
+      <p className="hint">Money paid for particular fees shows against those fees; the rest covers tuition first, then the bill’s other fees in order.</p>
     </section>
   );
 }

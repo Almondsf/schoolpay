@@ -3,7 +3,7 @@ Paying for particular fees. A parent (on the payment page) or whoever records ca
 what the money is for, e.g. WAEC. The payment is then earmarked: it goes to the bill holding
 those fees first, even before older debts (owner's decision, 2026-10-20), and the fee-by-fee
 views and the receipt show those fees paid. Transfers into a child's own account number
-can't say what they're for, so they follow the bill order.
+can't say what they're for, so they cover tuition first, then the bill's other fees in order.
 """
 
 import uuid

@@ -8,7 +8,16 @@ from sqlalchemy.exc import DBAPIError
 
 from app.core.tenancy import scope_to_school
 from app.modules.accounts.models import Role
-from app.modules.fees.models import Discount, DiscountKind, DiscountRule, FeeItem, FeeSchedule, Invoice, InvoiceLine
+from app.modules.fees.models import (
+    Discount,
+    DiscountKind,
+    DiscountRule,
+    FeeCategory,
+    FeeItem,
+    FeeSchedule,
+    Invoice,
+    InvoiceLine,
+)
 from app.modules.students.models import Guardian, GuardianStudent
 from tests.factories import (
     QueryCounter,
@@ -27,7 +36,11 @@ NAIRA = 100  # kobo
 def add_fees(school, term, levels, *, tuition=(150_000, 180_000, 200_000)):
     """Tuition per class, an optional bus fee and a PTA levy for every class."""
     with tenant_writer() as w:
-        items = {name: FeeItem(id=uuid.uuid4(), school_id=school.id, name=name) for name in ("Tuition", "Bus", "PTA")}
+        categories = {"Tuition": FeeCategory.TUITION, "Bus": FeeCategory.SERVICE, "PTA": FeeCategory.LEVY}
+        items = {
+            name: FeeItem(id=uuid.uuid4(), school_id=school.id, name=name, category=category)
+            for name, category in categories.items()
+        }
         w.add_all(items.values())
         w.flush()
         for level, amount in zip(levels, tuition, strict=False):

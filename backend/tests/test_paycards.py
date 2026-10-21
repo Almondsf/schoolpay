@@ -29,7 +29,7 @@ async def test_one_pupils_card(client, world, db):
     assert card.account_number and card.account_number.startswith("9") and card.bank_name == "Fake Bank"
     # What's to be paid: each fee this term with what's left on it, then the total
     assert card.term_label == "2026/2027 First term"
-    assert {f.name: f.left_kobo for f in card.fees} == {"PTA": 0, "Tuition": 135_000 * NAIRA}
+    assert {f.name: f.left_kobo for f in card.fees} == {"PTA": 5_000 * NAIRA, "Tuition": 130_000 * NAIRA}
     assert card.earlier_left_kobo == 0 and card.total_left_kobo == 135_000 * NAIRA
     # Printing makes no payment links (the card carries no code)
     assert db.scalar(select(func.count()).select_from(FamilyPayLink)) == 0
