@@ -45,7 +45,7 @@ def migration_url() -> str:
 def upgrade(revision: str = "head") -> None:
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
-    engine = create_engine(migration_url(), poolclass=NullPool)
+    engine = create_engine(migration_url(), poolclass=NullPool, hide_parameters=True)
     try:
         with engine.connect() as connection:
             connection.execute(text("SET lock_timeout = '120s'"))

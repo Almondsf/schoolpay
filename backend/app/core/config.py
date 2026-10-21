@@ -26,6 +26,12 @@ def normalize_database_url(value: str) -> str:
     raise ValueError("Database URLs must be PostgreSQL (postgresql+psycopg://...)")
 
 
+# Accepted address schemes. Checked at startup so a mistyped address (e.g. a whole `redis-cli -u ...`
+# command pasted in) stops the deploy with a clear message instead of failing the first request.
+REDIS_SCHEMES = ("redis://", "rediss://")
+RATE_LIMIT_SCHEMES = ("memory://", "redis://", "rediss://", "redis+sentinel://", "redis+cluster://")
+
+
 def _split_csv(value: object) -> object:
     if isinstance(value, str):
         return [item.strip() for item in value.split(",") if item.strip()]
@@ -38,6 +44,8 @@ class Settings(BaseSettings):
         env_file=os.environ.get("SCHOOLPAY_ENV_FILE", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        # Never echo a rejected value back: these hold passwords and keys, and startup errors end up in logs
+        hide_input_in_errors=True,
     )
 
     environment: Environment = "production"
@@ -202,7 +210,25 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def _postgres_driver(cls, value: str) -> str:
-        return normalize_database_url(value)
+        return normalize_database_url(value.strip())
+
+    @field_validator("redis_url")
+    @classmethod
+    def _redis_address(cls, value: str) -> str:
+        value = value.strip()
+        if not value.startswith(REDIS_SCHEMES):
+            raise ValueError("REDIS_URL must be just the address, starting with redis:// or rediss://")
+        return value
+
+    @field_validator("rate_limit_storage_url")
+    @classmethod
+    def _rate_limit_address(cls, value: str) -> str:
+        value = value.strip()
+        if not value.startswith(RATE_LIMIT_SCHEMES):
+            raise ValueError(
+                "RATE_LIMIT_STORAGE_URL must be just the address, starting with " + ", ".join(RATE_LIMIT_SCHEMES)
+            )
+        return value
 
     @model_validator(mode="after")
     def _production_is_strict(self) -> "Settings":

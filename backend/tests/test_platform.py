@@ -134,11 +134,35 @@ def test_production_settings_are_safe_by_default():
         {"whatsapp_templates": "receipt"},
         {"enforce_mfa": False},
         {"payment_gateways": "bachs", "bachs_secret_key": "sk_sandbox_x", "bachs_webhook_secret": "s"},
+        {"rate_limit_storage_url": "redis-cli -u redis://default:pw@cache.example:6379"},
+        {"redis_url": "cache.example:6379"},
     ],
 )
 def test_production_refuses_unsafe_settings(overrides):
     with pytest.raises(ValidationError):
         _settings(**overrides)
+
+
+def test_a_pasted_command_is_refused_without_echoing_the_password():
+    """A whole `redis-cli -u ...` command once reached production and only failed on the first sign-up."""
+    with pytest.raises(ValidationError) as refused:
+        _settings(redis_url="redis-cli -u redis://default:hunter2-secret@cache.example:6379")
+    assert "REDIS_URL must be just the address" in str(refused.value)
+    assert "hunter2-secret" not in str(refused.value)
+
+
+def test_redis_addresses_with_tls_or_stray_spaces_are_accepted():
+    settings = _settings(
+        redis_url=" rediss://default:pw@cache.example:6380 ", rate_limit_storage_url="rediss://c:6380/1"
+    )
+    assert settings.redis_url == "rediss://default:pw@cache.example:6380"
+
+
+def test_production_logs_leave_out_query_values():
+    from app.core.db import make_engine
+
+    assert make_engine(_settings()).hide_parameters is True
+    assert make_engine(_settings(environment="development")).hide_parameters is False
 
 
 def test_whatsapp_templates_from_env_string():

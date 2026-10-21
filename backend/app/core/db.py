@@ -10,22 +10,24 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.base import Base
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 
 __all__ = ["Base", "SessionLocal", "engine", "get_db"]
 
 
-def _make_engine() -> Engine:
-    settings = get_settings()
+def make_engine(settings: Settings) -> Engine:
     return create_engine(
         settings.database_url,
         pool_pre_ping=True,
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
+        # A failed statement's error carries its bound values (emails, phone numbers). Keep them out of
+        # production logs and error reports; development keeps them for debugging.
+        hide_parameters=settings.is_production,
     )
 
 
-engine = _make_engine()
+engine = make_engine(get_settings())
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
 
 

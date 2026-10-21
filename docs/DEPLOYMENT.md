@@ -56,6 +56,24 @@ domain), one address only, with no trailing slash; it builds the links in emails
 
 Run the CLI commands below from the API service's Shell on Render.
 
+**On Render's free plan** there's no Shell, pre-deploy command or background worker. While
+trying it out, set the API's Docker Command so each start migrates and runs the worker
+alongside the API:
+
+```
+sh -c "python -m app.core.migrate && (celery -A app.workers.celery_app worker -B -l info --concurrency 1 &) && exec uvicorn app.main:app --host 0.0.0.0 --port 8002 --workers 1 --proxy-headers --forwarded-allow-ips '*'"
+```
+
+Run CLI commands from a developer machine instead, with `DATABASE_URL` set to the database's
+*external* URL for that one terminal (and the live `SECRET_KEY` and `FRONTEND_URL` for commands
+that print links). A free service sleeps after 15 idle minutes, so scheduled reminders pause
+and gateway webhooks arrive late (the gateway retries); free Postgres expires after 30 days.
+Move to paid plans and the separate worker before a school relies on it.
+
+Paste only the address into `REDIS_URL` and `RATE_LIMIT_STORAGE_URL` (`redis://…`, or
+`rediss://…` when the provider offers TLS), not the `redis-cli -u …` command some providers
+show: the API refuses to start with anything else.
+
 ## First platform admin
 
 ```bash

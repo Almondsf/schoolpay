@@ -81,6 +81,11 @@ It is updated with every change that affects security.
 - Logs pass through a redaction filter that masks passwords, OTPs, tokens,
   BVNs and account/card numbers. One list of sensitive keys
   (`app/core/redaction.py`) covers logs, audit entries and stored gateway payloads.
+- In production a failed database statement is logged without its values
+  (SQLAlchemy `hide_parameters`), so an error can't put a parent's email or phone
+  in the logs. Development keeps them for debugging.
+- A rejected setting at startup is reported by name only, never its value
+  (`hide_input_in_errors`): database and Redis addresses carry passwords.
 
 ## Money
 - All amounts are integer kobo in the database and API; the frontend parses
