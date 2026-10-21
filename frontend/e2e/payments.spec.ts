@@ -6,6 +6,7 @@ test('a transfer into a student account number is matched automatically', async 
   await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
   await page.getByRole('link', { name: 'Students', exact: true }).click();
   await page.getByRole('row').nth(1).getByRole('link').first().click();
+  await page.getByRole('tab', { name: 'Payments' }).click();
   const accountNumber = (await page.locator('.account-number').textContent())!.trim();
   expect(accountNumber).toMatch(/^\d{10}$/);
 
@@ -16,6 +17,7 @@ test('a transfer into a student account number is matched automatically', async 
   expect(sent.ok()).toBeTruthy();
 
   await page.reload();
+  await page.getByRole('tab', { name: 'Payments' }).click();
   await expect(page.getByRole('cell', { name: 'Transfer to student account' })).toBeVisible();
   await page.getByRole('link', { name: 'Payments', exact: true }).click();
   await expect(page.getByRole('cell', { name: /₦25,000\.00/ }).first()).toBeVisible();

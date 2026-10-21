@@ -7,7 +7,7 @@ import { saveBlob } from '../lib/download';
 import { FeeList } from '../lib/FeeBreakdown';
 import { PlanSchedule } from '../lib/PlanSchedule';
 import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
-import { Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
+import { BackLink, Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
 import { ParentAuthProvider, useParentAuth } from './ParentAuth';
 import { FamilyPayment } from '../public/FamilyPay';
 import { ParentLogin } from './ParentLogin';
@@ -247,9 +247,7 @@ function PayAll() {
   if (family.isError) return <ErrorAlert error={family.error} />;
   return (
     <>
-      <p>
-        <Link to="/parent">← All children</Link>
-      </p>
+      <BackLink to="/parent">All children</BackLink>
       <FamilyPayment
         data={family.data}
         checkout={async (items) => unwrap(await api.POST('/api/v1/parent/family/checkout', { body: { items } }))}
@@ -270,9 +268,7 @@ function ChildPage() {
   const { child, invoices, payments } = account.data;
   return (
     <>
-      <p>
-        <Link to="/parent">← All children</Link>
-      </p>
+      <BackLink to="/parent">All children</BackLink>
       <ChildCard child={child} />
       <section className="card">
         <h2>Bills</h2>

@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { Banknote, CircleCheck, Clock, FileText } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { formatDate, formatKobo } from '../lib/format';
-import { Empty, ErrorAlert, Loading, PageHeader } from '../lib/ui';
+import { Empty, ErrorAlert, Loading, PageHeader, Stat, Tabs } from '../lib/ui';
 import { GettingStarted } from './GettingStarted';
 import { useSessions } from './hooks';
 
@@ -96,157 +97,194 @@ function MoneyDashboard({ first, schoolName }: { first: string; schoolName: stri
         }
       />
       <GettingStarted />
-      {overview.isPending ? <Loading /> : overview.isError ? <ErrorAlert error={overview.error} /> : <Figures data={overview.data} />}
-      {can('students.view') && (
-        <>
-          <h2 className="section-title">Pupils</h2>
-          <SchoolAtAGlance withTerm={false} />
-        </>
+      {overview.isPending ? (
+        <Loading />
+      ) : overview.isError ? (
+        <ErrorAlert error={overview.error} />
+      ) : (
+        <Figures data={overview.data} pupils={can('students.view') ? <SchoolAtAGlance withTerm={false} /> : null} />
       )}
     </>
   );
 }
 
-function Figures({ data }: { data: Overview }) {
+type Panel = 'money' | 'classes' | 'aging' | 'pupils';
+
+function Figures({ data, pupils }: { data: Overview; pupils: ReactNode }) {
+  const [panel, setPanel] = useState<Panel>('money');
   if (data.invoices === 0) {
     return (
-      <Empty>
-        No bills for {data.term_label} yet. <Link to="/console/billing">Generate the term's bills</Link> and this page fills in as payments
-        arrive.
-      </Empty>
+      <>
+        <Empty>
+          No bills for {data.term_label} yet. <Link to="/console/billing">Generate the term's bills</Link> and this page fills in as
+          payments arrive.
+        </Empty>
+        {pupils && (
+          <>
+            <h2 className="section-title">Pupils</h2>
+            {pupils}
+          </>
+        )}
+      </>
     );
   }
   const rate = percent(data.collected_kobo, data.billed_kobo);
+  const tabs: { key: Panel; label: string }[] = [
+    { key: 'money', label: 'Money in' },
+    { key: 'classes', label: 'By class' },
+    { key: 'aging', label: 'How late' },
+    ...(pupils ? [{ key: 'pupils' as const, label: 'Pupils' }] : []),
+  ];
   return (
     <>
-      <h2 className="section-title">{data.term_label}</h2>
       <div className="stats">
-        <Stat label="Billed" value={formatKobo(data.billed_kobo)} note={`${data.invoices} bills`} />
-        <Stat label="Collected" value={formatKobo(data.collected_kobo)} tone="ok">
+        <Stat
+          label="Billed"
+          value={formatKobo(data.billed_kobo)}
+          note={`${data.invoices} bills · ${data.term_label}`}
+          icon={<FileText size={18} />}
+        />
+        <Stat label="Collected" value={formatKobo(data.collected_kobo)} tone="ok" icon={<CircleCheck size={18} />}>
           <Progress value={rate} label={`${rate}% of the term's bills`} />
         </Stat>
         <Stat
           label="Outstanding"
           value={formatKobo(data.outstanding_kobo)}
           tone={data.outstanding_kobo > 0 ? 'warn' : undefined}
+          icon={<Clock size={18} />}
           note={<Link to="/console/reports">{data.students_owing} students owe</Link>}
         />
         <Stat
           label="Received today"
           value={formatKobo(data.received_today_kobo)}
+          tone="info"
+          icon={<Banknote size={18} />}
           note={`${formatKobo(data.received_7_days_kobo)} in the last 7 days`}
         />
       </div>
-      <div className="stats">
-        <Stat
-          label="Older debts"
-          value={formatKobo(data.older_outstanding_kobo)}
-          note="Earlier terms, balances brought forward and one-off charges"
-          small
-        />
-        <Stat label="Credit held" value={formatKobo(data.credit_kobo)} note="Paid ahead; used on the next bill" small />
-        <Stat
-          label="Awaiting approval"
-          value={formatKobo(data.pending_approval_kobo)}
-          note={
-            data.pending_approval > 0 ? (
+
+      <div className="card mini-stats">
+        <div>
+          <span className="stat-label">Older debts</span>
+          <span className="stat-value">{formatKobo(data.older_outstanding_kobo)}</span>
+          <span className="stat-note">Earlier terms, balances brought forward, one-off charges</span>
+        </div>
+        <div>
+          <span className="stat-label">Credit held</span>
+          <span className="stat-value">{formatKobo(data.credit_kobo)}</span>
+          <span className="stat-note">Paid ahead; used on the next bill</span>
+        </div>
+        <div className={data.pending_approval > 0 ? 'stat warn' : 'stat'}>
+          <span className="stat-label">Awaiting approval</span>
+          <span className="stat-value">{formatKobo(data.pending_approval_kobo)}</span>
+          <span className="stat-note">
+            {data.pending_approval > 0 ? (
               <Link to="/console/payments">{data.pending_approval} cash or teller entries to check</Link>
             ) : (
               'Nothing waiting'
-            )
-          }
-          tone={data.pending_approval > 0 ? 'warn' : undefined}
-          small
-        />
+            )}
+          </span>
+        </div>
       </div>
 
-      <div className="grid-2">
-        <section className="card" aria-label="Money received per day">
-          <h2>Money received per day</h2>
-          <p className="muted small">
-            {formatKobo(data.received_this_term_kobo)} since {formatDate(data.term_start)}, after any reversals.
-          </p>
-          <DailyChart days={data.by_day} />
-        </section>
-        <section className="card" aria-label="How parents paid">
-          <h2>How parents paid</h2>
-          {data.by_method.length === 0 ? (
-            <p className="muted">No payments this term yet.</p>
-          ) : (
-            <ul className="bars">
-              {data.by_method.map((m) => (
-                <li key={m.method}>
-                  <div className="row between small">
-                    <span>{METHOD_LABELS[m.method]}</span>
-                    <span>
-                      {formatKobo(m.amount_kobo)} <span className="muted">· {m.payments}</span>
-                    </span>
-                  </div>
-                  <Progress value={percent(m.amount_kobo, data.received_this_term_kobo)} />
-                </li>
-              ))}
-            </ul>
+      <section className="card panel">
+        <div className="panel-head">
+          <Tabs tabs={tabs} value={panel} onChange={setPanel} label="Details" />
+          {panel === 'classes' && (
+            <Link to="/console/reports" className="small">
+              Debtors list →
+            </Link>
           )}
-        </section>
-      </div>
-
-      <section className="card table-card" aria-label="By class">
-        <div className="row between card-pad">
-          <h2>By class</h2>
-          <Link to="/console/reports" className="small">
-            Debtors list →
-          </Link>
+          {panel === 'pupils' && (
+            <Link to="/console/classes" className="small">
+              Classes →
+            </Link>
+          )}
         </div>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Class</th>
-                <th className="num">Billed</th>
-                <th className="num">Collected</th>
-                <th className="num">Outstanding</th>
-                <th style={{ width: '22%' }}>Collected</th>
-                <th className="num">Owing</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.by_class.map((c) => {
-                const classRate = percent(c.collected_kobo, c.billed_kobo);
-                return (
-                  <tr key={c.class_level_id ?? 'none'}>
-                    <td>{c.class_name}</td>
-                    <td className="num">{formatKobo(c.billed_kobo)}</td>
-                    <td className="num">{formatKobo(c.collected_kobo)}</td>
-                    <td className="num">{formatKobo(c.outstanding_kobo)}</td>
-                    <td>
-                      <Progress value={classRate} label={`${classRate}%`} />
-                    </td>
-                    <td className="num">
-                      {c.students_owing} of {c.invoices}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="card" aria-label="How late the debts are">
-        <h2>How late the debts are</h2>
-        <p className="muted small">Everything still owed, by how long ago each bill was due.</p>
-        <div className="aging">
-          {data.aging.map((a) => (
-            <div
-              key={a.bucket}
-              className={`aging-cell ${a.amount_kobo === 0 || a.bucket === 'not_due' ? '' : a.bucket === '1_30' ? 'warn' : 'danger'}`}
-            >
-              <div className="small muted">{AGING_LABELS[a.bucket]}</div>
-              <div className="stat-value">{formatKobo(a.amount_kobo)}</div>
-              <div className="small muted">{a.invoices} bills</div>
+        {panel === 'money' && (
+          <div className="panel-body split">
+            <section aria-label="Money received per day">
+              <h2>Money received per day</h2>
+              <p className="muted small">
+                {formatKobo(data.received_this_term_kobo)} since {formatDate(data.term_start)}, after any reversals.
+              </p>
+              <DailyChart days={data.by_day} />
+            </section>
+            <section aria-label="How parents paid">
+              <h2>How parents paid</h2>
+              {data.by_method.length === 0 ? (
+                <p className="muted">No payments this term yet.</p>
+              ) : (
+                <ul className="bars">
+                  {data.by_method.map((m) => (
+                    <li key={m.method}>
+                      <div className="row between small">
+                        <span>{METHOD_LABELS[m.method]}</span>
+                        <span>
+                          {formatKobo(m.amount_kobo)} <span className="muted">· {m.payments}</span>
+                        </span>
+                      </div>
+                      <Progress value={percent(m.amount_kobo, data.received_this_term_kobo)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
+        {panel === 'classes' && (
+          <section className="panel-body flush table-scroll" aria-label="By class">
+            <table>
+              <thead>
+                <tr>
+                  <th>Class</th>
+                  <th className="num">Billed</th>
+                  <th className="num">Collected</th>
+                  <th className="num">Outstanding</th>
+                  <th style={{ width: '22%' }}>Collected</th>
+                  <th className="num">Owing</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.by_class.map((c) => {
+                  const classRate = percent(c.collected_kobo, c.billed_kobo);
+                  return (
+                    <tr key={c.class_level_id ?? 'none'}>
+                      <td>{c.class_name}</td>
+                      <td className="num">{formatKobo(c.billed_kobo)}</td>
+                      <td className="num">{formatKobo(c.collected_kobo)}</td>
+                      <td className="num">{formatKobo(c.outstanding_kobo)}</td>
+                      <td>
+                        <Progress value={classRate} label={`${classRate}%`} />
+                      </td>
+                      <td className="num">
+                        {c.students_owing} of {c.invoices}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        )}
+        {panel === 'aging' && (
+          <section className="panel-body" aria-label="How late the debts are">
+            <p className="muted small">Everything still owed, by how long ago each bill was due.</p>
+            <div className="aging">
+              {data.aging.map((a) => (
+                <div
+                  key={a.bucket}
+                  className={`aging-cell ${a.amount_kobo === 0 || a.bucket === 'not_due' ? '' : a.bucket === '1_30' ? 'warn' : 'danger'}`}
+                >
+                  <div className="small muted">{AGING_LABELS[a.bucket]}</div>
+                  <div className="stat-value">{formatKobo(a.amount_kobo)}</div>
+                  <div className="small muted">{a.invoices} bills</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </section>
+        )}
+        {panel === 'pupils' && <div className="panel-body nested">{pupils}</div>}
       </section>
     </>
   );
@@ -359,31 +397,6 @@ function RollFigures({ data, withTerm }: { data: Roll; withTerm: boolean }) {
         </section>
       )}
     </>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  note,
-  tone,
-  small,
-  children,
-}: {
-  label: string;
-  value: string;
-  note?: React.ReactNode;
-  tone?: 'ok' | 'warn';
-  small?: boolean;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className={`card stat ${tone ?? ''} ${small ? 'small-stat' : ''}`}>
-      <div className="muted small">{label}</div>
-      <div className="stat-value">{value}</div>
-      {children}
-      {note && <div className="muted small">{note}</div>}
-    </div>
   );
 }
 

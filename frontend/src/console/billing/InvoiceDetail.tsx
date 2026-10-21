@@ -6,7 +6,7 @@ import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { INVOICE_KIND_LABELS, formatDate, formatDateTime, formatKobo, parseNairaToKobo } from '../../lib/format';
 import { PlanSchedule, splitEvenly, stepDates } from '../../lib/PlanSchedule';
-import { ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
+import { BackLink, ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
 
 type Invoice = Schemas['InvoiceOut'];
 
@@ -27,9 +27,7 @@ export function InvoiceDetail() {
 
   return (
     <>
-      <p>
-        <Link to="/console/billing">← Billing</Link>
-      </p>
+      <BackLink to="/console/billing">Billing</BackLink>
       <PageHeader
         title={`Invoice #${i.number}`}
         subtitle={

@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { api, unwrap } from '../../api/client';
 import { ROLE_LABELS, formatDate, formatDateTime, formatKobo } from '../../lib/format';
-import { ErrorAlert, Loading, PageHeader, StatusBadge } from '../../lib/ui';
+import { BackLink, ErrorAlert, Loading, PageHeader, StatusBadge } from '../../lib/ui';
 import { InvoiceTable } from './Billing';
 import { Card } from './Overview';
 import { ChangeStatus } from './Schools';
@@ -40,9 +40,7 @@ export function PlatformSchoolDetail() {
   const defaultPlan = plans.data?.find((p) => p.is_default);
   return (
     <>
-      <p>
-        <Link to="/console/platform/schools">← Schools</Link>
-      </p>
+      <BackLink to="/console/platform/schools">Schools</BackLink>
       <PageHeader
         title={s.name}
         subtitle={

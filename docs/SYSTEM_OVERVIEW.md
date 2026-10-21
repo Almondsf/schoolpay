@@ -1004,6 +1004,22 @@ One SPA (`frontend/src`): `console/`, `parent/`, `public/`, and `api/`, which
 holds the generated `schema.d.ts` and a typed `openapi-fetch` client. In
 development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 
+- **Design system** (`src/styles.css`, redesigned 21 Oct 2026): one stylesheet
+  of plain classes driven by tokens at the top (`--primary` emerald,
+  `--side-bg` deep green, neutrals, status colours, radii, shadows). The font is
+  Plus Jakarta Sans, self-hosted through `@fontsource-variable` (no external
+  requests, so the strict CSP holds); icons come from `lucide-react`. Shared
+  pieces live in `src/lib/ui.tsx`: `PageHeader`, `Stat` (a headline figure with
+  an icon chip), `Tabs` (a segmented control; use it rather than hand-written
+  tab buttons), `Menu` (a "More"/⋯ button with a short action list, built on
+  `<details>`), `BackLink`, `Modal`, `Field`, badges and alerts. Rule of thumb:
+  the few things done most often stay visible as buttons; rarer actions go in
+  a `Menu`; long pages split into tabs.
+- **Layout** (`src/console/ConsoleApp.tsx`): a fixed left sidebar with the main
+  pages, a **Setup** group (always open), and the signed-in person with
+  sign-out at the bottom. Under 900px it becomes a slide-in menu behind a top
+  bar. The navigation keeps `aria-label="Main"`, which the browser tests use.
+
 - **Auth** (`src/auth/AuthContext.tsx`, `src/api/client.ts`): the access token
   lives only in memory. On page load the app calls `/auth/refresh` (the cookie
   restores the session). A 401 triggers one silent refresh and a retry; if
@@ -1014,7 +1030,9 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   School setup: **Calendar** (sessions and terms, make current, move students
   to the next term with a preview), **Classes** (levels in promotion order,
   arms, retire/restore), **Students** (search and filter by term, class and
-  status; add; detail with class history, guardians, withdraw/reinstate) and
+  status; add; a pupil's page has a profile header with the balance and tabs:
+  Overview (details, class history, parents with Payment link and a ⋯ menu),
+  Fees and Payments; withdraw/reinstate sit under More) and
   **Import** (template, upload, preview with row-by-row problems, import).
   Money: **Fees** (fee items, a per-term grid of amounts per class with
   optional flags and copy-from-term, discounts), **Billing** (term summary,
@@ -1031,15 +1049,16 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   school's bank account, issue students' account numbers), and on each
   student a **Paying in** panel (their account number, a card payment link,
   recent payments). Receipt numbers on payments download the PDF.
-  **Overview** (the dashboard: term figures, a progress bar per class, money
-  received per day as a plain SVG chart, payment methods, how late the debts
-  are; a term picker; then pupils, classes and a "Needs attention" list) and **Reports** (debtors with filters, phone links and
+  **Overview** (the dashboard: four headline figures, a strip with older
+  debts, credit and approvals, then one tabbed panel: Money in (per-day SVG
+  chart and payment methods), By class, How late, and Pupils (classes and a
+  "Needs attention" list); a term picker) and **Reports** (debtors with filters, phone links and
   paging; money received over a date range; Excel and PDF downloads through
   `src/lib/download.ts`). Money queries are re-read every time the page is
   shown (`staleTime: 0`), so the figures are never 30 seconds stale.
   Set-up pages (fees, classes, calendar, staff, school profile, payment
-  settings, subscription, activity log) sit under a **Setup** menu in the top
-  bar. New schools see a **Getting started** checklist on the dashboard.
+  settings, subscription, activity log) are listed under **Setup** in the
+  sidebar. New schools see a **Getting started** checklist on the dashboard.
   **Subscription** shows the school's plan, a term's cost at its pupil
   numbers, where to pay, and its bills (PDF).
 - **Platform console** (`src/console/platform/`, platform admins): Overview,

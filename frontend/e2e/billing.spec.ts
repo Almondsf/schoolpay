@@ -34,8 +34,9 @@ test('bursar generates the term invoices in one click and corrects one', async (
   await expect(page.getByText('Agreed with the mother at the bursary')).toBeVisible();
 
   await page.getByRole('link', { name: student }).click();
-  await expect(page.getByRole('heading', { name: 'Fees', exact: true })).toBeVisible();
-  await expect(page.getByText('Owed')).toBeVisible();
+  await expect(page.getByText('Owed', { exact: true })).toBeVisible(); // the balance sits in the pupil's header
+  await page.getByRole('tab', { name: 'Fees' }).click();
+  await expect(page.getByRole('heading', { name: /fees$/ })).toBeVisible();
 });
 
 test('a fee is added to SSS 3 after billing, with one pupil left out', async ({ page }) => {

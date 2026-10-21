@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import { App } from './App';
+import '@fontsource-variable/plus-jakarta-sans';
 import './styles.css';
 
 const queryClient = new QueryClient({

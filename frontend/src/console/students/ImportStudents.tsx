@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { BRAND } from '../../lib/brand';
-import { ErrorAlert, Field, Notice, PageHeader } from '../../lib/ui';
+import { BackLink, ErrorAlert, Field, Notice, PageHeader } from '../../lib/ui';
 
 type Report = Schemas['ImportReportOut'];
 type Mode = 'skip' | 'update';
@@ -85,9 +85,7 @@ export function ImportStudents() {
 
   return (
     <>
-      <p>
-        <Link to="/console/students">← Students</Link>
-      </p>
+      <BackLink to="/console/students">Students</BackLink>
       <PageHeader title="Import students" subtitle="Load your student list from Excel (.xlsx) or CSV. You'll see a preview before anything is saved." />
       <div className="grid-2">
         <div className="card">

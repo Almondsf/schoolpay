@@ -18,9 +18,19 @@ export function StudentAccount({ studentId }: { studentId: string }) {
   const manageFees = can('fees.manage');
   const queryClient = useQueryClient();
   const path = { params: { path: { student_id: studentId } } };
-  const account = useQuery({ queryKey: ['account', studentId], queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/account', path)) });
-  const given = useQuery({ queryKey: ['student-discounts', studentId], queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/discounts', path)) });
-  const discounts = useQuery({ queryKey: ['discounts'], enabled: manageFees, queryFn: async () => unwrap(await api.GET('/api/v1/discounts')) });
+  const account = useQuery({
+    queryKey: ['account', studentId],
+    queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/account', path)),
+  });
+  const given = useQuery({
+    queryKey: ['student-discounts', studentId],
+    queryFn: async () => unwrap(await api.GET('/api/v1/students/{student_id}/discounts', path)),
+  });
+  const discounts = useQuery({
+    queryKey: ['discounts'],
+    enabled: manageFees,
+    queryFn: async () => unwrap(await api.GET('/api/v1/discounts')),
+  });
   const items = useQuery({ queryKey: ['fee-items'], queryFn: async () => unwrap(await api.GET('/api/v1/fee-items')) });
   // Under the 'account' key so everything that refreshes the account refreshes this too
   const breakdown = useQuery({
@@ -31,7 +41,8 @@ export function StudentAccount({ studentId }: { studentId: string }) {
   const [discountId, setDiscountId] = useState('');
   const refreshDiscounts = () => void queryClient.invalidateQueries({ queryKey: ['student-discounts', studentId] });
   const give = useMutation({
-    mutationFn: async () => unwrap(await api.POST('/api/v1/students/{student_id}/discounts', { ...path, body: { discount_id: discountId } })),
+    mutationFn: async () =>
+      unwrap(await api.POST('/api/v1/students/{student_id}/discounts', { ...path, body: { discount_id: discountId } })),
     onSuccess: () => {
       setDiscountId('');
       refreshDiscounts();
@@ -39,7 +50,11 @@ export function StudentAccount({ studentId }: { studentId: string }) {
   });
   const take = useMutation({
     mutationFn: async (id: string) =>
-      unwrap(await api.DELETE('/api/v1/students/{student_id}/discounts/{discount_id}', { params: { path: { student_id: studentId, discount_id: id } } })),
+      unwrap(
+        await api.DELETE('/api/v1/students/{student_id}/discounts/{discount_id}', {
+          params: { path: { student_id: studentId, discount_id: id } },
+        }),
+      ),
     onSuccess: refreshDiscounts,
   });
 
@@ -49,98 +64,90 @@ export function StudentAccount({ studentId }: { studentId: string }) {
   const available = (discounts.data ?? []).filter((d) => d.is_active && d.rule === 'manual' && !given.data?.some((g) => g.id === d.id));
 
   return (
-    <div className="card section">
-      <div className="row between">
-        <h2>Fees</h2>
-        {issue && (
-          <div className="row">
-            <button className="secondary small" onClick={() => setAdding('charge')}>
-              Add a charge
-            </button>
-            {!a.invoices.some((i) => i.kind === 'opening_balance' && i.status !== 'void') && (
-              <button className="secondary small" onClick={() => setAdding('opening_balance')}>
-                Opening balance
+    <>
+      <div className="card section">
+        <div className="row between">
+          <h2>{breakdown.data?.term_label ? `${breakdown.data.term_label} fees` : 'Fees'}</h2>
+          {issue && (
+            <div className="row">
+              <button className="secondary small" onClick={() => setAdding('charge')}>
+                Add a charge
               </button>
-            )}
-          </div>
-        )}
+              {!a.invoices.some((i) => i.kind === 'opening_balance' && i.status !== 'void') && (
+                <button className="secondary small" onClick={() => setAdding('opening_balance')}>
+                  Opening balance
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {breakdown.data && <FeeTable breakdown={breakdown.data} />}
       </div>
-      <div className="stats compact">
-        <div>
-          <div className="muted small">Owed</div>
-          <div className={`stat-value ${a.outstanding_kobo > 0 ? 'error-text' : ''}`}>{formatKobo(a.outstanding_kobo)}</div>
+      <div className="grid-2">
+        <div className="card">
+          <h2>Bills</h2>
+          {a.invoices.length === 0 ? (
+            <p className="muted">No invoices yet.</p>
+          ) : (
+            <table className="compact">
+              <tbody>
+                {a.invoices.map((i) => (
+                  <tr key={i.id}>
+                    <td>
+                      <Link to={`/console/invoices/${i.id}`}>#{i.number}</Link>{' '}
+                      <span className="muted small">{INVOICE_KIND_LABELS[i.kind]}</span>
+                    </td>
+                    <td className="num">{formatKobo(i.total_kobo)}</td>
+                    <td className="num">{formatKobo(i.balance_kobo)} left</td>
+                    <td>
+                      <StatusBadge status={i.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-        <div>
-          <div className="muted small">Billed</div>
-          <div className="stat-value">{formatKobo(a.billed_kobo)}</div>
-        </div>
-        <div>
-          <div className="muted small">Paid</div>
-          <div className="stat-value">{formatKobo(a.paid_kobo)}</div>
-        </div>
-      </div>
-      {breakdown.data && (
-        <>
-          <h3>{breakdown.data.term_label ? `${breakdown.data.term_label} fees` : 'Fees'}</h3>
-          <FeeTable breakdown={breakdown.data} />
-          <h3>Bills</h3>
-        </>
-      )}
-      {a.invoices.length === 0 ? (
-        <p className="muted">No invoices yet.</p>
-      ) : (
-        <table className="compact">
-          <tbody>
-            {a.invoices.map((i) => (
-              <tr key={i.id}>
-                <td>
-                  <Link to={`/console/invoices/${i.id}`}>#{i.number}</Link> <span className="muted small">{INVOICE_KIND_LABELS[i.kind]}</span>
-                </td>
-                <td className="num">{formatKobo(i.total_kobo)}</td>
-                <td className="num">{formatKobo(i.balance_kobo)} left</td>
-                <td>
-                  <StatusBadge status={i.status} />
-                </td>
-              </tr>
+        <div className="card">
+          <h2>Discounts</h2>
+          <ErrorAlert error={give.error ?? take.error} />
+          {(given.data ?? []).length === 0 && (
+            <p className="muted small">None. Sibling discounts are applied automatically when invoices are generated.</p>
+          )}
+          <ul className="plain">
+            {(given.data ?? []).map((d) => (
+              <li key={d.id}>
+                {d.name} <span className="muted small">({describeDiscount(d, items.data)})</span>{' '}
+                {manageFees && (
+                  <button className="link small" onClick={() => take.mutate(d.id)}>
+                    Remove
+                  </button>
+                )}
+              </li>
             ))}
-          </tbody>
-        </table>
-      )}
-      <h3>Discounts</h3>
-      <ErrorAlert error={give.error ?? take.error} />
-      {(given.data ?? []).length === 0 && <p className="muted small">None. Sibling discounts are applied automatically when invoices are generated.</p>}
-      <ul className="plain">
-        {(given.data ?? []).map((d) => (
-          <li key={d.id}>
-            {d.name} <span className="muted small">({describeDiscount(d, items.data)})</span>{' '}
-            {manageFees && (
-              <button className="link small" onClick={() => take.mutate(d.id)}>
-                Remove
+          </ul>
+          {manageFees && available.length > 0 && (
+            <div className="row">
+              <select aria-label="Discount" value={discountId} onChange={(e) => setDiscountId(e.target.value)}>
+                <option value="">Give a discount…</option>
+                {available.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <button className="secondary small" disabled={!discountId || give.isPending} onClick={() => give.mutate()}>
+                Give
               </button>
-            )}
-          </li>
-        ))}
-      </ul>
-      {manageFees && available.length > 0 && (
-        <div className="row">
-          <select aria-label="Discount" value={discountId} onChange={(e) => setDiscountId(e.target.value)}>
-            <option value="">Give a discount…</option>
-            {available.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <button className="secondary small" disabled={!discountId || give.isPending} onClick={() => give.mutate()}>
-            Give
-          </button>
+            </div>
+          )}
+          <Exemptions studentId={studentId} canChange={issue} onExempt={() => setAdding('exempt')} />
+          {adding === 'opening_balance' && <NewInvoice studentId={studentId} kind={adding} onClose={() => setAdding(null)} />}
+          {adding === 'charge' && <AddCharge studentId={studentId} onClose={() => setAdding(null)} />}
+          {adding === 'exempt' && <Exempt studentId={studentId} onClose={() => setAdding(null)} />}
         </div>
-      )}
-      <Exemptions studentId={studentId} canChange={issue} onExempt={() => setAdding('exempt')} />
-      {adding === 'opening_balance' && <NewInvoice studentId={studentId} kind={adding} onClose={() => setAdding(null)} />}
-      {adding === 'charge' && <AddCharge studentId={studentId} onClose={() => setAdding(null)} />}
-      {adding === 'exempt' && <Exempt studentId={studentId} onClose={() => setAdding(null)} />}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -151,7 +158,9 @@ function NewInvoice({ studentId, kind, onClose }: { studentId: string; kind: 'op
   const kobo = parseNairaToKobo(amount);
   const save = useMutation({
     mutationFn: async () =>
-      unwrap(await api.POST('/api/v1/invoices', { body: { student_id: studentId, kind, lines: [{ description, amount_kobo: kobo ?? 0 }] } })),
+      unwrap(
+        await api.POST('/api/v1/invoices', { body: { student_id: studentId, kind, lines: [{ description, amount_kobo: kobo ?? 0 }] } }),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['account', studentId] });
       void queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -251,11 +260,20 @@ function AddCharge({ studentId, onClose }: { studentId: string; onClose: () => v
         </Field>
         {!itemId && (
           <Field label="What it's for" error={fieldError(save.error, 'description')}>
-            <input value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={200} placeholder="e.g. Textbooks" />
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+              maxLength={200}
+              placeholder="e.g. Textbooks"
+            />
           </Field>
         )}
         <div className="grid-2 tight">
-          <Field label="Price (₦)" error={fieldError(save.error, 'unit_kobo') ?? (price && unit === null ? 'Not a valid amount' : undefined)}>
+          <Field
+            label="Price (₦)"
+            error={fieldError(save.error, 'unit_kobo') ?? (price && unit === null ? 'Not a valid amount' : undefined)}
+          >
             <input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" required />
           </Field>
           <Field label="Quantity">
@@ -266,7 +284,9 @@ function AddCharge({ studentId, onClose }: { studentId: string; onClose: () => v
         <Field label="Note (optional)">
           <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />
         </Field>
-        <ErrorAlert error={save.error && !fieldError(save.error, 'description') && !fieldError(save.error, 'unit_kobo') ? save.error : null} />
+        <ErrorAlert
+          error={save.error && !fieldError(save.error, 'description') && !fieldError(save.error, 'unit_kobo') ? save.error : null}
+        />
         <div className="row end">
           <button type="button" className="secondary" onClick={onClose}>
             Cancel
@@ -376,7 +396,12 @@ function Exempt({ studentId, onClose }: { studentId: string; onClose: () => void
             </select>
           </Field>
           <Field label="Reason (kept with the bill)">
-            <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="e.g. Not going on the excursion" />
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={300}
+              placeholder="e.g. Not going on the excursion"
+            />
           </Field>
           <ErrorAlert error={save.error} />
           <div className="row end">

@@ -116,10 +116,12 @@ describe('dashboard and reports', () => {
     expect(screen.getByText("37% of the term's bills")).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '2 students owe' })).toHaveAttribute('href', '/console/reports');
     expect(screen.getByRole('link', { name: '1 cash or teller entries to check' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Money received on 2 days' })).toBeInTheDocument(); // the first tab
+    await userEvent.click(screen.getByRole('tab', { name: 'By class' }));
     const byClass = screen.getByRole('region', { name: 'By class' });
     expect(within(byClass).getByText('2 of 2')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'How late' }));
     expect(screen.getByText('Over 90 days late')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Money received on 2 days' })).toBeInTheDocument();
   });
 
   it("gives staff who don't see money the school at a glance instead", async () => {

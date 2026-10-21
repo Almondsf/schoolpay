@@ -30,6 +30,7 @@ test('the bursar words a reminder, sends one, and sees it in the log', async ({ 
   await page.getByRole('link', { name: 'Students', exact: true }).click();
   await page.locator('table tbody tr').last().getByRole('link').first().click();
   // Something to remind about, whether or not this term's bills have been generated yet
+  await page.getByRole('tab', { name: 'Fees' }).click();
   await page.getByRole('button', { name: 'Add a charge' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel("What it's for").fill('Excursion to the National Museum');

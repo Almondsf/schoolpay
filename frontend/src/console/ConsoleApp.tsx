@@ -1,4 +1,28 @@
-import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  Building2,
+  CalendarDays,
+  ChartColumn,
+  CreditCard,
+  FileText,
+  GraduationCap,
+  History,
+  Landmark,
+  Layers,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Plug,
+  Receipt,
+  Search,
+  Tags,
+  UserCog,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
 import { useAuth, type Capability } from '../auth/AuthContext';
 import { BRAND } from '../lib/brand';
@@ -35,36 +59,46 @@ import { Subscription } from './Subscription';
 interface NavItem {
   to: string;
   label: string;
+  icon: LucideIcon;
   capability: Capability;
-  setup?: boolean; // grouped under the Setup menu
+  setup?: boolean; // listed under "Setup" in the sidebar
 }
 
 const SCHOOL_NAV: NavItem[] = [
-  { to: '/console', label: 'Overview', capability: 'school.view' },
-  { to: '/console/students', label: 'Students', capability: 'students.view' },
-  { to: '/console/billing', label: 'Billing', capability: 'fees.view' },
-  { to: '/console/payments', label: 'Payments', capability: 'payments.view' },
-  { to: '/console/reports', label: 'Reports', capability: 'reports.view' },
-  { to: '/console/messages', label: 'Messages', capability: 'messaging.manage' },
-  { to: '/console/fees', label: 'Fees', capability: 'fees.view', setup: true },
-  { to: '/console/classes', label: 'Classes', capability: 'school.view', setup: true },
-  { to: '/console/calendar', label: 'Calendar', capability: 'school.view', setup: true },
-  { to: '/console/staff', label: 'Staff', capability: 'staff.view', setup: true },
-  { to: '/console/school', label: 'School profile', capability: 'school.view', setup: true },
-  { to: '/console/payment-settings', label: 'Payment settings', capability: 'payments.view', setup: true },
-  { to: '/console/subscription', label: 'Subscription', capability: 'reports.view', setup: true },
-  { to: '/console/audit', label: 'Activity log', capability: 'audit.view', setup: true },
+  { to: '/console', label: 'Overview', icon: LayoutDashboard, capability: 'school.view' },
+  { to: '/console/students', label: 'Students', icon: Users, capability: 'students.view' },
+  { to: '/console/billing', label: 'Billing', icon: FileText, capability: 'fees.view' },
+  { to: '/console/payments', label: 'Payments', icon: Wallet, capability: 'payments.view' },
+  { to: '/console/reports', label: 'Reports', icon: ChartColumn, capability: 'reports.view' },
+  { to: '/console/messages', label: 'Messages', icon: MessageSquare, capability: 'messaging.manage' },
+  { to: '/console/fees', label: 'Fees', icon: Tags, capability: 'fees.view', setup: true },
+  { to: '/console/classes', label: 'Classes', icon: GraduationCap, capability: 'school.view', setup: true },
+  { to: '/console/calendar', label: 'Calendar', icon: CalendarDays, capability: 'school.view', setup: true },
+  { to: '/console/staff', label: 'Staff', icon: UserCog, capability: 'staff.view', setup: true },
+  { to: '/console/school', label: 'School profile', icon: Building2, capability: 'school.view', setup: true },
+  { to: '/console/payment-settings', label: 'Payment settings', icon: Landmark, capability: 'payments.view', setup: true },
+  { to: '/console/subscription', label: 'Subscription', icon: CreditCard, capability: 'reports.view', setup: true },
+  { to: '/console/audit', label: 'Activity log', icon: History, capability: 'audit.view', setup: true },
 ];
 
 const PLATFORM_NAV: NavItem[] = [
-  { to: '/console/platform', label: 'Overview', capability: 'platform.manage' },
-  { to: '/console/platform/schools', label: 'Schools', capability: 'platform.manage' },
-  { to: '/console/platform/billing', label: 'Billing', capability: 'platform.manage' },
-  { to: '/console/platform/plans', label: 'Plans', capability: 'platform.manage' },
-  { to: '/console/platform/providers', label: 'Providers', capability: 'platform.manage' },
-  { to: '/console/platform/lookup', label: 'Support lookup', capability: 'platform.manage' },
-  { to: '/console/platform/audit', label: 'Activity log', capability: 'platform.manage' },
+  { to: '/console/platform', label: 'Overview', icon: LayoutDashboard, capability: 'platform.manage' },
+  { to: '/console/platform/schools', label: 'Schools', icon: Building2, capability: 'platform.manage' },
+  { to: '/console/platform/billing', label: 'Billing', icon: Receipt, capability: 'platform.manage' },
+  { to: '/console/platform/plans', label: 'Plans', icon: Layers, capability: 'platform.manage' },
+  { to: '/console/platform/providers', label: 'Providers', icon: Plug, capability: 'platform.manage' },
+  { to: '/console/platform/lookup', label: 'Support lookup', icon: Search, capability: 'platform.manage' },
+  { to: '/console/platform/audit', label: 'Activity log', icon: History, capability: 'platform.manage' },
 ];
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('');
+}
 
 export function ConsoleApp() {
   return (
@@ -132,51 +166,63 @@ function Home() {
 function Layout() {
   const { user, can, logout } = useAuth();
   const location = useLocation();
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => setNavOpen(false), [location.pathname]);
   if (!user) return null;
   const nav = [...SCHOOL_NAV, ...PLATFORM_NAV].filter((item) => can(item.capability));
-  const setup = nav.filter((item) => item.setup);
-  const inSetup = setup.some((item) => location.pathname.startsWith(item.to));
+  const groups = [
+    { label: '', items: nav.filter((item) => !item.setup) },
+    { label: 'Setup', items: nav.filter((item) => item.setup) },
+  ].filter((group) => group.items.length > 0);
+  const role = ROLE_LABELS[user.role] ?? user.role;
   return (
-    <div className="console">
-      <header className="topbar">
-        <div className="brand">
-          {BRAND}
-          {user.school && <span className="school-name">{user.school.name}</span>}
-        </div>
-        <nav aria-label="Main">
-          {!user.mfa_enrolment_required && (
-            <>
-              {nav
-                .filter((item) => !item.setup)
-                .map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.to === '/console' || item.to === '/console/platform'}>
-                    {item.label}
+    <div className={`console${navOpen ? ' nav-open' : ''}`}>
+      <div className="mobile-bar">
+        <button type="button" className="icon-button" aria-label="Open the menu" onClick={() => setNavOpen(true)}>
+          <Menu size={20} />
+        </button>
+        <strong>{user.school?.name ?? BRAND}</strong>
+      </div>
+      <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} />
+      <aside className="sidebar">
+        <Link to="/console" className="side-brand">
+          <span className="side-logo" aria-hidden="true">
+            {BRAND[0]}
+          </span>
+          <span className="side-brand-text">
+            <strong>{BRAND}</strong>
+            {user.school && <span>{user.school.name}</span>}
+          </span>
+        </Link>
+        <nav aria-label="Main" className="side-nav">
+          {!user.mfa_enrolment_required &&
+            groups.map((group) => (
+              <div key={group.label || 'main'}>
+                {group.label && <div className="side-group-label">{group.label}</div>}
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink key={to} to={to} className="side-link" end={to === '/console' || to === '/console/platform'}>
+                    <Icon size={18} strokeWidth={1.9} aria-hidden="true" />
+                    {label}
                   </NavLink>
                 ))}
-              {setup.length > 0 && (
-                <details className="nav-menu" key={location.pathname /* closes after navigating */}>
-                  <summary className={inSetup ? 'active' : ''}>Setup</summary>
-                  <div className="nav-menu-list">
-                    {setup.map((item) => (
-                      <NavLink key={item.to} to={item.to}>
-                        {item.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </>
-          )}
+              </div>
+            ))}
         </nav>
-        <div className="user-menu">
+        <div className="side-user">
           <NavLink to="/console/account" title="Your account">
-            {user.full_name} <span className="muted small">({ROLE_LABELS[user.role] ?? user.role})</span>
+            <span className="avatar" aria-hidden="true">
+              {initials(user.full_name)}
+            </span>
+            <span className="side-user-text">
+              <strong>{user.full_name}</strong>
+              <span>{role}</span>
+            </span>
           </NavLink>
-          <button className="secondary small" onClick={() => void logout()}>
-            Sign out
+          <button type="button" className="icon-button" aria-label="Sign out" title="Sign out" onClick={() => void logout()}>
+            <LogOut size={18} />
           </button>
         </div>
-      </header>
+      </aside>
       <main className="page">
         <Outlet />
       </main>
