@@ -15,6 +15,7 @@ import {
   Plug,
   Receipt,
   Search,
+  TriangleAlert,
   Tags,
   UserCog,
   Users,
@@ -45,6 +46,7 @@ import { PlatformBilling } from './platform/Billing';
 import { PlatformLookup } from './platform/Lookup';
 import { PlatformOverview } from './platform/Overview';
 import { PlatformPlans } from './platform/Plans';
+import { PlatformProblems } from './platform/Problems';
 import { PlatformProviders } from './platform/Providers';
 import { PlatformSchoolDetail } from './platform/SchoolDetail';
 import { PlatformSchools } from './platform/Schools';
@@ -87,6 +89,7 @@ const PLATFORM_NAV: NavItem[] = [
   { to: '/console/platform/schools', label: 'Schools', icon: Building2, capability: 'platform.manage' },
   { to: '/console/platform/billing', label: 'Billing', icon: Receipt, capability: 'platform.manage' },
   { to: '/console/platform/plans', label: 'Plans', icon: Layers, capability: 'platform.manage' },
+  { to: '/console/platform/problems', label: 'Problems', icon: TriangleAlert, capability: 'platform.manage' },
   { to: '/console/platform/providers', label: 'Providers', icon: Plug, capability: 'platform.manage' },
   { to: '/console/platform/lookup', label: 'Support lookup', icon: Search, capability: 'platform.manage' },
   { to: '/console/platform/audit', label: 'Activity log', icon: History, capability: 'platform.manage' },
@@ -134,6 +137,7 @@ export function ConsoleApp() {
           <Route path="platform/billing" element={<Guard capability="platform.manage"><PlatformBilling /></Guard>} />
           <Route path="platform/plans" element={<Guard capability="platform.manage"><PlatformPlans /></Guard>} />
           <Route path="platform/providers" element={<Guard capability="platform.manage"><PlatformProviders /></Guard>} />
+          <Route path="platform/problems" element={<Guard capability="platform.manage"><PlatformProblems /></Guard>} />
           <Route path="platform/lookup" element={<Guard capability="platform.manage"><PlatformLookup /></Guard>} />
           <Route path="platform/audit" element={<Guard capability="platform.manage"><AuditLog platform /></Guard>} />
           <Route path="*" element={<Navigate to="/console" replace />} />

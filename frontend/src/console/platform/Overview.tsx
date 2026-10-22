@@ -19,6 +19,11 @@ export function PlatformOverview() {
   return (
     <>
       <PageHeader title="Platform overview" subtitle={`Every school on ${BRAND}`} />
+      {o.problems_open > 0 && (
+        <div className="alert warn" role="status">
+          {o.problems_open === 1 ? '1 thing needs' : `${o.problems_open} things need`} a person: <Link to="/console/platform/problems">see Problems</Link>.
+        </div>
+      )}
       <h2 className="section-title">Schools</h2>
       <div className="stats">
         <Card label="Active schools" value={String(o.schools_active)} note={<Link to="/console/platform/schools">See all schools</Link>} />

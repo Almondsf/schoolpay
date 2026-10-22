@@ -133,6 +133,10 @@ class PaymentIntent(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     provider_reference: Mapped[str] = mapped_column(String(100), default="", server_default="")
     review_reason: Mapped[str] = mapped_column(String(300), default="")
     created_by: Mapped[uuid.UUID | None] = mapped_column()  # staff user (payment link) or None (parent)
+    # A platform admin's note on how a payment in review was sorted out (the money record isn't changed)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column()
+    resolution_note: Mapped[str] = mapped_column(String(300), default="", server_default="")
 
 
 class PaymentIntentItem(TenantMixin, Base):

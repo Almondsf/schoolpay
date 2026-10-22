@@ -877,6 +877,22 @@ status). A school's page adds its staff (invited, two-factor, last sign-in),
 this term's bills and collections, the plan picker, its subscription bills,
 and suspend/reactivate.
 
+**Problems to fix (`problems.py`, `GET /platform/problems`).** Everything stuck
+across schools, newest first, in a fixed number of queries:
+
+- payment notifications parked as needs_review (e.g. an unknown account number) or
+  failed: **Retry** (`POST /platform/problems/webhooks/{id}/retry`) puts one back
+  in the queue after the cause is fixed (recording is still idempotent);
+  **Resolve** with a note closes it as handled by hand;
+- card checkouts in review (school fees `SP…` or subscription `WS…`): paid but
+  not as expected, so nothing was recorded; **Resolve** records what was done
+  (`resolved_at`, `resolved_by`, `resolution_note`) without touching money;
+- background tasks the outbox dead-lettered: **Retry**;
+- messages that failed in the last 7 days, per school, read-only.
+
+The overview shows how many need a person (`problems_open`). Every action is
+audited (`platform.problem_retried`, `platform.problem_resolved`).
+
 **Support lookup** (`GET /platform/lookup?q=`) finds:
 
 - a school, by name, short name or email;
@@ -1157,7 +1173,9 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   Schools (filters, plan, pupils, payments set-up, what each owes) and a
   school's page (figures, staff, plan picker, bills, suspend), Billing (bill
   the term with a preview, record a transfer, void, PDF), Plans (prices, with
-  the termly per-pupil amount worked out), and Support lookup.
+  the termly per-pupil amount worked out), Problems (stuck payments, tasks and
+  failed messages, with retry and resolve), Providers, Support lookup and the
+  activity log.
 - **Public website** (`src/public/Landing.tsx` at `/`, `PrivacyNotice.tsx` at
   `/privacy`): a short home page (hero photo with example payment cards, plain facts,
   proprietors / bursars / parents, how it works, features, a parents band with an

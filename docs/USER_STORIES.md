@@ -95,6 +95,7 @@ What each kind of user needs from WardPay. Stories are marked ✅ when built.
 - ✅ Check that a receipt is genuine on a public page (scan its QR code), without seeing the child's details. A reversed payment shows as reversed; a fake receipt doesn't match anything.
 
 ## Platform admin
+- ✅ See on one page everything stuck across schools (payments set aside, card payments in review, background tasks that gave up, failed messages), retry what can be retried and note how the rest was sorted out.
 - ✅ Switch the payment provider (Paystack or Bachs) for new payments at once, without a release; payments under way and schools not yet set up on the new provider keep working.
 - ✅ Switch the SMS provider (Termii or Africa's Talking) at once, without a release, if one is down or dearer.
 - ✅ Create a school and invite its proprietor.

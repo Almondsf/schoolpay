@@ -1,8 +1,9 @@
 import uuid
+from dataclasses import asdict
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,7 +25,7 @@ from app.modules.payments.models import IntentStatus
 from app.modules.schools.models import School, SchoolOrigin, SchoolStatus
 from app.modules.schools.schemas import SchoolOut
 
-from . import billing, card_payments, console, onboarding, pdf, plans, signup
+from . import billing, card_payments, console, onboarding, pdf, plans, problems, signup
 from .models import SubscriptionCheckout, SubscriptionLineKind
 
 router = APIRouter(prefix="/platform", tags=["platform"], responses=ERROR_RESPONSES)
@@ -54,6 +55,7 @@ class PlatformOverviewOut(BaseModel):
     subscription_paid_kobo: int
     subscription_outstanding_kobo: int
     subscription_overdue_kobo: int
+    problems_open: int = Field(description="Stuck payments, notifications and tasks that need a person")
 
 
 class PlatformSchoolOut(SchoolOut):
@@ -348,7 +350,7 @@ def _pdf_response(db: Session, invoice_id: uuid.UUID) -> Response:
 
 @router.get("/overview", response_model=PlatformOverviewOut, summary="Totals across every school")
 def get_overview(admin: Principal = ADMIN, db: Session = Depends(get_db)) -> PlatformOverviewOut:
-    return PlatformOverviewOut.model_validate(console.overview(db))
+    return PlatformOverviewOut(**asdict(console.overview(db)), problems_open=problems.count(db))
 
 
 @router.get("/schools", response_model=Page[PlatformSchoolOut], summary="Schools, newest first")
@@ -707,3 +709,115 @@ def get_sms_provider(admin: Principal = ADMIN, db: Session = Depends(get_db)) ->
 def put_sms_provider(body: SmsProviderIn, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> SmsProviderOut:
     view = sms_providers.set_sms_provider(db, body.provider, actor=admin.actor, meta=admin.meta, user_id=admin.user.id)
     return SmsProviderOut.model_validate(view, from_attributes=True)
+
+
+# --- Problems to fix ---------------------------------------------------------------------------------
+
+
+class WebhookProblemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    gateway: GatewayCode
+    status: Literal["needs_review", "failed"]
+    event_type: str
+    reference: str | None
+    school_name: str | None
+    claimed_amount_kobo: int | None
+    note: str
+    attempts: int
+    received_at: datetime
+
+
+class CheckoutProblemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: Literal["school_fees", "subscription"]
+    reference: str
+    school_name: str
+    amount_kobo: int
+    review_reason: str
+    created_at: datetime
+
+
+class TaskProblemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    task_name: str
+    attempts: int
+    last_error: str
+    created_at: datetime
+
+
+class MessageProblemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    school_name: str
+    failed: int
+    last_error: str
+
+
+class ProblemsOut(BaseModel):
+    webhooks: list[WebhookProblemOut]
+    checkouts: list[CheckoutProblemOut]
+    tasks: list[TaskProblemOut]
+    messages: list[MessageProblemOut] = Field(description="Messages that failed in the last 7 days, per school")
+
+
+class ResolveIn(BaseModel):
+    note: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
+@router.get("/problems", response_model=ProblemsOut, summary="Everything stuck across schools that needs a person")
+def get_problems(admin: Principal = ADMIN, db: Session = Depends(get_db)) -> ProblemsOut:
+    found = problems.problems(db)
+    return ProblemsOut(
+        webhooks=[WebhookProblemOut.model_validate(w) for w in found.webhooks],
+        checkouts=[CheckoutProblemOut.model_validate(c) for c in found.checkouts],
+        tasks=[TaskProblemOut.model_validate(t) for t in found.tasks],
+        messages=[MessageProblemOut.model_validate(m) for m in found.messages],
+    )
+
+
+@router.post(
+    "/problems/webhooks/{event_id}/retry",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Process a parked payment notification again",
+)
+def retry_webhook(event_id: uuid.UUID, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> None:
+    problems.retry_webhook(db, admin, event_id)
+
+
+@router.post(
+    "/problems/webhooks/{event_id}/resolve",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Close a parked payment notification that was dealt with by hand",
+)
+def resolve_webhook(
+    event_id: uuid.UUID, body: ResolveIn, admin: Principal = ADMIN, db: Session = Depends(get_db)
+) -> None:
+    problems.resolve_webhook(db, admin, event_id, body.note)
+
+
+@router.post(
+    "/problems/checkouts/{reference}/resolve",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Record how a card payment in review was sorted out",
+)
+def resolve_checkout(
+    body: ResolveIn,
+    reference: str = Path(pattern=r"^(SP|WS)[0-9A-F]{20}$"),
+    admin: Principal = ADMIN,
+    db: Session = Depends(get_db),
+) -> None:
+    problems.resolve_checkout(db, admin, reference, body.note)
+
+
+@router.post(
+    "/problems/tasks/{task_id}/retry",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Put a failed background task back in the queue",
+)
+def retry_task(task_id: uuid.UUID, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> None:
+    problems.retry_task(db, admin, task_id)

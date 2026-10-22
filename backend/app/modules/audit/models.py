@@ -53,6 +53,8 @@ class AuditAction(enum.StrEnum):
     SUBSCRIPTION_INVOICE_VOIDED = "platform.subscription_voided"
     SUBSCRIPTION_CHECKOUT_STARTED = "platform.subscription_checkout"
     SUBSCRIPTION_CHECKOUT_NEEDS_REVIEW = "platform.subscription_checkout_review"
+    PROBLEM_RETRIED = "platform.problem_retried"
+    PROBLEM_RESOLVED = "platform.problem_resolved"
     SUPPORT_LOOKUP = "platform.support_lookup"
     PRIVACY_EXPORTED = "privacy.exported"
     PRIVACY_ERASED = "privacy.erased"
