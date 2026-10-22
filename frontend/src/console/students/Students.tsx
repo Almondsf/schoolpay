@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
@@ -190,6 +190,15 @@ function AddStudent({ onClose }: { onClose: () => void }) {
   });
   const [guardian, setGuardian] = useState({ full_name: '', phone: '', email: '', relationship: 'mother' as Schemas['Relationship'] });
   const [consent, setConsent] = useState(false);
+  // The next number in the school's own pattern, filled in once; staff keep, edit or replace it
+  const suggestion = useQuery({
+    queryKey: ['admission-suggestion'],
+    staleTime: 0,
+    queryFn: async () => unwrap(await api.GET('/api/v1/students/admission-number/suggestion')).suggestion,
+  });
+  useEffect(() => {
+    if (suggestion.data) setForm((f) => (f.admission_number ? f : { ...f, admission_number: suggestion.data }));
+  }, [suggestion.data]);
   const create = useMutation({
     mutationFn: async () =>
       unwrap(
@@ -220,7 +229,7 @@ function AddStudent({ onClose }: { onClose: () => void }) {
       <form onSubmit={submit}>
         <ErrorAlert error={create.error} />
         <div className="grid-2 tight">
-          <Field label="Admission number" error={fieldError(create.error, 'admission_number')}>
+          <Field label="Admission number" hint="Suggested from your latest number; change it if you like." error={fieldError(create.error, 'admission_number')}>
             <input value={form.admission_number} onChange={set('admission_number')} required maxLength={30} />
           </Field>
           <Field label="Class">

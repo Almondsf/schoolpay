@@ -7,6 +7,7 @@ school's IDs are simply "not found".
 """
 
 import enum
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -220,6 +221,52 @@ def student_detail(session: Session, student_id: uuid.UUID) -> StudentDetail:
         ).all()
     ]
     return StudentDetail(student=student, guardians=guardians, enrollments=enrollments)
+
+
+_TRAILING_DIGITS = re.compile(r"^(.*?)(\d+)(\D*)$")
+_NAME_FILLERS = {"school", "schools", "the", "of", "and", "&"}
+
+
+def suggest_admission_number(session: Session, school_name: str, today: date) -> str:
+    """
+    A suggested admission number for the next pupil added by hand; staff keep, edit or replace it.
+    One query for the school's numbers; see `next_admission_number` for the rule.
+    """
+    rows = session.execute(select(Student.admission_number, Student.created_at)).all()
+    return next_admission_number([(number, created) for number, created in rows], school_name, today)
+
+
+def next_admission_number(numbers: list[tuple[str, datetime]], school_name: str, today: date) -> str:
+    """
+    The school's numbers are grouped by pattern (DMC/2026/…, DMC/2024/…). The pattern used most
+    recently wins (on a tie, as after a spreadsheet import, the later-sorting one, so 2026 beats
+    2024), and the suggestion is its highest number plus one, keeping the zero padding and skipping
+    any number already taken. With no numbers to follow: the school's initials and the year.
+    """
+    patterns: dict[tuple[str, str], tuple[datetime, int, int]] = {}  # (head, tail) -> (latest use, highest, width)
+    for number, created in numbers:
+        match = _TRAILING_DIGITS.match(number)
+        if match is None:
+            continue
+        head, digits, tail = match.groups()
+        seen = patterns.get((head, tail))
+        value = int(digits)
+        if seen is None:
+            patterns[(head, tail)] = (created, value, len(digits))
+        else:
+            patterns[(head, tail)] = (max(seen[0], created), max(seen[1], value), max(seen[2], len(digits)))
+    if not patterns:
+        words = [w for w in re.findall(r"[A-Za-z]+", school_name) if w.lower() not in _NAME_FILLERS]
+        prefix = "".join(w[0] for w in words[:4]).upper() or "ADM"
+        return f"{prefix}/{today.year}/0001"
+    (head, tail), (_, highest, width) = max(patterns.items(), key=lambda kv: (kv[1][0], kv[0]))
+    used = {number.lower() for number, _ in numbers}
+    value = highest
+    while True:  # in memory: every number was fetched above
+        value += 1
+        candidate = f"{head}{value:0{width}d}{tail}"
+        if candidate.lower() not in used:
+            return candidate
 
 
 def _active_arm(session: Session, arm_id: uuid.UUID) -> Arm:

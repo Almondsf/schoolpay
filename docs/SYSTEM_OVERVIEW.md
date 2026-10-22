@@ -245,7 +245,11 @@ number of statements (existing ranks are moved aside, then reset in one
 `CASE` update).
 
 **Students** (`app/modules/students`). A `Student` has an admission number
-(unique per school), names, and optional gender and date of birth; `status`
+(unique per school) (when staff add a pupil by hand, the form suggests the next one:
+`GET /students/admission-number/suggestion` groups the school's numbers by pattern, takes
+the pattern used most recently, later-sorting on a tie as after an import, and adds one to its
+highest number, keeping the zero padding and skipping taken ones; a school with none gets its
+initials and the year, e.g. SA/2026/0001; staff can change it), names, and optional gender and date of birth; `status`
 is `active`, `withdrawn` or `graduated`. Where a student is each term is an
 `Enrollment` (one row per student per term). That keeps class history, and
 each term's fees use that term's class. A composite foreign key

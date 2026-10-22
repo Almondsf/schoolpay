@@ -87,6 +87,23 @@ describe('students', () => {
     expect(asked.searchParams.get('class_level_id')).toBe('l1');
   });
 
+  it('suggests the next admission number, which staff can change', async () => {
+    const calls = mockApi({
+      ...base,
+      'GET /api/v1/students': () => json({ items: [], total: 0, limit: 50, offset: 0 }),
+      'GET /api/v1/students/admission-number/suggestion': () => json({ suggestion: 'DMC/2026/0193' }),
+      'POST /api/v1/students': () => json({ detail: 'stop here' }, 400),
+    });
+    renderAt('/console/students');
+    await userEvent.click(await screen.findByRole('button', { name: 'Add student' }));
+    const box = await screen.findByLabelText(/Admission number/);
+    await vi.waitFor(() => expect(box).toHaveValue('DMC/2026/0193'));
+    await userEvent.clear(box);
+    await userEvent.type(box, 'DMC/2026/0500');
+    expect(box).toHaveValue('DMC/2026/0500'); // a suggestion, not a rule
+    expect(calls.filter((c) => c.url.includes('/admission-number/suggestion'))).toHaveLength(1);
+  });
+
   it('opens filtered from the school overview links', async () => {
     const calls = mockApi({ ...base, 'GET /api/v1/students': () => json({ items: [], total: 0, limit: 50, offset: 0 }) });
     renderAt('/console/students?show=parent&class=l1');

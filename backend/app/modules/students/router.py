@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile,
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 from sqlalchemy.orm import Session
 
+from app.core.clock import lagos_today
 from app.core.db import get_db
 from app.core.errors import ERROR_RESPONSES, DomainError
 from app.core.pagination import Page, PageParams, page_params, paginate
@@ -15,7 +16,7 @@ from app.core.repo import get_or_404
 from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
 from app.modules.schools.academics_service import list_class_levels, require_current_term
-from app.modules.schools.models import Term
+from app.modules.schools.models import School, Term
 
 from . import importer, promotion, service, summary
 from .models import Gender, Language, Relationship, Student, StudentStatus
@@ -344,6 +345,20 @@ def list_students(
         for r in rows
     ]
     return Page(items=items, total=total, limit=params.limit, offset=params.offset)
+
+
+class AdmissionSuggestionOut(BaseModel):
+    suggestion: str = Field(description="The next admission number, to keep, edit or replace")
+
+
+@router.get(
+    "/students/admission-number/suggestion",
+    response_model=AdmissionSuggestionOut,
+    summary="A suggested admission number for the next pupil (follows the school's latest)",
+)
+def admission_suggestion(ctx: StaffContext = MANAGE, db: Session = Depends(get_db)) -> AdmissionSuggestionOut:
+    school = get_or_404(db, School, ctx.school_id, label="School")
+    return AdmissionSuggestionOut(suggestion=service.suggest_admission_number(db, school.name, lagos_today()))
 
 
 @router.post(

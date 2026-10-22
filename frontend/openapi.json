@@ -265,6 +265,20 @@
         "title": "AddLineIn",
         "type": "object"
       },
+      "AdmissionSuggestionOut": {
+        "properties": {
+          "suggestion": {
+            "description": "The next admission number, to keep, edit or replace",
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "suggestion"
+        ],
+        "title": "AdmissionSuggestionOut",
+        "type": "object"
+      },
       "AgingBucket": {
         "enum": [
           "not_due",
@@ -22868,6 +22882,102 @@
           }
         ],
         "summary": "Add a student, place them in a class and link guardians",
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/admission-number/suggestion": {
+      "get": {
+        "operationId": "students_admission_suggestion",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdmissionSuggestionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A suggested admission number for the next pupil (follows the school's latest)",
         "tags": [
           "students"
         ]

@@ -240,3 +240,53 @@ async def test_same_guardian_phone_is_separate_per_school(client, world):
     assert (
         await client.patch(f"/api/v1/guardians/{b_guardian}", headers=world["admin"], json={"full_name": "Hacked"})
     ).status_code == 404
+
+
+# --- Suggested admission numbers ---------------------------------------------------------------
+
+
+def test_next_admission_number_rules():
+    from datetime import UTC, date, datetime
+
+    from app.modules.students.service import next_admission_number as nxt
+
+    today = date(2026, 10, 22)
+    t1, t2 = datetime(2026, 9, 1, tzinfo=UTC), datetime(2026, 10, 1, tzinfo=UTC)
+    assert nxt([("DMC/2026/0192", t1)], "x", today) == "DMC/2026/0193"
+    # A spreadsheet import: one time for everyone; the highest number of the latest pattern wins
+    imported = [("DMC/2024/0001", t1), ("DMC/2026/0240", t1), ("DMC/2026/0007", t1), ("DMC/2025/0300", t1)]
+    assert nxt(imported, "x", today) == "DMC/2026/0241"
+    # Pupils added later in an older pattern still count as the latest
+    assert nxt([("DMC/2026/0240", t1), ("OLD-12", t2)], "x", today) == "OLD-13"
+    assert nxt([("DMC/2026/0192A", t1)], "x", today) == "DMC/2026/0193A"  # letters after the digits stay
+    assert nxt([("0099", t1)], "x", today) == "0100" and nxt([("999", t1)], "x", today) == "1000"
+    assert nxt([("A-5", t1), ("a-6", t1), ("A-7", t2)], "x", today) == "A-8"  # taken in any case
+    assert nxt([], "Sunrise Academy of Lagos", today) == "SAL/2026/0001"  # no pupils yet
+    assert nxt([("SMITH", t1)], "The School of Excellence", today) == "E/2026/0001"  # nothing to count on
+    assert nxt([], "", today) == "ADM/2026/0001"
+
+
+def test_suggestion_follows_the_schools_own_latest_pupil(db):
+    from datetime import date
+
+    from app.core.tenancy import scope_to_school
+    from app.modules.students.service import suggest_admission_number
+
+    school, other = make_school(db, "Sunrise Academy"), make_school(db)
+    _, terms = make_calendar(school)
+    make_student(other, make_calendar(other)[1][0], make_levels(other)[0].arms[0], admission="SA/2026/0007")
+    db.commit()
+    scope_to_school(db, school.id)
+    assert suggest_admission_number(db, school.name, date(2026, 10, 22)) == "SA/2026/0001"  # other schools don't count
+    make_student(school, terms[0], make_levels(school)[0].arms[0], admission="SA/2026/0041")
+    assert suggest_admission_number(db, school.name, date(2026, 10, 22)) == "SA/2026/0042"
+
+
+async def test_admission_suggestion_endpoint(client, db):
+    school = make_school(db, "Bright Future School")
+    admin, bursar = make_user(db, school, Role.SCHOOL_ADMIN), make_user(db, school, Role.BURSAR)
+    db.commit()
+    url = "/api/v1/students/admission-number/suggestion"
+    response = await client.get(url, headers=headers_for(db, admin))
+    assert response.status_code == 200 and response.json()["suggestion"].startswith("BF/")
+    assert (await client.get(url, headers=headers_for(db, bursar))).status_code == 403  # bursars don't add pupils

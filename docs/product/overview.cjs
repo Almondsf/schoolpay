@@ -190,6 +190,7 @@ const CHANGES = [
   ['20 Oct 2026', 'Payment provider switchable at any time (Paystack or Bachs), with Bachs checkout and onboarding'],
   ['20 Oct 2026', 'Fee status by pupil: every fee paid, part paid or unpaid, for the school or one class (Excel and PDF)'],
   ['21 Oct 2026', 'Fee status download: each class with only its own fees, what was paid on part-paid fees, a printable page per class'],
+  ['22 Oct 2026', 'Adding a pupil suggests the next admission number in the school’s own pattern; staff can change it'],
   ['22 Oct 2026', 'Set up a new school step by step: details, school year, classes, fees once per section (Primary, JSS, SSS), pupils and bills'],
   ['22 Oct 2026', 'Text messages cost less than half as much: they write NGN for ₦ and keep to the plain SMS alphabet (a reminder went from 7 SMS pages to 3)'],
   ['22 Oct 2026', 'Reminders and new-bill messages list what the money is for (biggest first), with the child’s account number'],
