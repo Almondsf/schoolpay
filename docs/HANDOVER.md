@@ -144,8 +144,7 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
   decision that nothing is split automatically. Until then the family payment link covers paying for
   all children at once.
 
-1. **Card payment of school subscriptions** (step 3 of the plan agreed on 19 Oct): schools pay their
-   WardPay bill by card/transfer through Paystack, not only by bank transfer recorded by hand.
+1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in
    (`ConsentMethod.PORTAL` already exists).
 3. **The "later" list in PLAN.md** (step 5): only when the owner says so.

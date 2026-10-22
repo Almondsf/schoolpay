@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -18,11 +19,12 @@ from app.modules.accounts.models import Role
 from app.modules.accounts.permissions import Capability
 from app.modules.payments import providers
 from app.modules.payments.gateways import GatewayCode
+from app.modules.payments.models import IntentStatus
 from app.modules.schools.models import School, SchoolOrigin, SchoolStatus
 from app.modules.schools.schemas import SchoolOut
 
-from . import billing, console, onboarding, pdf, plans, signup
-from .models import SubscriptionLineKind
+from . import billing, card_payments, console, onboarding, pdf, plans, signup
+from .models import SubscriptionCheckout, SubscriptionLineKind
 
 router = APIRouter(prefix="/platform", tags=["platform"], responses=ERROR_RESPONSES)
 public_router = APIRouter(prefix="/public", tags=["public"], responses=ERROR_RESPONSES)
@@ -177,6 +179,7 @@ class SubscriptionPaymentOut(BaseModel):
     amount_kobo: int
     received_on: date
     reference: str
+    gateway: GatewayCode | None = Field(description="Set for a card payment the gateway confirmed; else a transfer")
     created_at: datetime
 
 
@@ -238,6 +241,23 @@ class SubscriptionOut(BaseModel):
     next_term_estimate_kobo: int
     pay_to: BankDetailsOut | None
     invoices: list[SubscriptionInvoiceOut]
+
+
+class SubscriptionCheckoutOut(BaseModel):
+    reference: str
+    amount_kobo: int
+    authorization_url: str
+
+
+class SubscriptionVerifyIn(BaseModel):
+    reference: Annotated[str, StringConstraints(pattern=r"^WS[0-9A-F]{20}$")]
+
+
+class SubscriptionVerifyOut(BaseModel):
+    reference: str
+    status: IntentStatus
+    amount_kobo: int
+    review_reason: str
 
 
 class OnboardingStepOut(BaseModel):
@@ -577,6 +597,52 @@ def my_invoice_pdf(
     db: Session = Depends(get_db),
 ) -> Response:
     return _pdf_response(db, invoice_id)  # the session is scoped: another school's invoice is "not found"
+
+
+# Paying the platform is a money action: proprietors and bursars (payments.record), not every viewer
+PAY = Depends(require(Capability.PAYMENTS_RECORD))
+
+
+@school_router.post(
+    "/subscription/invoices/{invoice_id}/checkout",
+    response_model=SubscriptionCheckoutOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Pay a subscription bill by card: a checkout link for what's left on it",
+)
+def pay_invoice_by_card(
+    invoice_id: uuid.UUID, ctx: StaffContext = PAY, db: Session = Depends(get_db)
+) -> SubscriptionCheckoutOut:
+    get_limiter().hit("subscription-checkout:user", "20/hour", str(ctx.user.id))
+    checkout = card_payments.start(db, ctx, invoice_id)
+    return SubscriptionCheckoutOut(
+        reference=checkout.reference, amount_kobo=checkout.amount_kobo, authorization_url=checkout.authorization_url
+    )
+
+
+@school_router.post(
+    "/subscription/checkouts/verify",
+    response_model=SubscriptionVerifyOut,
+    summary="Back from the gateway: confirm a subscription card payment (the outcome comes from the gateway)",
+)
+def verify_subscription_payment(
+    body: SubscriptionVerifyIn,
+    ctx: StaffContext = Depends(require(Capability.REPORTS_VIEW)),
+    db: Session = Depends(get_db),
+) -> SubscriptionVerifyOut:
+    get_limiter().hit("subscription-verify:user", "60/minute", str(ctx.user.id))
+    # The scoped session finds only this school's checkouts
+    if db.scalar(select(SubscriptionCheckout.id).where(SubscriptionCheckout.reference == body.reference)) is None:
+        raise NotFound("Payment not found.")
+    db.rollback()  # release the snapshot before confirming in its own transaction
+    checkout = card_payments.confirm(body.reference)
+    if checkout is None:
+        raise NotFound("Payment not found.")
+    return SubscriptionVerifyOut(
+        reference=checkout.reference,
+        status=checkout.status,
+        amount_kobo=checkout.amount_kobo,
+        review_reason=checkout.review_reason,
+    )
 
 
 @school_router.get("/school/onboarding", response_model=list[OnboardingStepOut], summary="Getting-started checklist")

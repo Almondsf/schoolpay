@@ -156,10 +156,13 @@ class PaymentGateway(Protocol):
         amount_kobo: int,
         email: str,
         callback_url: str,
-        subaccount_code: str,
+        subaccount_code: str | None,
         description: str,
         platform_fee_bp: int = 0,
-    ) -> Checkout: ...
+    ) -> Checkout:
+        """A hosted checkout. With a subaccount the money settles to that school; with None (the
+        school paying its own subscription) it settles to the platform's own balance."""
+        ...
 
     def verify(
         self, reference: str, *, provider_reference: str | None = None, payment_id: str | None = None

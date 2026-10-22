@@ -116,7 +116,7 @@ class FakeGateway:
         amount_kobo: int,
         email: str,
         callback_url: str,
-        subaccount_code: str,
+        subaccount_code: str | None,
         description: str,
         platform_fee_bp: int = 0,  # set on the subaccount instead
     ) -> Checkout:

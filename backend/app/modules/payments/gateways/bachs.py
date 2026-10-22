@@ -160,7 +160,7 @@ class BachsGateway:
         amount_kobo: int,
         email: str,
         callback_url: str,
-        subaccount_code: str,
+        subaccount_code: str | None,
         description: str,
         platform_fee_bp: int = 0,
     ) -> Checkout:
@@ -175,8 +175,14 @@ class BachsGateway:
                 "reference": reference,
                 "success_url": back,
                 "cancel_url": back,
-                "transfer_data": {"destination": subaccount_code},
-                "platform_fee": _naira(amount_kobo * platform_fee_bp // 10_000),
+                **(
+                    {
+                        "transfer_data": {"destination": subaccount_code},
+                        "platform_fee": _naira(amount_kobo * platform_fee_bp // 10_000),
+                    }
+                    if subaccount_code
+                    else {}
+                ),
                 "metadata": {"description": description[:200]},
             },
         )

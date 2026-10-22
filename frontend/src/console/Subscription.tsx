@@ -1,16 +1,59 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import { BRAND } from '../lib/brand';
 import { saveBlob } from '../lib/download';
 import { formatDate, formatKobo } from '../lib/format';
-import { Empty, ErrorAlert, Loading, PageHeader } from '../lib/ui';
+import { Empty, ErrorAlert, Loading, Notice, PageHeader } from '../lib/ui';
 
 type Invoice = Schemas['SubscriptionInvoiceOut'];
+const REFERENCE = /^WS[0-9A-F]{20}$/;
+
+/** Back from the card payment page: what the gateway says happened (never what the URL says). */
+function CardResult({ reference }: { reference: string }) {
+  const queryClient = useQueryClient();
+  const result = useQuery({
+    queryKey: ['subscription-card', reference],
+    retry: false,
+    refetchInterval: (query) => (query.state.data?.status === 'pending' ? 3000 : false),
+    queryFn: async () => unwrap(await api.POST('/api/v1/subscription/checkouts/verify', { body: { reference } })),
+  });
+  const status = result.data?.status;
+  useEffect(() => {
+    if (status === 'succeeded') void queryClient.invalidateQueries({ queryKey: ['subscription'] });
+  }, [status, queryClient]);
+  if (result.isPending) return <Notice>Checking your payment…</Notice>;
+  if (result.isError) return <ErrorAlert error={result.error} />;
+  if (status === 'succeeded') return <Notice>Thank you. We received {formatKobo(result.data.amount_kobo)}.</Notice>;
+  if (status === 'pending') return <Notice>We're confirming your payment with the bank. This updates by itself.</Notice>;
+  if (status === 'failed')
+    return (
+      <div className="alert warn" role="status">
+        The payment didn't go through and you haven't been charged.
+      </div>
+    );
+  return (
+    <div className="alert warn" role="status">
+      We received your payment but it needs a quick check on our side. We'll be in touch.
+    </div>
+  );
+}
 
 /** What the school pays for WardPay: its plan and its termly bills. */
 export function Subscription() {
   const sub = useQuery({ queryKey: ['subscription'], queryFn: async () => unwrap(await api.GET('/api/v1/subscription')) });
+  const { can } = useAuth();
+  const [params] = useSearchParams();
+  // Paystack sends ?reference= (and trxref=); Flutterwave sends ?tx_ref=
+  const returned = params.get('reference') ?? params.get('trxref') ?? params.get('tx_ref') ?? '';
+  const payByCard = useMutation({
+    mutationFn: async (invoice: Invoice) =>
+      unwrap(await api.POST('/api/v1/subscription/invoices/{invoice_id}/checkout', { params: { path: { invoice_id: invoice.id } } })),
+    onSuccess: (checkout) => window.location.assign(checkout.authorization_url),
+  });
   const pdf = useMutation({
     mutationFn: async (invoice: Invoice) => {
       const { data, response } = await api.GET('/api/v1/subscription/invoices/{invoice_id}/pdf', {
@@ -28,14 +71,19 @@ export function Subscription() {
   return (
     <>
       <PageHeader title="Subscription" subtitle={`What your school pays for ${BRAND}. Parents never pay anything extra.`} />
+      {REFERENCE.test(returned) && <CardResult reference={returned} />}
       <div className="grid-2">
         <section className="card" aria-label="Your plan">
           <h2>{plan.name} plan</h2>
           <dl className="details">
             <dt>Set-up fee</dt>
             <dd>{formatKobo(plan.setup_fee_kobo)}, once</dd>
-            <dt>Licence</dt>
-            <dd>{formatKobo(plan.annual_fee_kobo)} per school year</dd>
+            {plan.annual_fee_kobo > 0 && (
+              <>
+                <dt>Licence</dt>
+                <dd>{formatKobo(plan.annual_fee_kobo)} per school year</dd>
+              </>
+            )}
             <dt>Per pupil</dt>
             <dd>
               {formatKobo(plan.per_pupil_term_kobo)} each term ({formatKobo(plan.per_pupil_year_kobo)} a year)
@@ -47,9 +95,10 @@ export function Subscription() {
         </section>
         <section className="card" aria-label="How to pay">
           <h2>How to pay</h2>
+          {can('payments.record') && <p>By card: press Pay by card next to a bill.</p>}
           {payTo ? (
             <p>
-              Bank transfer to <strong>{payTo.account_name}</strong>, account <strong>{payTo.account_number}</strong> ({payTo.bank_name}).
+              Or by bank transfer to <strong>{payTo.account_name}</strong>, account <strong>{payTo.account_number}</strong> ({payTo.bank_name}).
               Please quote the invoice number as the reference.
             </p>
           ) : (
@@ -63,7 +112,7 @@ export function Subscription() {
         </section>
       </div>
       <h2 className="section-title">Bills</h2>
-      <ErrorAlert error={pdf.error} />
+      <ErrorAlert error={pdf.error ?? payByCard.error} />
       {sub.data.invoices.length === 0 ? (
         <Empty>No bills yet. You'll get one by email at the start of each term.</Empty>
       ) : (
@@ -77,6 +126,7 @@ export function Subscription() {
                 <th className="num">Total</th>
                 <th className="num">Still owed</th>
                 <th>Due</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -97,6 +147,13 @@ export function Subscription() {
                   <td className="num">{formatKobo(i.total_kobo)}</td>
                   <td className="num">{formatKobo(i.balance_kobo)}</td>
                   <td className="nowrap small">{formatDate(i.due_date)}</td>
+                  <td>
+                    {can('payments.record') && i.balance_kobo > 0 && (i.status === 'unpaid' || i.status === 'overdue') && (
+                      <button className="small" onClick={() => payByCard.mutate(i)} disabled={payByCard.isPending}>
+                        {payByCard.isPending && payByCard.variables?.id === i.id ? 'Opening…' : 'Pay by card'}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

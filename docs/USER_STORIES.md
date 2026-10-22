@@ -5,6 +5,7 @@ What each kind of user needs from WardPay. Stories are marked ✅ when built.
 ## Proprietor (school owner)
 - ✅ Sign my school up online, confirm my email, and get a checklist of what to set up next.
 - ✅ See our plan, what a term costs at our pupil numbers, where to pay, and our WardPay bills (PDF).
+- ✅ Pay a WardPay bill by card from the console, and see it marked paid as soon as the payment clears.
 - ✅ Connect the school's own bank account so all payments settle there (the platform never holds our money).
 - ✅ Invite staff by email, choose their role, rename them, change their role, deactivate or reactivate them.
 - ✅ Reset a staff member's two-factor sign-in when they lose their phone.

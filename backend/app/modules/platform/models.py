@@ -32,7 +32,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.base import Base, Timestamped, UUIDPrimaryKey, enum_type
+from app.core.crypto import EncryptedString
 from app.core.tenancy import TenantMixin
+from app.modules.payments.gateways.base import GatewayCode
+from app.modules.payments.models import GATEWAY_ENUM, IntentStatus
 
 
 class Plan(UUIDPrimaryKey, Timestamped, Base):
@@ -111,11 +114,18 @@ class SubscriptionLine(TenantMixin, UUIDPrimaryKey, Base):
 
 
 class SubscriptionPayment(TenantMixin, UUIDPrimaryKey, Base):
-    """Money a school paid the platform (bank transfer to the platform's account). Append-only."""
+    """
+    Money a school paid the platform. Append-only. Either a bank transfer to the platform's account
+    that a platform admin recorded (`recorded_by`), or a card payment the gateway confirmed
+    (`gateway_reference`, unique, so a payment is never recorded twice).
+    """
 
     __tablename__ = "subscription_payments"
     __table_args__ = (
         CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        CheckConstraint("recorded_by IS NOT NULL OR gateway_reference IS NOT NULL", name="recorded_or_gateway"),
+        CheckConstraint("(gateway IS NULL) = (gateway_reference IS NULL)", name="gateway_with_reference"),
+        UniqueConstraint("gateway_reference"),
         Index("ix_subscription_payments_invoice", "invoice_id"),
     )
 
@@ -123,5 +133,35 @@ class SubscriptionPayment(TenantMixin, UUIDPrimaryKey, Base):
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
     received_on: Mapped[date] = mapped_column(Date)
     reference: Mapped[str] = mapped_column(String(100), default="")
-    recorded_by: Mapped[uuid.UUID] = mapped_column()
+    recorded_by: Mapped[uuid.UUID | None] = mapped_column()  # the platform admin; None for a card payment
+    gateway: Mapped[GatewayCode | None] = mapped_column(GATEWAY_ENUM)
+    gateway_reference: Mapped[str | None] = mapped_column(String(60))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SubscriptionCheckout(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    A school paying its subscription bill by card. The money settles to the platform's own
+    gateway balance (no school subaccount: it's the platform's income, not school money).
+    The outcome always comes from the gateway, never the browser.
+    """
+
+    __tablename__ = "subscription_checkouts"
+    __table_args__ = (
+        UniqueConstraint("reference"),
+        CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        Index("ix_subscription_checkouts_invoice", "invoice_id"),
+    )
+
+    invoice_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subscription_invoices.id", ondelete="RESTRICT"))
+    reference: Mapped[str] = mapped_column(String(40))
+    gateway: Mapped[GatewayCode] = mapped_column(GATEWAY_ENUM)
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)
+    email: Mapped[str] = mapped_column(EncryptedString)
+    status: Mapped[IntentStatus] = mapped_column(
+        enum_type(IntentStatus, "payment_intent_status"), default=IntentStatus.PENDING
+    )
+    authorization_url: Mapped[str] = mapped_column(String(500), default="")
+    provider_reference: Mapped[str] = mapped_column(String(100), default="")
+    review_reason: Mapped[str] = mapped_column(String(300), default="")
+    created_by: Mapped[uuid.UUID] = mapped_column()

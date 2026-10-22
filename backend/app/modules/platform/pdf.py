@@ -62,7 +62,9 @@ def render_invoice(
     body = [["Description", "Quantity", "Unit price", "Amount"]]
     body += [[ln.description, str(ln.quantity), _ngn(ln.unit_kobo), _ngn(ln.amount_kobo)] for ln in lines]
     body += [["", "", "Total", _ngn(row.total_kobo)]]
-    body += [["", "", f"Paid ({payment.received_on:%d %b %Y})", _ngn(-payment.amount_kobo)] for payment in payments]
+    for payment in payments:
+        how_paid = "Paid by card" if payment.gateway else "Paid"
+        body.append(["", "", f"{how_paid} ({payment.received_on:%d %b %Y})", _ngn(-payment.amount_kobo)])
     body += [["", "", "Balance due", _ngn(row.balance_kobo)]]
     table = Table(body, colWidths=[86 * mm, 20 * mm, 34 * mm, 34 * mm], repeatRows=1)
     table.setStyle(
@@ -86,6 +88,7 @@ def render_invoice(
         )
     else:
         how = "Contact us for payment details, quoting this invoice number."
+    how += " Or pay by card from Subscription in the console."
     story = [
         header,
         Spacer(1, 6 * mm),

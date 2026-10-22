@@ -59,6 +59,10 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
       (Plans), set the "Standard" plan's **licence to ₦0** (live site too: it's ₦100,000 there
       now; with ₦0 no licence line is billed) and put in your real set-up and per-pupil
       amounts. The website no longer shows figures, only what the two fees are.
+- [ ] _(new)_ **Try paying a bill by card** (2026-10-22): sign in as a school (e.g. the demo
+      school's proprietor), Subscription → **Pay by card**, and pay on Paystack's test page with
+      their test card (4084 0840 8408 4081, any future date, CVV 408, PIN 0000, OTP 123456). The
+      bill should show Paid when you come back. Paystack's page has a bot check, so this one needs a person.
 - [ ] _(new)_ **Home page photos** (2026-10-22): four free stock photos (Ben White on
       Unsplash; Mickael Ange Konan, Roman Odintsov and Emmanuel Abiodun on Pexels), credited
       in the footer. The three iStock previews you found are paid: buy them before using them.

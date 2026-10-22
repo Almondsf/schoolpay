@@ -196,6 +196,7 @@ It is updated with every change that affects security.
 - Sign-up gives the same answer whether or not an email is registered (the owner gets an "already have an account" email instead), is rate limited per IP, needs the terms accepted, and has a honeypot field. The school stays pending, and nobody can sign in to it, until the proprietor proves the email address by setting a password. `SIGNUP_ENABLED=false` closes it.
 - Platform endpoints need a platform admin (who must use two-factor sign-in). Support lookups show students as initials only, are rate limited, and every search is recorded in the platform audit trail. Plan changes, billing runs, payments and voids are audited too.
 - Subscription invoice lines and payments are append-only (database trigger); a payment can't exceed what's owed; a live bill per school per term is enforced by a unique index.
+- Card payment of a subscription bill: only staff with `payments.record`, only their own school's bill (scoped session), rate limited; the money settles to the platform's own balance (no school subaccount); the result comes from the gateway's verify call, never the browser; a card payment is unique on its gateway reference and a payment that doesn't fit the bill is parked for review, never forced onto it.
 
 ## Reports and downloads
 - Reports need `reports.view` (proprietor, bursar and school admin, all on two-factor

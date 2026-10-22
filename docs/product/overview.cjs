@@ -161,7 +161,7 @@ const AREAS = [
         'New schools can start without a sales call'],
       ['Platform overview: active schools, new sign-ups, pupils, money processed, subscription income owed',
         'Run the business from one screen'],
-      ['Bill every school for the term in one click; record their payments; PDF invoices emailed to proprietors',
+      ['Bill every school for the term in one click; schools pay by card from the console, or by transfer that you record; PDF invoices emailed to proprietors',
         'Subscription income is collected without spreadsheets'],
       ['Support lookup by school, staff email, payment reference, account number or receipt (children shown as initials only)',
         'Answer "I paid but it isn’t showing" calls quickly, without exposing children’s details'],
@@ -182,6 +182,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['22 Oct 2026', 'Schools pay their WardPay bill by card from the console; the money goes to the platform’s own account'],
   ['20 Oct 2026', 'Parents (and the bursary) can pay for particular fees, such as WAEC; the receipt says what it was for'],
   ['20 Oct 2026', 'Fees added to the fee grid after billing can be added to the bills already sent, in one click'],
   ['20 Oct 2026', 'Fee breakdowns everywhere: each fee charged, paid and left, for staff, in the portal and on the payment page'],

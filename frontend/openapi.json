@@ -7449,6 +7449,29 @@
         "title": "StudentUpdateIn",
         "type": "object"
       },
+      "SubscriptionCheckoutOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "authorization_url": {
+            "title": "Authorization Url",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "amount_kobo",
+          "authorization_url"
+        ],
+        "title": "SubscriptionCheckoutOut",
+        "type": "object"
+      },
       "SubscriptionDraftBillOut": {
         "properties": {
           "lines": {
@@ -7770,6 +7793,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "gateway": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GatewayCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set for a card payment the gateway confirmed; else a transfer"
+          },
           "received_on": {
             "format": "date",
             "title": "Received On",
@@ -7784,6 +7818,7 @@
           "amount_kobo",
           "received_on",
           "reference",
+          "gateway",
           "created_at"
         ],
         "title": "SubscriptionPaymentOut",
@@ -7826,6 +7861,47 @@
           "no_current_term"
         ],
         "title": "SubscriptionRunOut",
+        "type": "object"
+      },
+      "SubscriptionVerifyIn": {
+        "properties": {
+          "reference": {
+            "pattern": "^WS[0-9A-F]{20}$",
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "SubscriptionVerifyIn",
+        "type": "object"
+      },
+      "SubscriptionVerifyOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "review_reason": {
+            "title": "Review Reason",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IntentStatus"
+          }
+        },
+        "required": [
+          "reference",
+          "status",
+          "amount_kobo",
+          "review_reason"
+        ],
+        "title": "SubscriptionVerifyOut",
         "type": "object"
       },
       "SubscriptionVoidIn": {
@@ -25767,6 +25843,220 @@
           }
         ],
         "summary": "The school's plan and invoices",
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/checkouts/verify": {
+      "post": {
+        "operationId": "subscription_verify_subscription_payment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionVerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionVerifyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Back from the gateway: confirm a subscription card payment (the outcome comes from the gateway)",
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/invoices/{invoice_id}/checkout": {
+      "post": {
+        "operationId": "subscription_pay_invoice_by_card",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionCheckoutOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pay a subscription bill by card: a checkout link for what's left on it",
         "tags": [
           "subscription"
         ]

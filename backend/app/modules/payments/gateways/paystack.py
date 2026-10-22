@@ -37,10 +37,12 @@ from .base import (
 )
 
 API = "https://api.paystack.co"
+# Anything else ("abandoned", "ongoing", "pending", "processing", "queued") is still pending. Paystack calls a
+# checkout "abandoned" until the customer pays, and they can still pay on the same page later: treating
+# it as failed would close the checkout and the real payment would then be ignored.
 _STATUSES = {
     "success": TransactionStatus.SUCCESS,
     "failed": TransactionStatus.FAILED,
-    "abandoned": TransactionStatus.FAILED,
     "reversed": TransactionStatus.FAILED,
 }
 
@@ -127,10 +129,11 @@ class PaystackGateway:
         amount_kobo: int,
         email: str,
         callback_url: str,
-        subaccount_code: str,
+        subaccount_code: str | None,
         description: str,
         platform_fee_bp: int = 0,  # set on the subaccount instead
     ) -> Checkout:
+        split = {"subaccount": subaccount_code, "bearer": "subaccount"} if subaccount_code else {}
         data = self._request(
             "POST",
             "/transaction/initialize",
@@ -140,8 +143,7 @@ class PaystackGateway:
                 "currency": "NGN",
                 "email": email,
                 "callback_url": callback_url,
-                "subaccount": subaccount_code,
-                "bearer": "subaccount",
+                **split,
                 "channels": ["card", "bank_transfer", "ussd"],
                 "metadata": {"description": description},
             },

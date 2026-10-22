@@ -24,6 +24,7 @@ from app.core import outbox
 from app.core.db import SessionLocal
 from app.core.redaction import redact
 from app.core.tenancy import scope_platform_wide, scope_to_school
+from app.modules.platform import card_payments
 
 from . import checkout
 from .gateways import GatewayCode, TransactionStatus, WebhookKind, get_gateway
@@ -34,6 +35,10 @@ from .service import NewPayment, record_payment
 logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 10
 PROCESS_TASK = "payments.process_webhook"
+CHECKOUT_OUTCOMES = {
+    IntentStatus.SUCCEEDED: WebhookStatus.PROCESSED,
+    IntentStatus.NEEDS_REVIEW: WebhookStatus.NEEDS_REVIEW,
+}
 
 
 def receive(session: Session, gateway: GatewayCode, headers: dict[str, str], body: bytes) -> bool:
@@ -107,17 +112,25 @@ def process_event(event_id: uuid.UUID) -> WebhookStatus:
         _finish(event_id, WebhookStatus.IGNORED, "No transaction reference")
         return WebhookStatus.IGNORED
 
+    # A school paying its subscription bill?
+    if card_payments.is_subscription_reference(reference):
+        bill = card_payments.confirm(reference, payment_id)
+        status = CHECKOUT_OUTCOMES.get(bill.status, WebhookStatus.IGNORED) if bill else WebhookStatus.IGNORED
+        _finish(
+            event_id,
+            status,
+            f"Subscription checkout {bill.status.value if bill else 'unknown'}",
+            school_id=bill.school_id if bill else None,
+        )
+        return status
+
     # A card checkout we started?
     with SessionLocal() as session:
         scope_platform_wide(session)
         is_checkout = session.scalar(select(PaymentIntent.id).where(PaymentIntent.reference == reference)) is not None
     if is_checkout:
         intent = checkout.confirm(reference, payment_id)
-        outcomes = {
-            IntentStatus.SUCCEEDED: WebhookStatus.PROCESSED,
-            IntentStatus.NEEDS_REVIEW: WebhookStatus.NEEDS_REVIEW,
-        }
-        status = outcomes.get(intent.status, WebhookStatus.IGNORED) if intent else WebhookStatus.IGNORED
+        status = CHECKOUT_OUTCOMES.get(intent.status, WebhookStatus.IGNORED) if intent else WebhookStatus.IGNORED
         _finish(
             event_id,
             status,

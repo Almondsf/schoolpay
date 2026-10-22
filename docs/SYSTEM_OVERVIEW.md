@@ -823,8 +823,22 @@ school's proprietor is emailed its bill through the outbox
 Schools pay by transfer to the platform's own account (`PLATFORM_ACCOUNT_*`,
 printed on the invoice and its PDF). A platform admin records each payment,
 which can't exceed the balance or be dated in the future. An unpaid bill can
-be voided with a reason, and the term billed again. Card payment for
-subscriptions isn't built yet.
+be voided with a reason, and the term billed again.
+
+**Paying by card (`card_payments.py`).** Staff with `payments.record` press
+**Pay by card** on an unpaid bill (`POST /subscription/invoices/{id}/checkout`).
+A `SubscriptionCheckout` (reference `WS…`; school-fee checkouts are `SP…`) opens a
+hosted checkout on the active payment provider for what's left on the bill, with
+**no school subaccount**, so the money settles to the platform's own gateway
+balance. The gateway sends the school back to `/console/subscription?reference=…`
+(`POST /subscription/checkouts/verify`) and sends a webhook; the webhook worker
+sends `WS` references to `card_payments.confirm`. Either way the outcome comes from
+the gateway's verify call, under a row lock, and the `SubscriptionPayment` is
+unique on its gateway reference, so it's recorded once. A payment that doesn't
+fit (wrong amount or currency, bill voided, or paid by transfer meanwhile) is
+parked as needs_review for a platform admin. Card payments show `gateway` on the
+invoice and "Paid by card" on its PDF. Paystack's "abandoned" status (a checkout
+not paid *yet*) counts as pending, for school-fee checkouts too.
 
 **Sign-up (`signup.py`).** `POST /public/signup` creates the school as
 **pending** (`schools.status`), its origin `signup`, a short name made from
@@ -1048,7 +1062,7 @@ production.
 | Parent portal | `GET /parent/home`; `GET /parent/children/{id}`; `GET /parent/invoices/{id}`; `POST /parent/children/{id}/pay`; `GET /parent/receipts/{id}/pdf` |
 | Messages | `GET /messages`; `GET /message-templates`, `PUT /message-templates/{kind}`, `POST /message-templates/preview`; `GET/PUT /reminder-settings`; `PUT /guardians/{id}/reminders`; `POST /students/{id}/remind`; parents: `GET/PUT /parent/preferences` |
 | Platform (platform admins) | `GET /platform/overview`; `GET /platform/schools` (search, status), `GET /platform/schools/{id}`, `PUT /platform/schools/{id}/plan`, `POST /platform/schools`, `/suspend`, `/reactivate`; `GET/POST /platform/plans`, `PUT /platform/plans/{id}`; `POST /platform/billing/generate`; `GET /platform/billing/invoices`, `GET /platform/billing/invoices/{id}`, `/pdf`, `POST .../payments`, `.../void`; `GET /platform/lookup` |
-| Subscription and sign-up | `GET /subscription`, `GET /subscription/invoices/{id}/pdf`; `GET /school/onboarding`; `POST /public/signup` (public, rate limited) |
+| Subscription and sign-up | `GET /subscription`, `GET /subscription/invoices/{id}/pdf`, `POST /subscription/invoices/{id}/checkout`, `POST /subscription/checkouts/verify`; `GET /school/onboarding`; `POST /public/signup` (public, rate limited) |
 | Privacy | `GET /guardians/{id}/export`; `POST /guardians/{id}/erase`, `POST /students/{id}/erase`; parents: `GET /parent/my-data` |
 | Public website | `GET /public/info` (name, contact, the default plan's prices) |
 | Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export`, `/reports/fee-status/export` (`format=xlsx|pdf`) |
@@ -1131,7 +1145,8 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   settings, subscription, activity log) are listed under **Setup** in the
   sidebar. New schools see a **Getting started** checklist on the dashboard, with **Set up step by step**: a wizard at `/console/get-started` (`GetStarted.tsx`) through six steps (details, school year filled in, classes ticked, this term's fees typed once per section and set for every class in it, pupils, bills). It opens on the first step the checklist says isn't done, every step can be skipped, and it reuses the Calendar's `SessionForm`, `ClassSetup` and Billing's `Generate`. Fees go through the usual `PUT /terms/{id}/fee-schedule`; a class not on the usual list counts as section "Other".
   **Subscription** shows the school's plan, a term's cost at its pupil
-  numbers, where to pay, and its bills (PDF).
+  numbers, where to pay, and its bills (PDF), with **Pay by card** on unpaid
+  ones; coming back from the gateway shows what it says happened.
 - **Platform console** (`src/console/platform/`, platform admins): Overview,
   Schools (filters, plan, pupils, payments set-up, what each owes) and a
   school's page (figures, staff, plan picker, bills, suspend), Billing (bill
@@ -1228,6 +1243,4 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   account belongs to one school only. A design is in `docs/HANDOVER.md` ("Ideas waiting on the owner").
 - Gateway virtual-account KYC requirements and messaging-provider accounts
   are still open (see OWNER_TODO.md). Plan prices are placeholders.
-- Schools pay subscriptions by bank transfer, recorded by a platform admin;
-  card payment of subscriptions isn't built.
 - There's no terms-of-service page yet (legal text from the owner).

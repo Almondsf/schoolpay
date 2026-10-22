@@ -2384,6 +2384,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/subscription/checkouts/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Back from the gateway: confirm a subscription card payment (the outcome comes from the gateway) */
+        post: operations["subscription_verify_subscription_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subscription/invoices/{invoice_id}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay a subscription bill by card: a checkout link for what's left on it */
+        post: operations["subscription_pay_invoice_by_card"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/subscription/invoices/{invoice_id}/pdf": {
         parameters: {
             query?: never;
@@ -5630,6 +5664,15 @@ export interface components {
             /** Middle Name */
             middle_name?: string | null;
         };
+        /** SubscriptionCheckoutOut */
+        SubscriptionCheckoutOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            /** Authorization Url */
+            authorization_url: string;
+            /** Reference */
+            reference: string;
+        };
         /** SubscriptionDraftBillOut */
         SubscriptionDraftBillOut: {
             /** Lines */
@@ -5774,6 +5817,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** @description Set for a card payment the gateway confirmed; else a transfer */
+            gateway: components["schemas"]["GatewayCode"] | null;
             /**
              * Received On
              * Format: date
@@ -5794,6 +5839,21 @@ export interface components {
             no_current_term: string[];
             /** Total Kobo */
             total_kobo: number;
+        };
+        /** SubscriptionVerifyIn */
+        SubscriptionVerifyIn: {
+            /** Reference */
+            reference: string;
+        };
+        /** SubscriptionVerifyOut */
+        SubscriptionVerifyOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            /** Reference */
+            reference: string;
+            /** Review Reason */
+            review_reason: string;
+            status: components["schemas"]["IntentStatus"];
         };
         /** SubscriptionVoidIn */
         SubscriptionVoidIn: {
@@ -19279,6 +19339,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    subscription_verify_subscription_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionVerifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionVerifyOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    subscription_pay_invoice_by_card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionCheckoutOut"];
                 };
             };
             /** @description Bad Request */

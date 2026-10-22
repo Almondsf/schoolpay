@@ -95,6 +95,46 @@ def test_paystack_verify_maps_the_transaction(monkeypatch):
     assert calls[0].headers["authorization"] == f"Bearer {PAYSTACK_KEY}"
 
 
+@pytest.mark.parametrize(
+    ("paystack_status", "ours"),
+    [
+        ("abandoned", TransactionStatus.PENDING),  # not paid yet: the customer can still pay on the same page
+        ("ongoing", TransactionStatus.PENDING),
+        ("failed", TransactionStatus.FAILED),
+        ("reversed", TransactionStatus.FAILED),
+    ],
+)
+def test_paystack_unfinished_checkouts_stay_pending(monkeypatch, paystack_status, ours):
+    mock_api(
+        monkeypatch,
+        paystack,
+        lambda r: httpx.Response(200, json={"status": True, "data": {"reference": "T1", "status": paystack_status}}),
+    )
+    assert paystack.PaystackGateway(secret_key=PAYSTACK_KEY).verify("T1").status == ours
+
+
+@pytest.mark.parametrize("subaccount", ["ACCT_school", None])
+def test_paystack_checkout_splits_to_the_school_or_settles_to_the_platform(monkeypatch, subaccount):
+    calls = mock_api(
+        monkeypatch,
+        paystack,
+        lambda r: httpx.Response(200, json={"status": True, "data": {"authorization_url": "https://pay/x"}}),
+    )
+    paystack.PaystackGateway(secret_key=PAYSTACK_KEY).initialize_payment(
+        reference="WS1",
+        amount_kobo=100,
+        email="a@b.ng",
+        callback_url="https://x",
+        subaccount_code=subaccount,
+        description="Bill",
+    )
+    body = json.loads(calls[0].content)
+    if subaccount:
+        assert (body["subaccount"], body["bearer"]) == ("ACCT_school", "subaccount")
+    else:  # a school's own subscription: the platform's balance, no split
+        assert "subaccount" not in body and "bearer" not in body
+
+
 def test_paystack_subaccount_and_virtual_account(monkeypatch):
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/subaccount":
