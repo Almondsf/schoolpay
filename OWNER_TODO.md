@@ -4,9 +4,25 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-20 (Paystack chosen as the payment provider)
+Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 
-## _(new)_ Payment providers (2026-10-20)
+## _(new)_ The live site (2026-10-22)
+
+- [ ] **Change the database password on Render, now.** It was pasted into a chat. Render →
+      Postgres → reset the password, then put the new **Internal** URL in the API's
+      `DATABASE_URL` (and your local copy of the external URL, if you keep one).
+- [ ] **Change the Redis Cloud password** for the same reason (Redis Cloud → database →
+      Security), then update `REDIS_URL` and `RATE_LIMIT_STORAGE_URL` on Render.
+- [ ] **Render's free Postgres is deleted 30 days after it was made** (made about 20 Oct, so
+      around **19 Nov 2026**). Before then, or before any school relies on the site, move to
+      the paid database and API plans and a separate background worker (`docs/DEPLOYMENT.md`).
+      On the free plan the API sleeps after 15 idle minutes, so reminders pause.
+- [x] The API runs migrations, the worker and the API itself from one Docker Command:
+      `sh bin/start-all-in-one.sh` (2026-10-22).
+- [ ] **Demos:** until Termii is live, demo from your laptop (parent sign-in has a "Fill in
+      the code" button there). See `docs/HANDOVER.md` → Running it on this machine.
+
+## Payment providers (2026-10-20)
 
 - [ ] **Paystack "Dedicated NUBAN"** (each pupil's own account number) is not enabled on your
       Paystack business yet: email support@paystack.com to request it. Until then, parents pay
@@ -36,7 +52,7 @@ Last updated: 2026-10-20 (Paystack chosen as the payment provider)
 | **Paystack** (business) | Open the account, get test keys, then ask Paystack what approval/KYC **Dedicated Virtual Accounts** need for a platform with subaccounts (PLAN.md §3.2). Send me the answer. | Per-student account numbers on real money |
 | **Flutterwave** | Optional second gateway. Permanent virtual accounts need each customer's BVN, so we use it for card payments only unless they offer another route. | Card payments via Flutterwave |
 | **Meta WhatsApp Business** | _(new)_ You plan to use **Zoho** for WhatsApp: Zoho Voice can send WhatsApp messages (approved templates) for you, but **not WhatsApp calls**, and Meta reportedly doesn't allow business-started WhatsApp calls in Nigeria. Either way: create a WhatsApp Business account and phone number in Meta Business Manager, a permanent access token, and submit the three message templates in `docs/DEPLOYMENT.md` ("Messages to parents") for approval. _(new)_ The bill and reminder templates' last parameter is now the parent's family payment link. | WhatsApp receipts and reminders (SMS is used until then) |
-| **Termii** (SMS) | Open an account, register a sender ID (up to 11 characters, e.g. the product name), and enable the DND route. | Parent sign-in codes and SMS messages on a live system |
+| **Termii** (SMS) | _(new)_ **Account opened** (2026-10-22, ₦30 balance; KYC documents still to come). Still to do: request a **Sender ID** (up to 11 characters, e.g. `ParentPay`; Termii approves it), ask Termii to **switch on the DND route** (sign-in codes must reach numbers on Do-Not-Disturb), **top up**, then on Render set `SMS_BACKEND=termii`, `TERMII_API_KEY` and `TERMII_SENDER_ID` (exactly as approved). | Parent sign-in codes and SMS messages on a live system |
 | **Email sending** | _(new)_ **Zoho Mail chosen** (2026-10-19). Create the mailbox on your domain, then set `EMAIL_BACKEND=smtp`, `SMTP_HOST=smtp.zoho.com` (or `smtppro.zoho.com` for a paid domain plan), `SMTP_PORT=587`, `SMTP_USERNAME`, `SMTP_PASSWORD` (an app password) and `EMAIL_FROM`. Nothing to build. | Staff invites and password resets on a live system |
 | _(new)_ **Voice calls** | **Built** with Africa's Talking (calls in English and Pidgin, read by text-to-speech). To go live: an Africa's Talking account and voice number, the env settings and callback URL in `docs/DEPLOYMENT.md`. If you'd rather use Zoho Voice, confirm its API can call Nigerian numbers and read out text, and it can be added as another provider. **Decide:** who pays for calls (included in the per-pupil fee, or charged to the school per call?); whether to add Yoruba, Hausa and Igbo, which need voices recorded by native speakers (text-to-speech in those languages isn't good enough yet). Listen to a test call in Pidgin before launch: it's read by an English voice. | Phone calls to parents |
 | _(new)_ **Platform bank account** | A business account for SchoolPay itself (not a school's). Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` so subscription invoices tell schools where to pay. | Schools paying their subscription |

@@ -9,7 +9,7 @@ For a new Claude Code session (or anyone) taking over ParentPay. Read in this or
 4. `OWNER_TODO.md`: everything waiting on the owner (accounts, keys, decisions).
 5. `PLAN.md`: the original product plan and roadmap (chunks 0 to 10, all done).
 
-Last updated: 2026-10-20, at commit `edb7106` on `main`.
+Last updated: 2026-10-22, with the parent portal redesign (branch `feature/parent-redesign`, then `main`).
 
 ## Where things stand
 
