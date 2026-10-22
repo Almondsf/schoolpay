@@ -4,8 +4,11 @@ Text messages.
 Backends (SMS_BACKEND):
 - console: logs that a message went to a masked number. Never the text: it can hold a sign-in code.
 - memory: keeps messages in `sent_sms` (tests)
-- termii: sends through Termii (https://developers.termii.com). The "dnd" route
-  reaches numbers on Do-Not-Disturb, which matters for sign-in codes.
+- termii / africastalking: real providers. Which one sends is the platform admin's runtime choice
+  among those with keys set (`providers.py`); SMS_BACKEND is the default.
+  - Termii (https://developers.termii.com): the "dnd" route reaches numbers on Do-Not-Disturb,
+    which matters for sign-in codes.
+  - Africa's Talking (https://developers.africastalking.com): the same account as phone calls.
 
 Callers never send directly; they go through the outbox so a message only
 leaves if the transaction that caused it commits.
@@ -22,8 +25,14 @@ from app.core.config import get_settings
 from app.core.outbound import outbound_client
 from app.core.phone import mask_phone
 
+from .providers import current_sms_provider
+
 logger = logging.getLogger(__name__)
 TERMII_API = "https://api.ng.termii.com"
+AFRICASTALKING_API = "https://api.africastalking.com"
+AFRICASTALKING_SANDBOX_API = "https://api.sandbox.africastalking.com"
+# Africa's Talking's per-recipient codes for a message it took: processed, sent, queued
+AFRICASTALKING_ACCEPTED = frozenset({100, 101, 102})
 
 
 class SmsError(Exception):
@@ -84,6 +93,17 @@ def send_sms(message: Sms) -> None:
     if settings.sms_backend == "console":
         logger.info("SMS (console backend) to %s, %d characters", mask_phone(message.to), len(message.text))
         return
+    provider = current_sms_provider()
+    if provider == "africastalking":
+        _send_africastalking(message)
+    elif provider == "termii":
+        _send_termii(message)
+    else:
+        raise SmsError("No SMS provider is configured.")
+
+
+def _send_termii(message: Sms) -> None:
+    settings = get_settings()
     try:
         with outbound_client("termii", base_url=TERMII_API) as client:
             response = client.post(
@@ -101,3 +121,33 @@ def send_sms(message: Sms) -> None:
         raise SmsError(f"Couldn't reach Termii ({type(e).__name__})") from e
     if response.status_code >= 400:
         raise SmsError(f"Termii refused the message (HTTP {response.status_code})")
+
+
+def _send_africastalking(message: Sms) -> None:
+    settings = get_settings()
+    sandbox = settings.africastalking_username == "sandbox"
+    data = {"username": settings.africastalking_username, "to": message.to, "message": message.text}
+    if settings.africastalking_sms_sender:
+        data["from"] = settings.africastalking_sms_sender
+    try:
+        with outbound_client(
+            "africastalking",
+            base_url=AFRICASTALKING_SANDBOX_API if sandbox else AFRICASTALKING_API,
+            redact_keys=frozenset({"number"}),  # its reply names each recipient's phone number
+        ) as client:
+            response = client.post(
+                "/version1/messaging",
+                headers={"apiKey": settings.africastalking_api_key, "Accept": "application/json"},
+                data=data,
+            )
+    except httpx.HTTPError as e:
+        raise SmsError(f"Couldn't reach Africa's Talking ({type(e).__name__})") from e
+    if response.status_code >= 400:
+        raise SmsError(f"Africa's Talking refused the message (HTTP {response.status_code})")
+    try:
+        recipients = (response.json().get("SMSMessageData") or {}).get("Recipients") or []
+    except ValueError as e:
+        raise SmsError("Africa's Talking sent an unreadable reply") from e
+    if not recipients or recipients[0].get("statusCode") not in AFRICASTALKING_ACCEPTED:
+        reason = recipients[0].get("status", "unknown") if recipients else "no recipients"
+        raise SmsError(f"Africa's Talking didn't send it ({str(reason)[:40]})")

@@ -630,8 +630,14 @@ checkout with the parent's email, or a routing address if the school has none,
 and returns to `/pay/complete`.
 
 **Text messages** (`app/modules/notifications/sms.py`): `SMS_BACKEND=console`
-logs only a masked number and the message length; `termii` sends through
-Termii on the DND route (needed for sign-in codes); `memory` is for tests.
+logs only a masked number and the message length; `memory` is for tests.
+Otherwise texts go through **Termii** (DND route, needed for sign-in codes) or
+**Africa's Talking**, whichever a platform admin chose (`providers.py`,
+`GET`/`PUT /platform/providers/sms`, console: Platform → Providers), among those
+with keys set; `SMS_BACKEND` is the default. The choice is stored in
+`provider_settings` (service `sms`) and cached for 30 seconds per process.
+Africa's Talking replies name each recipient, so its outbound log redacts
+`number` (`outbound_client(..., redact_keys=...)`).
 Parents can turn off bill notices and reminders from the portal home page (see
 section 13).
 
@@ -740,7 +746,7 @@ out.
 `GET|PUT /parent/preferences`.
 
 **Channels:** `whatsapp.py` (`WHATSAPP_BACKEND` off | console | memory | cloud),
-`sms.py` (`SMS_BACKEND` console | memory | termii), and `app/core/email.py`.
+`sms.py` (`SMS_BACKEND` console | memory | termii | africastalking, switchable at runtime), and `app/core/email.py`.
 Console backends log only a masked number or the recipient's domain, never the
 text.
 
@@ -1053,7 +1059,7 @@ production.
 | Discounts | `GET/POST /discounts`; `PATCH /discounts/{id}`; `GET/POST /students/{id}/discounts`; `DELETE /students/{id}/discounts/{did}` |
 | Payment setup | `GET/PUT /payment-settings`; `GET /payment-settings/banks`; `POST /virtual-accounts/provision`; `GET /students/{id}/virtual-account` |
 | Payments | `GET /students/{id}/pay-card`; `GET /pay-cards`; `GET /payments`; `GET /payments/{id}`; `POST /payments/{id}/reverse`; `GET /students/{id}/credit` |
-| Payment providers | `GET /platform/providers`, `PUT /platform/providers/payment` (platform admin); `POST /payment-settings/bachs/onboarding`; webhook `POST /webhooks/bachs` |
+| Payment and SMS providers | `GET /platform/providers`, `PUT /platform/providers/payment`, `GET`/`PUT /platform/providers/sms` (platform admin); `POST /payment-settings/bachs/onboarding`; webhook `POST /webhooks/bachs` |
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |

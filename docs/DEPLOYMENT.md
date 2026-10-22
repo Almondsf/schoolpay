@@ -123,9 +123,15 @@ nothing chosen, the first configured one is used.
 
 Messages go by **WhatsApp first**, then SMS, then email, whichever works.
 
-**SMS (Termii).** `SMS_BACKEND=termii`, `TERMII_API_KEY`, and a sender ID
-registered with Termii (`TERMII_SENDER_ID`). Parent sign-in codes also need
-SMS, so the parent portal doesn't work without it.
+**SMS (Termii or Africa's Talking).** Set the keys of either or both:
+Termii's `TERMII_API_KEY` and a sender ID registered with Termii
+(`TERMII_SENDER_ID`), and/or Africa's Talking's `AFRICASTALKING_USERNAME`,
+`AFRICASTALKING_API_KEY` and `AFRICASTALKING_SMS_SENDER` (its registered sender
+ID or short code). `SMS_BACKEND` (`termii` or `africastalking`) is the one used
+until a platform admin switches in the console (**Platform → Providers → SMS
+provider**); only providers with keys are offered, and a switch reaches the worker
+within 30 seconds. Parent sign-in codes also need SMS, so the parent portal
+doesn't work without one.
 
 **WhatsApp (Meta Cloud API).**
 1. In Meta Business Manager, create a WhatsApp Business account and a phone

@@ -23,16 +23,16 @@ from app.core.redaction import redact, truncate
 TIMEOUT = httpx.Timeout(20.0, connect=10.0)
 
 
-def _body_preview(raw: bytes) -> str:
+def _body_preview(raw: bytes, extra_keys: frozenset[str] = frozenset()) -> str:
     if not raw:
         return ""
     try:
-        return truncate(json.dumps(redact(json.loads(raw))), 2000)
+        return truncate(json.dumps(redact(json.loads(raw), extra_keys)), 2000)
     except (ValueError, UnicodeDecodeError):
         return "<non-JSON body>"
 
 
-def _hooks(provider: str) -> dict[str, list[Any]]:
+def _hooks(provider: str, redact_keys: frozenset[str] = frozenset()) -> dict[str, list[Any]]:
     log = logging.getLogger(f"outbound.{provider}")
 
     def on_request(request: httpx.Request) -> None:
@@ -44,7 +44,7 @@ def _hooks(provider: str) -> dict[str, list[Any]]:
         elapsed = f"{(time.perf_counter() - started) * 1000:.0f}ms" if started else "?"
         line = (
             f"{provider} {response.request.method} {response.request.url.path} -> {response.status_code} "
-            f"in {elapsed} body={_body_preview(response.content)}"
+            f"in {elapsed} body={_body_preview(response.content, redact_keys)}"
         )
         level = (
             logging.ERROR
@@ -58,5 +58,14 @@ def _hooks(provider: str) -> dict[str, list[Any]]:
     return {"request": [on_request], "response": [on_response]}
 
 
-def outbound_client(provider: str, *, base_url: str, headers: dict[str, str] | None = None) -> httpx.Client:
-    return httpx.Client(base_url=base_url, headers=headers or {}, timeout=TIMEOUT, event_hooks=_hooks(provider))
+def outbound_client(
+    provider: str,
+    *,
+    base_url: str,
+    headers: dict[str, str] | None = None,
+    redact_keys: frozenset[str] = frozenset(),
+) -> httpx.Client:
+    """`redact_keys` hides more of this provider's replies, e.g. the parents' numbers an SMS provider echoes."""
+    return httpx.Client(
+        base_url=base_url, headers=headers or {}, timeout=TIMEOUT, event_hooks=_hooks(provider, redact_keys)
+    )

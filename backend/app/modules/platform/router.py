@@ -17,6 +17,7 @@ from app.core.tenancy import scope_platform_wide
 from app.modules.accounts.deps import Principal, StaffContext, require, require_platform_admin
 from app.modules.accounts.models import Role
 from app.modules.accounts.permissions import Capability
+from app.modules.notifications import providers as sms_providers
 from app.modules.payments import providers
 from app.modules.payments.gateways import GatewayCode
 from app.modules.payments.models import IntentStatus
@@ -679,3 +680,30 @@ def get_providers(admin: Principal = ADMIN, db: Session = Depends(get_db)) -> li
 def put_payment_provider(body: ProviderIn, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> ProviderOut:
     view = providers.set_payment_provider(db, body.provider, actor=admin.actor, meta=admin.meta, user_id=admin.user.id)
     return ProviderOut.model_validate(view, from_attributes=True)
+
+
+class SmsProviderOut(BaseModel):
+    service: str
+    active_provider: sms_providers.SmsProvider | None = Field(description="None when no SMS provider has keys")
+    available: list[sms_providers.SmsProvider] = Field(description="Providers configured on this platform (keys set)")
+    updated_at: datetime | None
+    sending: bool = Field(description="False in development: texts are only logged")
+
+
+class SmsProviderIn(BaseModel):
+    provider: sms_providers.SmsProvider
+
+
+@router.get("/providers/sms", response_model=SmsProviderOut, summary="Which SMS provider texts go through")
+def get_sms_provider(admin: Principal = ADMIN, db: Session = Depends(get_db)) -> SmsProviderOut:
+    return SmsProviderOut.model_validate(sms_providers.sms_provider(db), from_attributes=True)
+
+
+@router.put(
+    "/providers/sms",
+    response_model=SmsProviderOut,
+    summary="Switch the SMS provider (texts already sent aren't affected; queued ones use the new one)",
+)
+def put_sms_provider(body: SmsProviderIn, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> SmsProviderOut:
+    view = sms_providers.set_sms_provider(db, body.provider, actor=admin.actor, meta=admin.meta, user_id=admin.user.id)
+    return SmsProviderOut.model_validate(view, from_attributes=True)

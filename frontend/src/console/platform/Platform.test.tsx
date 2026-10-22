@@ -72,6 +72,8 @@ describe('platform console', () => {
 
   it('switches the payment provider', async () => {
     let active = 'paystack';
+    let sms = 'termii';
+    const smsView = (updated: string | null) => ({ service: 'sms', active_provider: sms, available: ['termii', 'africastalking'], updated_at: updated, sending: true });
     const calls = mockApi({
       'POST /api/v1/auth/refresh': () => json(signedIn(platformAdmin)),
       'GET /api/v1/platform/providers': () =>
@@ -80,16 +82,30 @@ describe('platform console', () => {
         active = (await request.json()).provider;
         return json({ service: 'payment', active_provider: active, available: ['paystack', 'bachs'], updated_at: '2026-10-20T10:00:00Z' });
       },
+      'GET /api/v1/platform/providers/sms': () => json(smsView(null)),
+      'PUT /api/v1/platform/providers/sms': async (request) => {
+        sms = (await request.json()).provider;
+        return json(smsView('2026-10-22T10:00:00Z'));
+      },
     });
     renderConsole('/console/platform/providers');
-    const paystack = await screen.findByRole('radio', { name: /Paystack/ });
+    const payment = within(await screen.findByRole('region', { name: 'Payment provider' }));
+    const paystack = await payment.findByRole('radio', { name: /Paystack/ });
     expect(paystack).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Switch' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('radio', { name: /Bachs/ }));
-    await userEvent.click(screen.getByRole('button', { name: 'Switch' }));
+    expect(payment.getByRole('button', { name: 'Switch' })).toBeDisabled();
+    await userEvent.click(payment.getByRole('radio', { name: /Bachs/ }));
+    await userEvent.click(payment.getByRole('button', { name: 'Switch' }));
     expect(await screen.findByText('Switched to Bachs.')).toBeInTheDocument();
     const put = calls.find((c) => c.method === 'PUT')!;
     expect(await put.json()).toEqual({ provider: 'bachs' });
+
+    const texts = within(await screen.findByRole('region', { name: 'SMS provider' }));
+    expect(await texts.findByRole('radio', { name: /Termii/ })).toBeChecked();
+    await userEvent.click(texts.getByRole('radio', { name: /Africa's Talking/ }));
+    await userEvent.click(texts.getByRole('button', { name: 'Switch' }));
+    expect(await screen.findByText("Switched to Africa's Talking.")).toBeInTheDocument();
+    const smsPut = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/providers/sms'))!;
+    expect(await smsPut.json()).toEqual({ provider: 'africastalking' });
   });
 
   it('platform admins land on the overview', async () => {

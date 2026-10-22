@@ -96,6 +96,7 @@ What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Platform admin
 - ✅ Switch the payment provider (Paystack or Bachs) for new payments at once, without a release; payments under way and schools not yet set up on the new provider keep working.
+- ✅ Switch the SMS provider (Termii or Africa's Talking) at once, without a release, if one is down or dearer.
 - ✅ Create a school and invite its proprietor.
 - ✅ Suspend a school (its staff are signed out at once) and reactivate it, with the reason recorded.
 - ✅ See platform-level activity (school changes, platform sign-ins, failed sign-ins for unknown emails).

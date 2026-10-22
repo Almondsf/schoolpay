@@ -141,8 +141,9 @@ class Settings(BaseSettings):
     # The text of messages to parents is cleared after this many days (who, when and how is kept)
     message_body_retention_days: int = Field(default=365, ge=30, le=3650)
 
-    # Text messages: console (log only), memory (tests) or termii
-    sms_backend: Literal["console", "memory", "termii"] = "console"
+    # Text messages: console (log only), memory (tests), or a provider: termii | africastalking. With keys for
+    # both, a platform admin can switch between them at runtime (Platform → Providers); this is the default.
+    sms_backend: Literal["console", "memory", "termii", "africastalking"] = "console"
     termii_api_key: str = ""
     # Registered Termii sender ID (up to 11 characters), e.g. "WardPay"
     termii_sender_id: str = "WardPay"
@@ -169,6 +170,9 @@ class Settings(BaseSettings):
     africastalking_api_key: str = ""
     # The Africa's Talking voice number calls come from, e.g. +2347000000000
     africastalking_voice_number: str = ""
+    # Texts through Africa's Talking: its registered sender ID or short code (empty: theirs).
+    # Username "sandbox" sends to Africa's Talking's sandbox instead.
+    africastalking_sms_sender: str = ""
     # Calls only between these hours (Lagos time)
     call_hours_start: int = Field(default=9, ge=7, le=12)
     call_hours_end: int = Field(default=19, ge=13, le=21)
@@ -263,6 +267,10 @@ class Settings(BaseSettings):
                 raise ValueError("SMS_BACKEND=memory is for tests only")
             if self.sms_backend == "termii" and not self.termii_api_key:
                 raise ValueError("TERMII_API_KEY is required when SMS_BACKEND=termii")
+            if self.sms_backend == "africastalking" and not (
+                self.africastalking_username and self.africastalking_api_key
+            ):
+                raise ValueError("AFRICASTALKING_USERNAME and AFRICASTALKING_API_KEY are required for its texts")
             if self.email_backend == "memory":
                 raise ValueError("EMAIL_BACKEND=memory is for tests only")
             if self.email_backend == "smtp" and not self.smtp_host:

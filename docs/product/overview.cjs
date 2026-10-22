@@ -182,6 +182,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['22 Oct 2026', 'Texts can go through Termii or Africa’s Talking, switched at any time from the platform console'],
   ['22 Oct 2026', 'Schools pay their WardPay bill by card from the console; the money goes to the platform’s own account'],
   ['20 Oct 2026', 'Parents (and the bursary) can pay for particular fees, such as WAEC; the receipt says what it was for'],
   ['20 Oct 2026', 'Fees added to the fee grid after billing can be added to the bills already sent, in one click'],

@@ -116,8 +116,8 @@ owner decides: (1) who pays for announcement messages (prepaid credits per schoo
 each plan); (2) the price per SMS page; (3) whether urgent announcements reach parents who turned off
 reminders. The plan: write, choose who (school/classes/owing/pupils, one per family), SMS by default
 (cheaper than WhatsApp marketing at about ₦77 a message), 160-character counter and cost estimate before
-sending, a free copy in the parent portal, delivery report. Also discussed: an SMS-provider switch like
-the payment one, and optional browser push notifications (ideas from diplace). Costs research: Termii
+sending, a free copy in the parent portal, delivery report. Also discussed: optional browser push notifications (an idea from diplace); the SMS-provider
+switch from the same talk is built (22 Oct). Costs research: Termii
 about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.0516 a message.
 
 **Ideas waiting on the owner (2026-10-22), not started:**
@@ -145,6 +145,7 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
   all children at once.
 
 1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).
+   ~~SMS provider switch~~ (done 22 Oct: Termii or Africa's Talking, `notifications/providers.py`).
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in
    (`ConsentMethod.PORTAL` already exists).
 3. **The "later" list in PLAN.md** (step 5): only when the owner says so.

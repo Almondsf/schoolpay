@@ -26,7 +26,7 @@ def mock_api(monkeypatch, module, handler):
         calls.append(request)
         return handler(request)
 
-    def client(provider, *, base_url, headers=None):
+    def client(provider, *, base_url, headers=None, redact_keys=frozenset()):
         return httpx.Client(base_url=base_url, headers=headers or {}, transport=httpx.MockTransport(transport))
 
     monkeypatch.setattr(module, "outbound_client", client)

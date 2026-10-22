@@ -105,7 +105,10 @@ It is updated with every change that affects security.
   account via a gateway subaccount, and the platform fee is taken by the split.
 - Card data never touches the system (hosted checkout). Stored gateway payloads
   are redacted, and outbound gateway calls are logged without keys, card
-  authorisations or account numbers.
+  authorisations or account numbers. SMS providers' replies are logged without
+  the recipients' phone numbers (Africa's Talking's `number` is redacted).
+- Switching the payment or SMS provider is for platform admins only, offers only
+  providers with keys set, and is audited (`platform.provider_changed`).
 - Webhooks are accepted only with a valid signature (Paystack HMAC-SHA512 over
   the raw body, Flutterwave secret hash, compared in constant time). Even then
   the outcome is **re-verified with the gateway API** before anything is
