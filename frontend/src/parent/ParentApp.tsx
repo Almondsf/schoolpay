@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
+import { BRAND } from '../lib/brand';
 import { saveBlob } from '../lib/download';
 import { FeeList } from '../lib/FeeBreakdown';
 import { PlanSchedule } from '../lib/PlanSchedule';
@@ -41,7 +42,7 @@ function RequireParent() {
     <div className="parent-shell">
       <header className="parent-bar">
         <Link to="/parent" className="brand-link">
-          School fees
+          {BRAND}
         </Link>
         <nav className="row" aria-label="Account">
           <Link to="/parent/settings" className="bar-icon" aria-label="Settings" title="Settings">

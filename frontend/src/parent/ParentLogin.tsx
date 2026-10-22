@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
+import { BRAND } from '../lib/brand';
 import { ErrorAlert, Field, Notice } from '../lib/ui';
 import { useParentAuth } from './ParentAuth';
 
@@ -66,7 +67,7 @@ export function ParentLogin() {
   return (
     <main className="parent-shell auth-page">
       <div className="card auth-card">
-        <h1>School fees</h1>
+        <h1>Sign in to {BRAND}</h1>
         <ErrorAlert error={error} />
         {step === 'phone' && (
           <form onSubmit={sendCode}>
