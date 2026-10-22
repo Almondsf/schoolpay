@@ -29,6 +29,7 @@ COPY --from=build /code/.venv /code/.venv
 COPY --chown=10001:10001 app /code/app
 COPY --chown=10001:10001 alembic /code/alembic
 COPY --chown=10001:10001 alembic.ini /code/
+COPY --chown=10001:10001 bin /code/bin
 USER 10001:10001
 EXPOSE 8002
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

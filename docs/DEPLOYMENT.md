@@ -57,12 +57,16 @@ domain), one address only, with no trailing slash; it builds the links in emails
 Run the CLI commands below from the API service's Shell on Render.
 
 **On Render's free plan** there's no Shell, pre-deploy command or background worker. While
-trying it out, set the API's Docker Command so each start migrates and runs the worker
-alongside the API:
+trying it out, set the API's **Docker Command** to
 
 ```
-sh -c "python -m app.core.migrate && (celery -A app.workers.celery_app worker -B -l info --concurrency 1 &) && exec uvicorn app.main:app --host 0.0.0.0 --port 8002 --workers 1 --proxy-headers --forwarded-allow-ips '*'"
+sh bin/start-all-in-one.sh
 ```
+
+`backend/bin/start-all-in-one.sh` runs the migrations, starts the worker with its scheduler
+(state in `/tmp`, since the app user can't write its own folders) and then the API on `$PORT`.
+Don't paste a long `sh -c "..."` line into that box instead: Render keeps the inner quotes,
+and the deploy fails with `sh: 1: python -m app.core.migrate && ...: not found`.
 
 Run CLI commands from a developer machine instead, with `DATABASE_URL` set to the database's
 *external* URL for that one terminal (and the live `SECRET_KEY` and `FRONTEND_URL` for commands
