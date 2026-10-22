@@ -1,8 +1,5 @@
 # WardPay
 
-> The product is called **WardPay** (owner, 2026-10-22; it was ParentPay, and SchoolPay before that). The name
-> shown to people is one setting: `APP_NAME` for the backend (texts, emails, receipts, the authenticator app)
-> and `VITE_APP_NAME` for the web app.
 
 School fee collection and parent communication for Nigerian private schools.
 Each student gets their own bank account number. When a parent transfers
