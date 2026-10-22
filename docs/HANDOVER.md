@@ -40,6 +40,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 21 Oct | **Printable pay cards** (one pupil or a class, four to an A4 page: account number + this term's fees with what's left, total to pay; no QR code); Lagos time in one place (`core/clock.py`) | `payments/paycards.py`, `console/payments/PayCards.tsx` |
 | 21 Oct | **Tuition first** for money not marked for a fee; **mark a payment for fees afterwards** (once, audited) from the Payments page | `reports/fee_status.py` (`_fill`), `payments/earmarks.py` (`mark_payment`) |
 | 22 Oct | **Parent portal redesign**: one page (total at the top, each child with owed, Pay online, account number and fees; pay-all at the bottom), history and settings a tap away; demo code-fill button on laptops | `parent/ParentApp.tsx`, `parent/ParentLogin.tsx` |
+| 22 Oct | **Fees in reminders**: `{fees}` in new-bill notices and reminders (fees with money left, biggest first, max four then "N more"); WhatsApp templates get it as their last parameter | `notifications/service.py` (`fees_phrase`), `templates.py` |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:

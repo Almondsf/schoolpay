@@ -693,6 +693,15 @@ if the number dialled is the parent's), and it reports there how the call ended
    bills reminded within `min_gap_days`. All schools are handled in a fixed
    number of queries, and the inserts go in one statement.
 
+**What the money is for.** New-bill notices and reminders carry `{fees}`: the fees with money
+left, as the pupil's page works them out (`fee_breakdowns`: tuition first, fees parents chose),
+**biggest first** so tuition is never hidden, at most four and then "N more ₦X", plus earlier
+terms. For example ": Tuition ₦142,500, WAEC ₦100,000, School bus ₦45,000, 2 more ₦15,000".
+A reminder for a bill uses that bill's term; "Send reminder" on a pupil uses the current term;
+a reminder for an instalment plan leaves it out (it asks for the instalment, not the total).
+With the child's account number (`{pay_to}`) and the family link, a reminder is about 400
+characters, three SMS pages.
+
 **Wording** (`templates.py`): each school can replace the standard wording of
 each kind (`message_templates`) using a fixed set of `{placeholders}`. Unknown
 placeholders or broken brackets are refused when the wording is saved. The

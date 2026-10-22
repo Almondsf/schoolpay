@@ -40,6 +40,7 @@ from app.modules.payments.family_links import link_url, live_link
 from app.modules.payments.models import Payment, VirtualAccount, VirtualAccountStatus
 from app.modules.receipts.models import Receipt
 from app.modules.receipts.service import verification_url
+from app.modules.reports.fee_status import FeeBreakdown, fee_breakdowns
 from app.modules.schools.models import AcademicSession, School, SchoolStatus, Term
 from app.modules.students.models import Guardian, GuardianStudent, Student, StudentStatus
 
@@ -335,6 +336,32 @@ def _skip(message: MessageLog, reason: str) -> MessageStatus:
     return MessageStatus.SKIPPED
 
 
+FEES_LISTED = 4  # longer lists cost another SMS page; the rest are summed as "and N more"
+
+
+def _naira(kobo: int) -> str:
+    """Short naira for a message: ₦130,000, or ₦1,250.50 when there are kobo."""
+    return format_naira(kobo).removesuffix(".00")
+
+
+def fees_phrase(breakdown: FeeBreakdown | None) -> str:
+    """What the money is for, e.g. ': Tuition ₦130,000, PTA levy ₦5,000': the fees with money left, biggest first."""
+    if breakdown is None:
+        return ""
+    items = [(f.name, f.left_kobo) for f in breakdown.fees if f.left_kobo > 0]
+    if breakdown.earlier_left_kobo > 0:
+        items.append(("earlier terms", breakdown.earlier_left_kobo))
+    if not items:
+        return ""
+    items.sort(key=lambda item: -item[1])  # biggest first, so tuition isn't hidden in "and N more"
+    shown = items if len(items) <= FEES_LISTED else items[: FEES_LISTED - 1]
+    parts = [f"{name} {_naira(left)}" for name, left in shown]
+    rest = items[len(shown) :]
+    if rest:
+        parts.append(f"{len(rest)} more {_naira(sum(left for _, left in rest))}")
+    return ": " + ", ".join(parts)
+
+
 def _values(session: Session, message: MessageLog, guardian: Guardian, student: Student) -> dict[str, str]:
     settings = get_settings()
     school = session.get(School, message.school_id)
@@ -366,29 +393,34 @@ def _values(session: Session, message: MessageLog, guardian: Guardian, student: 
         if receipt:
             values["receipt_number"] = str(receipt.number)
             values["verify_url"] = verification_url(receipt.verification_code)
-    if message.invoice_id:
-        invoice = session.get(Invoice, message.invoice_id)
-        if invoice is not None:
-            amounts = amounts_for(session, [invoice.id])[invoice.id]
-            values["amount"] = format_naira(amounts.total_kobo)
-            if invoice.term_id:
-                term_row = session.execute(
-                    select(AcademicSession.name, Term.number)
-                    .join(Term, Term.session_id == AcademicSession.id)
-                    .where(Term.id == invoice.term_id)
-                ).first()
-                if term_row:
-                    values["term"] = f"{term_row[0]} {('first', 'second', 'third')[term_row[1] - 1]} term"
-            if invoice.due_date:
-                values["due_date"] = f"{invoice.due_date.day} {invoice.due_date.strftime('%b %Y')}"
-                past = invoice.due_date < datetime.now(LAGOS).date()
-                values["due_phrase"] = f" ({'was due' if past else 'due'} {values['due_date']})"
-            plan = plan_views(session, [invoice.id]).get(invoice.id)
-            if plan and plan.next_due and message.kind == MessageKind.REMINDER:
-                # Ask for the next instalment, not the whole balance
-                values["balance"] = format_naira(plan.next_amount_kobo)
-                values["due_date"] = f"{plan.next_due.day} {plan.next_due:%b %Y}"
-                values["due_phrase"] = plan_phrase(plan)
+    invoice = session.get(Invoice, message.invoice_id) if message.invoice_id else None
+    if message.kind in (MessageKind.FEE_NOTICE, MessageKind.REMINDER):
+        # What the money is for, as the pupil's page shows it (tuition first, fees parents chose): the bill's
+        # term, or the current term for a reminder about the child in general
+        term_id = invoice.term_id if invoice is not None else None
+        values["fees"] = fees_phrase(fee_breakdowns(session, [student.id], term_id).get(student.id))
+    if invoice is not None:
+        amounts = amounts_for(session, [invoice.id])[invoice.id]
+        values["amount"] = format_naira(amounts.total_kobo)
+        if invoice.term_id:
+            term_row = session.execute(
+                select(AcademicSession.name, Term.number)
+                .join(Term, Term.session_id == AcademicSession.id)
+                .where(Term.id == invoice.term_id)
+            ).first()
+            if term_row:
+                values["term"] = f"{term_row[0]} {('first', 'second', 'third')[term_row[1] - 1]} term"
+        if invoice.due_date:
+            values["due_date"] = f"{invoice.due_date.day} {invoice.due_date.strftime('%b %Y')}"
+            past = invoice.due_date < datetime.now(LAGOS).date()
+            values["due_phrase"] = f" ({'was due' if past else 'due'} {values['due_date']})"
+        plan = plan_views(session, [invoice.id]).get(invoice.id)
+        if plan and plan.next_due and message.kind == MessageKind.REMINDER:
+            # Ask for the next instalment, not the whole balance (so no fee list, which adds up to more)
+            values["balance"] = format_naira(plan.next_amount_kobo)
+            values["due_date"] = f"{plan.next_due.day} {plan.next_due:%b %Y}"
+            values["due_phrase"] = plan_phrase(plan)
+            values["fees"] = ""
     return values
 
 

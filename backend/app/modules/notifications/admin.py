@@ -33,6 +33,7 @@ SAMPLE = {
     "portal_url": "https://app.example/parent",
     "pay_link": "https://app.example/pay/f/Xy7…",
     "pay_to": "Pay by transfer to 9930000001 (Wema Bank), Chiamaka's own account number.",
+    "fees": ": Tuition ₦130,000, PTA levy ₦5,000",
 }
 
 

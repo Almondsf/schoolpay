@@ -152,6 +152,8 @@ async def test_generating_bills_can_notify_parents_once(client, world):
     [sent] = whatsapp.sent_whatsapp
     assert sent.template == "fee_notice"
     assert sent.parameters[4] == "₦155,000.00"  # amount
+    fees = sent.parameters[7]  # what it's for, last so earlier parameters keep their places
+    assert fees.startswith(": ") and "Tuition ₦150,000" in fees and "PTA ₦5,000" in fees
     # Re-running generation skips invoiced students, and the dedupe key stops a second notice anyway
     again = await generate(client, world, notify_parents=True)
     assert again["notices_queued"] == 0 and len(whatsapp.sent_whatsapp) == 1
@@ -295,6 +297,7 @@ async def test_manual_reminder_once_a_day_and_only_when_owed(client, world):
     assert (await client.post(url, headers=world["bursar"])).status_code == 202
     [sent] = whatsapp.sent_whatsapp
     assert sent.template == "fee_reminder" and sent.parameters[2] == "₦155,000.00"
+    assert "Tuition ₦150,000" in sent.parameters[6] and "PTA ₦5,000" in sent.parameters[6]
     again = await client.post(url, headers=world["bursar"])
     assert again.status_code == 409 and "already" in again.json()["error"]["message"]
 
@@ -464,3 +467,41 @@ def test_queue_ignores_repeats(db, world):
 def test_channel_enum_values_are_stable():
     # Stored in the database and shown in the console: renaming one needs a migration
     assert [c.value for c in Channel] == ["whatsapp", "sms", "email", "voice"]
+
+
+async def test_reminders_say_what_is_left_on_each_fee(client, world):
+    """After a part payment (tuition first), the reminder lists only what's still owed on each fee."""
+    await generate(client, world, due_date=str(lagos_today()))
+    await pay_cash(client, world, 150_000)  # clears tuition, so only PTA is left
+    whatsapp.sent_whatsapp.clear()
+    assert (
+        await client.post(f"/api/v1/students/{world['student'].id}/remind", headers=world["bursar"])
+    ).status_code == 202
+    [sent] = whatsapp.sent_whatsapp
+    assert sent.parameters[2] == "₦5,000.00" and sent.parameters[6] == ": PTA ₦5,000"
+
+
+def test_fee_list_wording():
+    from app.modules.notifications import templates
+    from app.modules.notifications.models import MessageKind
+    from app.modules.notifications.service import fees_phrase
+    from app.modules.reports.fee_status import FeeBreakdown, FeeLine
+
+    def fee(name, left, billed=None):
+        billed = billed if billed is not None else left
+        return FeeLine(name, billed, billed - left, left, "Unpaid")
+
+    assert fees_phrase(None) == "" and fees_phrase(FeeBreakdown("t", [fee("Tuition", 0, 100)], 0)) == ""
+    two = FeeBreakdown("t", [fee("Tuition", 13_000_000), fee("PTA levy", 500_000), fee("Bus", 0, 4_500_000)], 125_050)
+    assert fees_phrase(two) == ": Tuition ₦130,000, PTA levy ₦5,000, earlier terms ₦1,250.50"
+    many = FeeBreakdown(
+        "t", [fee(n, k * 100_000) for n, k in (("PTA", 5), ("Dev", 10), ("Bus", 45), ("Tuition", 285), ("Club", 2))], 0
+    )
+    assert fees_phrase(many) == ": Tuition ₦285,000, Bus ₦45,000, Dev ₦10,000, 2 more ₦7,000"  # biggest first
+
+    body = templates.render(
+        templates.DEFAULTS[MessageKind.REMINDER],
+        {"parent_name": "Mrs Okafor", "school_name": "Demo College", "balance": "₦135,000.00",
+         "student_name": "Chuka Okafor", "due_phrase": " (due 30 Oct 2026)", "fees": fees_phrase(two)},
+    )  # fmt: skip
+    assert "₦135,000.00 is outstanding for Chuka Okafor (due 30 Oct 2026): Tuition ₦130,000, PTA levy ₦5,000" in body

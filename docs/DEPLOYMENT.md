@@ -140,8 +140,8 @@ SMS, so the parent portal doesn't work without it.
 | Template (default name) | Parameters `{{1}}`, `{{2}}`, … |
 |---|---|
 | `payment_receipt` | parent name, amount, child's name, school name, receipt number, balance, verify link |
-| `fee_notice` | parent name, child's name, term, school name, amount, how to pay, the parent's family payment link |
-| `fee_reminder` | parent name, school name, balance, child's name, how to pay, the parent's family payment link |
+| `fee_notice` | parent name, child's name, term, school name, amount, how to pay, the parent's family payment link, what it's for (e.g. ": Tuition ₦130,000, PTA levy ₦5,000") |
+| `fee_reminder` | parent name, school name, balance, child's name, how to pay, the parent's family payment link, what it's for |
 
    For example `payment_receipt`: "Dear {{1}}, we have received {{2}} for {{3}}
    at {{4}}. Receipt no. {{5}}. Outstanding balance: {{6}}. Check this receipt
