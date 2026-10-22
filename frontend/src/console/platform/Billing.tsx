@@ -12,7 +12,7 @@ type Status = Invoice['status'];
 const PAGE = 50;
 const STATUS_TONE: Record<Status, string> = { paid: 'ok', unpaid: 'warn', overdue: 'danger', void: '' };
 
-/** Subscription bills: what schools owe SchoolPay each term. */
+/** Subscription bills: what schools owe WardPay each term. */
 export function PlatformBilling() {
   const [params, setParams] = useSearchParams();
   const status = (params.get('status') as Status | null) ?? '';
@@ -72,7 +72,7 @@ export function InvoiceTable({ invoices, showSchool = false }: { invoices: Invoi
         parseAs: 'blob',
       });
       if (!response.ok || !data) throw new Error('Could not download the invoice.');
-      saveBlob(data as Blob, `schoolpay-invoice-${invoice.number}.pdf`);
+      saveBlob(data as Blob, `wardpay-invoice-${invoice.number}.pdf`);
     },
   });
   if (invoices.length === 0) return <Empty>No bills yet.</Empty>;

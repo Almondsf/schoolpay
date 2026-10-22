@@ -1,6 +1,6 @@
 # System overview
 
-This document explains what SchoolPay does and how it is built. It is written
+This document explains what WardPay does and how it is built. It is written
 for a developer joining the project; the first sections assume no school-finance
 background. For what each kind of user needs, see [USER_STORIES.md](USER_STORIES.md).
 For running it in production, see [DEPLOYMENT.md](DEPLOYMENT.md). Security and
@@ -36,7 +36,7 @@ data protection are covered in [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVA
 
 ## 1. What the system is
 
-SchoolPay is a multi-tenant SaaS for Nigerian private schools. One deployment
+WardPay is a multi-tenant SaaS for Nigerian private schools. One deployment
 serves many schools. Each school uses it to bill fees, collect payments and talk
 to parents.
 
@@ -325,7 +325,7 @@ ledger records and are never rewritten.
 
 **The ledger** (`models.py`). An `Invoice` belongs to one student and is one of:
 `term` (the term's fees; at most one live one per student per term),
-`opening_balance` (debt from before the school joined SchoolPay) or `adhoc` (a
+`opening_balance` (debt from before the school joined WardPay) or `adhoc` (a
 one-off charge). Its total is the **sum of its `InvoiceLine`s**: `fee` lines
 (positive), `discount` lines (negative) and `adjustment` lines (later
 corrections, either sign, with a reason). Rules enforced by the database:
@@ -490,7 +490,7 @@ it paid is owed again, and nothing is edited or deleted.
 for active students without one (batches of 100, background task, one gateway
 call per student, one insert per batch). The gateway needs an email per
 customer, so a student without a parent email gets a routing address
-(`student-<id>@<school>.schoolpay.ng`). Each student's number is shown on
+(`student-<id>@<school>.wardpay.ng`). Each student's number is shown on
 their page and, later, in the parent portal.
 
 **Family payment links** (`family_links.py` for the link, `family.py` for the
@@ -794,8 +794,8 @@ Module: `app/modules/platform`. Console: the platform admin's **Overview**,
 **Subscription** (under Setup) and the **Getting started** checklist on the
 dashboard; the public **/signup** page.
 
-**Pricing (ParentPay's model, PLAN.md §3.4).** The school pays and parents use
-SchoolPay free. A `Plan` has a one-off **set-up fee**, an **annual licence**,
+**Pricing (the model of ParentPay in the UK, PLAN.md §3.4).** The school pays and parents use
+WardPay free. A `Plan` has a one-off **set-up fee**, an **annual licence**,
 and a **per-pupil fee per year**, billed a third each term for the pupils
 enrolled that term (`billing.termly()` rounds halves up to the kobo). One plan
 is the default (partial unique index); a school can be moved to another
@@ -850,7 +850,7 @@ the list until every step is done.
 
 **The platform console (`console.py`).** The overview counts schools by status
 and sign-ups, pupils enrolled at active schools, money parents paid through
-SchoolPay this month and last, and subscriptions billed, received, outstanding
+WardPay this month and last, and subscriptions billed, received, outstanding
 and overdue. The schools list shows each school's plan, pupils, proprietor,
 whether payments are set up, what it owes, and its last sign-in (filter by
 status). A school's page adds its staff (invited, two-factor, last sign-in),
@@ -1138,7 +1138,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   the term with a preview, record a transfer, void, PDF), Plans (prices, with
   the termly per-pupil amount worked out), and Support lookup.
 - **Public website** (`src/public/Landing.tsx` at `/`, `PrivacyNotice.tsx` at
-  `/privacy`): what SchoolPay does, how it works, the default plan's prices
+  `/privacy`): what WardPay does, how it works, the default plan's prices
   (from `GET /public/info`, so they always match), and the plain-language
   privacy notice. The parent portal has "Download my data"; a student's
   page has "Export data" and "Erase" for parents, and "Erase personal
@@ -1218,8 +1218,8 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 
 ## 23. Known gaps
 
-- The product is called "ParentPay" for now (`APP_NAME` / `VITE_APP_NAME`; the code uses the codename
-  `schoolpay`). It's also a UK company's brand: check the trademark before a public launch.
+- The product is called "WardPay" (`APP_NAME` / `VITE_APP_NAME`); the trademark and domain are still
+  to be checked.
 - Gateway virtual-account KYC requirements and messaging-provider accounts
   are still open (see OWNER_TODO.md). Plan prices are placeholders.
 - Schools pay subscriptions by bank transfer, recorded by a platform admin;

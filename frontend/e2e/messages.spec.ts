@@ -5,7 +5,7 @@ import { signIn } from './helpers';
 const PHONE = '08035000000';
 
 test('the bursar words a reminder, sends one, and sees it in the log', async ({ page }) => {
-  await signIn(page, 'bursar@demo.schoolpay.ng', { mfa: true });
+  await signIn(page, 'bursar@demo.wardpay.ng', { mfa: true });
   await page.getByRole('link', { name: 'Messages', exact: true }).click();
   await page.getByRole('tab', { name: 'Wording' }).click();
 

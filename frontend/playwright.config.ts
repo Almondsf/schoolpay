@@ -2,7 +2,7 @@
  * Browser (end-to-end) tests: `npm run e2e`.
  *
  * Starts its own API and Vite servers on separate ports against a throwaway
- * database (E2E_DATABASE_URL, default schoolpay_e2e on localhost) seeded by
+ * database (E2E_DATABASE_URL, default wardpay_e2e on localhost) seeded by
  * `python -m app.cli seed-demo --reset --bare`, so it never touches development data.
  *
  * Environment:
@@ -25,11 +25,11 @@ export const E2E_MFA_SECRET = 'JBSWY3DPEHPK3PXP';
 
 const backendEnv = {
   ...process.env,
-  SCHOOLPAY_ENV_FILE: 'does-not-exist.env', // never read a developer's .env
+  WARDPAY_ENV_FILE: 'does-not-exist.env', // never read a developer's .env
   ENVIRONMENT: 'development', // plain-http localhost cookies
   SECRET_KEY: 'e2e-only-signing-key-0123456789abcdef0123456789',
   FIELD_ENCRYPTION_KEYS: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
-  DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'postgresql+psycopg://schoolpay@localhost:5433/schoolpay_e2e',
+  DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'postgresql+psycopg://wardpay@localhost:5433/wardpay_e2e',
   CELERY_TASK_ALWAYS_EAGER: 'true',
   EMAIL_BACKEND: 'console',
   PAYMENT_GATEWAYS: 'fake', // simulated gateway: no real money moves

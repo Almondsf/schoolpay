@@ -163,7 +163,7 @@ It is updated with every change that affects security.
 ## Database
 - Migrations run as the schema owner (`MIGRATION_DATABASE_URL`) under an
   advisory lock. The API and workers connect as a DML-only role
-  (`schoolpay_app`, see `deploy/postgres-init.sh`), so a compromised API can't
+  (`wardpay_app`, see `deploy/postgres-init.sh`), so a compromised API can't
   alter the schema.
 
 ## Supply chain

@@ -18,11 +18,11 @@ jobs:
     services:
       postgres:
         image: postgres:18-alpine
-        env: {POSTGRES_DB: schoolpay_test, POSTGRES_USER: schoolpay, POSTGRES_PASSWORD: schoolpay}
+        env: {POSTGRES_DB: wardpay_test, POSTGRES_USER: wardpay, POSTGRES_PASSWORD: wardpay}
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 20
     env:
-      TEST_DATABASE_URL: postgresql+psycopg://schoolpay:schoolpay@localhost:5432/schoolpay_test
+      TEST_DATABASE_URL: postgresql+psycopg://wardpay:wardpay@localhost:5432/wardpay_test
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
@@ -59,4 +59,4 @@ jobs:
     needs: checks
     steps:
       - uses: actions/checkout@v5
-      - run: docker build --target runtime -t schoolpay-backend:ci backend
+      - run: docker build --target runtime -t wardpay-backend:ci backend

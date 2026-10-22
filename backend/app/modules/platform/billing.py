@@ -1,5 +1,5 @@
 """
-What schools pay the platform (the ParentPay model, PLAN.md §3.4).
+What schools pay the platform (the model of ParentPay in the UK, PLAN.md §3.4).
 
 Once a term, a platform admin generates the subscription bills: one per active
 school for its current term. Each bill has:

@@ -48,7 +48,7 @@ def new_reference() -> str:
 
 def checkout_email(guardian: Guardian, school: School) -> str:
     """The gateway needs an email: the parent's, or a routing address if the school has none on file."""
-    return guardian.email or f"guardian-{guardian.id}@{school.slug}.schoolpay.ng"
+    return guardian.email or f"guardian-{guardian.id}@{school.slug}.wardpay.ng"
 
 
 def start_checkout(

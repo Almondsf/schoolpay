@@ -1,10 +1,10 @@
 # User stories
 
-What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
+What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
 - ✅ Sign my school up online, confirm my email, and get a checklist of what to set up next.
-- ✅ See our plan, what a term costs at our pupil numbers, where to pay, and our SchoolPay bills (PDF).
+- ✅ See our plan, what a term costs at our pupil numbers, where to pay, and our WardPay bills (PDF).
 - ✅ Connect the school's own bank account so all payments settle there (the platform never holds our money).
 - ✅ Invite staff by email, choose their role, rename them, change their role, deactivate or reactivate them.
 - ✅ Reset a staff member's two-factor sign-in when they lose their phone.
@@ -29,7 +29,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Set up discounts: automatic sibling discounts, and scholarships or staff-child discounts I give to chosen students.
 - ✅ Generate the whole term's invoices in one click, after previewing the total per class; arrears from earlier terms stay owed.
 - ✅ Add a charge or correct an invoice without losing the history, and void an invoice issued by mistake.
-- ✅ Record what a student owed before we started using SchoolPay.
+- ✅ Record what a student owed before we started using WardPay.
 - ✅ See billed, paid and outstanding for the term, and every invoice's balance.
 - ✅ Have bank transfers matched to students automatically: each student has their own account number, and a transfer shows as paid within seconds.
 - ✅ Record cash, teller, POS and direct-transfer payments, approved by a second person before they count.
@@ -98,7 +98,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Create a school and invite its proprietor.
 - ✅ Suspend a school (its staff are signed out at once) and reactivate it, with the reason recorded.
 - ✅ See platform-level activity (school changes, platform sign-ins, failed sign-ins for unknown emails).
-- ✅ See every school at a glance: active, waiting to confirm, suspended, new sign-ups, pupils, money parents paid through SchoolPay, and subscription income owed and overdue.
+- ✅ See every school at a glance: active, waiting to confirm, suspended, new sign-ups, pupils, money parents paid through WardPay, and subscription income owed and overdue.
 - ✅ Set the prices (set-up fee, yearly licence, per pupil per year billed termly) and move a school to another plan.
 - ✅ Bill every school for the term in one click, after a preview; never bill a school twice for a term.
 - ✅ Record a school's bank transfer against its bill, void a bill made in error, and download any bill as PDF.
@@ -113,7 +113,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Stay signed in across page reloads, and be signed out everywhere when my access is removed.
 
 ## Anyone
-- ✅ Read what SchoolPay does, how it works and what it costs on the website, and start a sign-up.
+- ✅ Read what WardPay does, how it works and what it costs on the website, and start a sign-up.
 
 ## Platform (built)
 - ✅ The API reports liveness and readiness for monitoring.

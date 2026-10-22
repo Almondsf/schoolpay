@@ -56,7 +56,7 @@ class PlatformOverview:
     schools_suspended: int
     signups_30_days: int
     pupils: int
-    processed_this_month_kobo: int  # money parents paid schools through SchoolPay (net of reversals)
+    processed_this_month_kobo: int  # money parents paid schools through WardPay (net of reversals)
     processed_last_month_kobo: int
     payments_this_month: int
     subscription_billed_kobo: int

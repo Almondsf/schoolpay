@@ -3,8 +3,8 @@
 # throwaway database: a backup that has never been restored isn't a backup.
 #
 #   BACKUP_AGE_IDENTITY=/secure/age-key.txt \          # the private key (kept off the server)
-#   RESTORE_DATABASE_URL=postgresql://schoolpay@host:5432/schoolpay_restore_test \
-#   deploy/restore.sh /var/backups/schoolpay/schoolpay-20261019T020000Z.dump.age
+#   RESTORE_DATABASE_URL=postgresql://wardpay@host:5432/wardpay_restore_test \
+#   deploy/restore.sh /var/backups/wardpay/wardpay-20261019T020000Z.dump.age
 #
 # Restores into an EMPTY database, as its owner. Refuses a database that
 # already has tables, so it can't overwrite live data by mistake. Afterwards,

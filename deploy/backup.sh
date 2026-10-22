@@ -2,10 +2,10 @@
 # Encrypted Postgres backup. Run daily (cron or a scheduled job), from the host
 # running docker compose, or anywhere `pg_dump` can reach the database.
 #
-#   BACKUP_DIR=/var/backups/schoolpay \
+#   BACKUP_DIR=/var/backups/wardpay \
 #   BACKUP_AGE_RECIPIENT=age1...      \   # public key; the private key is kept OFF this server
 #   BACKUP_KEEP_DAYS=30               \
-#   BACKUP_UPLOAD_CMD='rclone copy "$1" offsite:schoolpay-backups/' \
+#   BACKUP_UPLOAD_CMD='rclone copy "$1" offsite:wardpay-backups/' \
 #   deploy/backup.sh
 #
 # What it does:
@@ -31,10 +31,10 @@ mkdir -p "$BACKUP_DIR"
 umask 077
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-file="$BACKUP_DIR/schoolpay-$stamp.dump.age"
+file="$BACKUP_DIR/wardpay-$stamp.dump.age"
 
 # The dump never touches the disk unencrypted
-$COMPOSE exec -T "$DB_SERVICE" pg_dump -U schoolpay -d schoolpay --format=custom --no-owner \
+$COMPOSE exec -T "$DB_SERVICE" pg_dump -U wardpay -d wardpay --format=custom --no-owner \
   | age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$file"
 
 [ -s "$file" ] || { echo "Backup is empty: $file" >&2; rm -f "$file"; exit 1; }
@@ -47,4 +47,4 @@ if [ -n "${BACKUP_UPLOAD_CMD:-}" ]; then
   echo "Copied off the server"
 fi
 
-find "$BACKUP_DIR" -name 'schoolpay-*.dump.age*' -mtime +"$KEEP_DAYS" -delete
+find "$BACKUP_DIR" -name 'wardpay-*.dump.age*' -mtime +"$KEEP_DAYS" -delete

@@ -50,6 +50,7 @@ def normalized(raw: str) -> tuple[str, str]:
 
 
 def _code_hash(phone_index: str, code: str) -> str:
+    # A fixed label (the old codename): changing it would only void codes already sent
     key = hashlib.sha256(b"schoolpay.parent-otp:" + get_settings().secret_key.encode()).digest()
     return hmac.new(key, f"{phone_index}:{code}".encode(), hashlib.sha256).hexdigest()
 

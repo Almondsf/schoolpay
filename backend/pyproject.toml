@@ -1,7 +1,7 @@
 [project]
-name = "schoolpay-backend"
+name = "wardpay-backend"
 version = "0.1.0"
-description = "SchoolPay API: school fee invoicing, payment reconciliation and parent portal"
+description = "WardPay API: school fee invoicing, payment reconciliation and parent portal"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.143.3",

@@ -241,7 +241,7 @@ def provision_virtual_accounts(session: Session, school_id: uuid.UUID, student_i
     issued: list[VirtualAccount] = []
     for student_id, first, last, phone, email in rows:
         # Gateways insist on an email; parents often have none, so the school's routing address stands in
-        contact = email or f"student-{student_id}@{school.slug if school else 'school'}.schoolpay.ng"
+        contact = email or f"student-{student_id}@{school.slug if school else 'school'}.wardpay.ng"
         try:
             created = provider.create_virtual_account(
                 customer=CustomerDetails(

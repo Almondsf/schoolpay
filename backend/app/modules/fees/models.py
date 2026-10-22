@@ -145,7 +145,7 @@ class StudentDiscount(TenantMixin, Base):
 
 class InvoiceKind(enum.StrEnum):
     TERM = "term"  # the term's fees: at most one live one per student per term
-    OPENING_BALANCE = "opening_balance"  # what a student owed before the school joined SchoolPay
+    OPENING_BALANCE = "opening_balance"  # what a student owed before the school joined WardPay
     ADHOC = "adhoc"  # one-off charges (replacement ID card, excursion)
 
 

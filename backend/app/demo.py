@@ -48,7 +48,7 @@ from app.modules.students.models import (
 
 DEMO_PASSWORD = "demo-password-123"  # noqa: S105  (demo data only; refuses to run in production)
 DEMO_SLUG = "demo-school"
-PLATFORM_EMAIL = "platform@demo.schoolpay.ng"
+PLATFORM_EMAIL = "platform@demo.wardpay.ng"
 FIRST_PARENT_PHONE = "+2348035000000"  # two children; used in the docs and the browser tests
 
 CLASSES = [
@@ -83,11 +83,11 @@ PHONE_PREFIXES = ["803", "806", "813", "816", "703", "706", "802", "808", "812",
 # More schools for the platform console: (name, slug, address, proprietor name, email, status)
 OTHER_SCHOOLS = [
     ("Kings and Queens Academy", "demo-kings-queens", "Plot 4 Gwarinpa Estate, Abuja", "Dr Ifeoma Nwachukwu",
-     "proprietor@kingsqueens.demo.schoolpay.ng", SchoolStatus.ACTIVE),
+     "proprietor@kingsqueens.demo.wardpay.ng", SchoolStatus.ACTIVE),
     ("Bright Futures Nursery and Primary School", "demo-bright-futures", "17 Ring Road, Ibadan", "Mrs Bukola Ajayi",
-     "proprietor@brightfutures.demo.schoolpay.ng", SchoolStatus.ACTIVE),
+     "proprietor@brightfutures.demo.wardpay.ng", SchoolStatus.ACTIVE),
     ("Sunrise International School", "demo-sunrise", "9 Aba Road, Port Harcourt", "Engr. Ikenna Okeke",
-     "proprietor@sunrise.demo.schoolpay.ng", SchoolStatus.SUSPENDED),
+     "proprietor@sunrise.demo.wardpay.ng", SchoolStatus.SUSPENDED),
 ]  # fmt: skip
 
 
@@ -184,10 +184,10 @@ def _retire_old_demo(session: Session) -> None:
 
 def _staff(session: Session, school: School, mfa_secret: str) -> tuple[User, User]:
     people = [
-        ("proprietor@demo.schoolpay.ng", "Grace Adeyemi", Role.PROPRIETOR, school.id, True),
-        ("bursar@demo.schoolpay.ng", "Musa Bello", Role.BURSAR, school.id, True),
+        ("proprietor@demo.wardpay.ng", "Grace Adeyemi", Role.PROPRIETOR, school.id, True),
+        ("bursar@demo.wardpay.ng", "Musa Bello", Role.BURSAR, school.id, True),
         # With ENFORCE_MFA off (local development only), Ada signs in with just the password
-        ("admin@demo.schoolpay.ng", "Ada Obi", Role.SCHOOL_ADMIN, school.id, get_settings().enforce_mfa),
+        ("admin@demo.wardpay.ng", "Ada Obi", Role.SCHOOL_ADMIN, school.id, get_settings().enforce_mfa),
         (PLATFORM_EMAIL, "Platform Ops", Role.PLATFORM_ADMIN, None, True),
     ]
     password_hash = hash_password(DEMO_PASSWORD)

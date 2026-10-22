@@ -20,7 +20,7 @@ const FEATURES = [
   ['The proprietor’s view', 'Billed, collected and outstanding by class, who owes and for how long, downloadable for Excel.'],
 ] as const;
 
-/** The public website: what SchoolPay does, how it's priced, and where to start. */
+/** The public website: what WardPay does, how it's priced, and where to start. */
 export function Landing() {
   const info = useQuery({ queryKey: ['public-info'], queryFn: async () => unwrap(await api.GET('/api/v1/public/info')) });
   const name = info.data?.app_name ?? BRAND;

@@ -396,7 +396,7 @@ def import_template(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> 
     return Response(
         content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": 'attachment; filename="schoolpay-students-template.xlsx"'},
+        headers={"Content-Disposition": 'attachment; filename="wardpay-students-template.xlsx"'},
     )
 
 

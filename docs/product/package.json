@@ -1,7 +1,7 @@
 {
-  "name": "schoolpay-product-overview",
+  "name": "wardpay-product-overview",
   "private": true,
-  "description": "Builds 'SchoolPay - what it does.docx' from overview.cjs",
+  "description": "Builds 'WardPay - what it does.docx' from overview.cjs",
   "scripts": {
     "build": "node overview.cjs"
   },

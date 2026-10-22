@@ -29,7 +29,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
 def migration_url() -> str:
-    env_file = Path(os.environ.get("SCHOOLPAY_ENV_FILE", BACKEND_ROOT / ".env"))
+    env_file = Path(os.environ.get("WARDPAY_ENV_FILE", BACKEND_ROOT / ".env"))
     file_values = dotenv_values(env_file) if env_file.is_file() else {}
     url = (
         os.environ.get("MIGRATION_DATABASE_URL")

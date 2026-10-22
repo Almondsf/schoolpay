@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.errors import DomainError
 
 TokenType = Literal["access", "mfa", "password", "parent", "parent_choice"]
-ISSUER = "schoolpay"
+ISSUER = "wardpay"
 ALGORITHM = "HS256"
 MIN_PASSWORD_LENGTH = 10
 
@@ -43,7 +43,9 @@ _COMMON_PASSWORDS = frozenset(
         "welcome1",
         "letmein123",
         "abc12345",
+        "wardpay",
         "schoolpay",
+        "parentpay",
         "school123",
         "nigeria123",
         "lagos12345",

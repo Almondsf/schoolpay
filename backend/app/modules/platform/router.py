@@ -318,7 +318,7 @@ def _pdf_response(db: Session, invoice_id: uuid.UUID) -> Response:
     return Response(
         pdf.render_invoice(row, school, lines, payments),
         media_type=PDF,
-        headers={"Content-Disposition": f'attachment; filename="schoolpay-invoice-{row.number}.pdf"'},
+        headers={"Content-Disposition": f'attachment; filename="wardpay-invoice-{row.number}.pdf"'},
     )
 
 

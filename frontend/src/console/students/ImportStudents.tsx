@@ -48,7 +48,7 @@ export function ImportStudents() {
       if (!response.ok || !data) throw new Error('Could not download the template.');
       const link = document.createElement('a');
       link.href = URL.createObjectURL(data as Blob);
-      link.download = 'schoolpay-students-template.xlsx';
+      link.download = 'wardpay-students-template.xlsx';
       link.click();
       URL.revokeObjectURL(link.href);
     },

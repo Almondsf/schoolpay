@@ -1,9 +1,8 @@
-# ParentPay (working name)
+# WardPay
 
-> The product is called **ParentPay** for now (owner, 2026-10-19). The name is one setting: `APP_NAME` for the
-> backend (texts, emails, receipts, the authenticator app) and `VITE_APP_NAME` for the web app. The code and
-> repository still use the codename `schoolpay`. ParentPay is also a UK company's brand, so check the trademark
-> before launching publicly under it.
+> The product is called **WardPay** (owner, 2026-10-22; it was ParentPay, and SchoolPay before that). The name
+> shown to people is one setting: `APP_NAME` for the backend (texts, emails, receipts, the authenticator app)
+> and `VITE_APP_NAME` for the web app.
 
 School fee collection and parent communication for Nigerian private schools.
 Each student gets their own bank account number. When a parent transfers
@@ -54,7 +53,7 @@ uv run python -m app.cli seed-demo --bare # the small version: 60 students, fees
 uv run python -m app.cli create-platform-admin --email you@example.com --name "Your Name"   # prints a set-password link
 ```
 
-Demo accounts: `proprietor@`, `bursar@`, `admin@` and `platform@demo.schoolpay.ng`.
+Demo accounts: `proprietor@`, `bursar@`, `admin@` and `platform@demo.wardpay.ng`.
 The proprietor, bursar and platform admin use two-factor sign-in with the
 secret `JBSWY3DPEHPK3PXP` (add it to an authenticator app).
 
@@ -78,7 +77,7 @@ npm run dev          # http://localhost:5175, proxies /api to :8002
 ```bash
 # Backend: needs a local Postgres database whose name ends in _test
 cd backend
-export TEST_DATABASE_URL=postgresql+psycopg://USER@localhost:5432/schoolpay_test
+export TEST_DATABASE_URL=postgresql+psycopg://USER@localhost:5432/wardpay_test
 uv run pytest tests/test_platform.py      # run targeted files; the full suite is slow on Windows
 uv run ruff check app tests alembic && uv run ruff format --check app tests alembic
 uv run mypy app
@@ -87,7 +86,7 @@ uv run mypy app
 cd frontend
 npm run typecheck && npm test
 npm run e2e          # browser tests: own API (8102) + Vite (5185) on a throwaway DB
-                     # (E2E_DATABASE_URL, default schoolpay_e2e). On Windows: PW_CHANNEL=msedge npm run e2e
+                     # (E2E_DATABASE_URL, default wardpay_e2e). On Windows: PW_CHANNEL=msedge npm run e2e
 ```
 
 The test suite refuses any database that isn't local or whose name doesn't end

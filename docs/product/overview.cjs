@@ -8,7 +8,7 @@ const {
   Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType,
 } = require('docx');
 
-const BRAND = 'ParentPay'; // the product's working name (APP_NAME)
+const BRAND = 'WardPay'; // the product's working name (APP_NAME)
 const UPDATED = '20 October 2026';
 const GREEN = '0F5132';
 const LIGHT = 'E8F3EE';

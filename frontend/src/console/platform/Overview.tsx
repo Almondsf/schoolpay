@@ -6,7 +6,7 @@ import { BRAND } from '../../lib/brand';
 import { formatKobo } from '../../lib/format';
 import { ErrorAlert, Loading, PageHeader } from '../../lib/ui';
 
-/** The platform at a glance: schools, pupils, money through SchoolPay, and subscription income. */
+/** The platform at a glance: schools, pupils, money through WardPay, and subscription income. */
 export function PlatformOverview() {
   const overview = useQuery({
     queryKey: ['platform-overview'],

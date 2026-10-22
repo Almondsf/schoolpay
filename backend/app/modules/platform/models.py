@@ -1,7 +1,7 @@
 """
-The platform's own business: subscription plans and what schools pay for SchoolPay.
+The platform's own business: subscription plans and what schools pay for WardPay.
 
-The model is ParentPay's (PLAN.md §3.4): the school pays, parents use it free.
+The model is that of ParentPay in the UK (PLAN.md §3.4): the school pays, parents use it free.
 A plan has a one-off set-up fee, an annual licence, and a per-pupil fee per
 year that is billed a third each term for the pupils enrolled that term.
 

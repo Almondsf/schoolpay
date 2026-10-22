@@ -31,7 +31,7 @@ jobs:
     needs: checks
     steps:
       - uses: actions/checkout@v5
-      - run: docker build -t schoolpay-frontend:ci frontend
+      - run: docker build -t wardpay-frontend:ci frontend
 
   # Browser tests: real API + Vite servers on a seeded throwaway database, driven by Playwright
   e2e:
@@ -39,11 +39,11 @@ jobs:
     services:
       postgres:
         image: postgres:18-alpine
-        env: {POSTGRES_DB: schoolpay_e2e, POSTGRES_USER: schoolpay, POSTGRES_PASSWORD: schoolpay}
+        env: {POSTGRES_DB: wardpay_e2e, POSTGRES_USER: wardpay, POSTGRES_PASSWORD: wardpay}
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 20
     env:
-      E2E_DATABASE_URL: postgresql+psycopg://schoolpay:schoolpay@localhost:5432/schoolpay_e2e
+      E2E_DATABASE_URL: postgresql+psycopg://wardpay:wardpay@localhost:5432/wardpay_e2e
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6

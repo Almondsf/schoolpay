@@ -1,6 +1,6 @@
 # Handover: where the project stands and how to pick it up
 
-For a new Claude Code session (or anyone) taking over ParentPay. Read in this order:
+For a new Claude Code session (or anyone) taking over WardPay. Read in this order:
 
 1. `CLAUDE.md`: the rules of the project (loaded automatically).
 2. **This file**: what's built since the original roadmap, the owner's decisions, what's next, and the
@@ -19,7 +19,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 |---|---|---|
 | 19 Oct | Payment plans (pay a bill in instalments) | `fees/plans.py` |
 | 19 Oct | Extra fees for whole classes mid-term, pupil exemptions, a price list, one-off charges per pupil | `fees/charges.py` |
-| 19 Oct | Product named **ParentPay** (one setting: `APP_NAME` / `VITE_APP_NAME`; the code keeps the codename `schoolpay`) | `core/config.py`, `frontend/src/lib/brand.ts` |
+| 22 Oct | Product named **WardPay** (was ParentPay; shown name is one setting: `APP_NAME` / `VITE_APP_NAME`; code and repo use `wardpay`) | `core/config.py`, `frontend/src/lib/brand.ts` |
 | 19 Oct | "School at a glance" (pupils, classes, records needing attention), now under the money figures on the dashboard | `students/summary.py`, `console/Dashboard.tsx` |
 | 19 Oct | **Family payment link**: one link per parent, no sign-in, pay for all children with the amount chosen per child | `payments/family.py`, `family_links.py`, `public/FamilyPay.tsx` |
 | 19 Oct | **Phone calls** for parents who don't read messages (English or Pidgin; overdue reminders and payment confirmations; Africa's Talking) | `notifications/voice.py` |
@@ -49,7 +49,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:
 https://claude.ai/artifact/U8F5XpU55wtrACtihHp2oH; the dashboard figures and contact details are
-placeholders) and the Word overview `docs/product/ParentPay - what it does.docx`.
+placeholders) and the Word overview `docs/product/WardPay - what it does.docx`.
 
 ## How the owner wants work done
 
@@ -88,6 +88,9 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 - 2026-10-18 Pricing model: set-up fee + yearly licence + per pupil per term, free for parents (prices in
   the platform plan are defaults: ₦50,000 / ₦100,000 / ₦500).
 - 2026-10-19 Product name "ParentPay" for now (trademark to be checked: it's a UK company's brand).
+- 2026-10-22 Product renamed **WardPay** everywhere: the app, the docs, the code (`wardpay`) and the GitHub
+  repository. Two fixed hashing labels in the code still say `schoolpay` (`core/crypto.py` blind index,
+  `parents/auth_service.py` sign-in codes): changing them would break every stored phone/email lookup.
 - 2026-10-19 Email through Zoho Mail; WhatsApp and voice via Zoho if it can (otherwise Termii / Africa's Talking).
 - 2026-10-19 A family payment can be split however the parent likes; nothing is split automatically.
 - 2026-10-20 Parents keep signing in with a texted code (the owner considered dropping it; kept for
@@ -114,7 +117,7 @@ the payment one, and optional browser push notifications (ideas from diplace). C
 about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.0516 a message.
 
 1. **Card payment of school subscriptions** (step 3 of the plan agreed on 19 Oct): schools pay their
-   ParentPay bill by card/transfer through Paystack, not only by bank transfer recorded by hand.
+   WardPay bill by card/transfer through Paystack, not only by bank transfer recorded by hand.
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in
    (`ConsentMethod.PORTAL` already exists).
 3. **The "later" list in PLAN.md** (step 5): only when the owner says so.
@@ -146,7 +149,7 @@ owner's **Paystack test key** (`PAYSTACK_SECRET_KEY=sk_test_…`), `ENFORCE_MFA=
 signs in without a code locally; production refuses it) and `SMS_BACKEND=memory`.
 
 **Demo accounts** (password `demo-password-123`, authenticator setup key `JBSWY3DPEHPK3PXP`):
-`admin@demo.schoolpay.ng` (Ada Obi, school admin; no code locally), `bursar@…` and `proprietor@…`
+`admin@demo.wardpay.ng` (Ada Obi, school admin; no code locally), `bursar@…` and `proprietor@…`
 (code required), `platform@…` (platform admin). Demo parent: phone **0803 500 0000**; on the code step,
 **"Fill in the code (demo on this computer)"** reads the texted code from the local inbox (the owner demos
 this way until Termii is set up; the button exists only in the Vite dev server; local `.env` sets

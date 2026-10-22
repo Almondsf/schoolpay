@@ -1,4 +1,4 @@
-# SchoolPay web app: build with Node, serve with unprivileged nginx (port 8080)
+# WardPay web app: build with Node, serve with unprivileged nginx (port 8080)
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

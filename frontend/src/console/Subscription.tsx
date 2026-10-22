@@ -8,7 +8,7 @@ import { Empty, ErrorAlert, Loading, PageHeader } from '../lib/ui';
 
 type Invoice = Schemas['SubscriptionInvoiceOut'];
 
-/** What the school pays for SchoolPay: its plan and its termly bills. */
+/** What the school pays for WardPay: its plan and its termly bills. */
 export function Subscription() {
   const sub = useQuery({ queryKey: ['subscription'], queryFn: async () => unwrap(await api.GET('/api/v1/subscription')) });
   const pdf = useMutation({
@@ -18,7 +18,7 @@ export function Subscription() {
         parseAs: 'blob',
       });
       if (!response.ok || !data) throw new Error('Could not download the invoice.');
-      saveBlob(data as Blob, `schoolpay-invoice-${invoice.number}.pdf`);
+      saveBlob(data as Blob, `wardpay-invoice-${invoice.number}.pdf`);
     },
   });
   if (sub.isPending) return <Loading />;

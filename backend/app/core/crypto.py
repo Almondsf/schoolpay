@@ -54,6 +54,7 @@ def decrypt(token: str) -> str:
 def _index_key(secret_key: str) -> bytes:
     # Derived from SECRET_KEY with a fixed label so it's distinct from JWT signing.
     # Rotating SECRET_KEY means recomputing blind indexes (see docs/SECURITY.md).
+    # The label keeps the old codename on purpose: changing it would orphan every stored index.
     return hashlib.sha256(b"schoolpay.blind-index:" + secret_key.encode()).digest()
 
 

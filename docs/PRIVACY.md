@@ -1,8 +1,8 @@
 # Privacy and children's data (NDPA 2023)
 
-SchoolPay processes personal data about children and their guardians on behalf
+WardPay processes personal data about children and their guardians on behalf
 of schools. Under the Nigeria Data Protection Act 2023 the **school is the data
-controller** and SchoolPay is its **data processor**. This page records how the
+controller** and WardPay is its **data processor**. This page records how the
 system meets that responsibility. It is updated as features are added.
 
 ## What we store
@@ -91,7 +91,7 @@ student's first and last name, the primary guardian's phone number, and the
 guardian's email (or a routing address we generate if there isn't one). Card
 payments send the payer's email to the gateway. Gateways are processors under
 their own NDPA obligations. No BVNs are sent or stored, and card details never
-reach SchoolPay.
+reach WardPay.
 
 ## Data subjects' rights
 - **Access:** parents download everything held about them and their children from the portal ("Download my data"); staff can export it for a parent who asks in person. Every export is recorded.

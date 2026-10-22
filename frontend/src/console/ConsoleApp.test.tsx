@@ -37,7 +37,7 @@ describe('console sign-in', () => {
   it('sends signed-out visitors to the login page', async () => {
     mockApi(noSession);
     renderConsole('/console/staff');
-    expect(await screen.findByRole('heading', { name: 'Sign in to ParentPay' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in to WardPay' })).toBeInTheDocument();
   });
 
   it('signs in with a password and lands where the user was going', async () => {

@@ -104,7 +104,7 @@ class FakeGateway:
         self.state.accounts[number] = customer
         return IssuedVirtualAccount(
             account_number=number,
-            account_name=f"SCHOOLPAY/{customer.last_name.upper()} {customer.first_name.upper()}",
+            account_name=f"WARDPAY/{customer.last_name.upper()} {customer.first_name.upper()}",
             bank_name="Fake Bank",
             provider_reference=f"FAKE_CUS_{customer.reference[:8]}",
         )

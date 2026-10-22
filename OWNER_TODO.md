@@ -40,15 +40,23 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
       urgent announcements reach parents who turned off reminders. Talk to a few schools first. Ask
       Termii for their current rate card (generic and DND routes).
 
-- [ ] _(new)_ **Set the actual prices.** The model is decided (ParentPay's:
+- [ ] _(new)_ **Set the actual prices.** The model is decided (ParentPay UK's:
       set-up fee + annual licence + per pupil per year, billed termly, free
       for parents; PLAN.md §3.4). The built-in "Standard" plan has
       placeholder amounts; change them in the platform console (Plans)
       before selling.
-- [ ] **Product name: "ParentPay" for now** (decided 2026-10-19; it's one setting,
-      `APP_NAME`). _(new)_ **Check the trademark before a public launch:** ParentPay
-      is the brand of ParentPay Ltd (UK), the product we modelled this on. Using it
-      publicly in Nigeria could draw a complaint, and they may expand into Africa.
+- [ ] _(new)_ **Product renamed to WardPay** (2026-10-22). Still to do:
+      - check nobody else trades as WardPay (a quick search and the Nigerian trademark register),
+        and get the domain (e.g. wardpay.ng / wardpay.com.ng);
+      - on **Render**, set `APP_NAME=WardPay` and `MFA_ISSUER=WardPay` if they're set there, and
+        `EMAIL_FROM` / `TERMII_SENDER_ID` when those are set up; then Manual Deploy;
+      - on **Netlify**, set `VITE_APP_NAME=WardPay` if it's set, and if you like rename the site to
+        `wardpay` (Site configuration → Change site name) so the address becomes
+        wardpay.netlify.app. Then set Render's `FRONTEND_URL` and `CORS_ORIGINS` to the new
+        address (and tell Claude, so the docs follow). Receipts printed before the change carry a
+        QR code to the old address;
+      - the Render service keeps its address (schoolpay-a97t.onrender.com) unless you make a new
+        service; nobody sees it, Netlify forwards to it.
 
 ## Accounts to open
 
@@ -57,10 +65,10 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 | **Paystack** (business) | Open the account, get test keys, then ask Paystack what approval/KYC **Dedicated Virtual Accounts** need for a platform with subaccounts (PLAN.md §3.2). Send me the answer. | Per-student account numbers on real money |
 | **Flutterwave** | Optional second gateway. Permanent virtual accounts need each customer's BVN, so we use it for card payments only unless they offer another route. | Card payments via Flutterwave |
 | **Meta WhatsApp Business** | _(new)_ You plan to use **Zoho** for WhatsApp: Zoho Voice can send WhatsApp messages (approved templates) for you, but **not WhatsApp calls**, and Meta reportedly doesn't allow business-started WhatsApp calls in Nigeria. Either way: create a WhatsApp Business account and phone number in Meta Business Manager, a permanent access token, and submit the three message templates in `docs/DEPLOYMENT.md` ("Messages to parents") for approval. _(new)_ The bill and reminder templates' last two parameters are now the parent's family payment link and what the money is for (e.g. ": Tuition ₦130,000, PTA levy ₦5,000"); see `docs/DEPLOYMENT.md`. | WhatsApp receipts and reminders (SMS is used until then) |
-| **Termii** (SMS) | _(new)_ **Account opened** (2026-10-22, ₦30 balance; KYC documents still to come). Still to do: request a **Sender ID** (up to 11 characters, e.g. `ParentPay`; Termii approves it), ask Termii to **switch on the DND route** (sign-in codes must reach numbers on Do-Not-Disturb), **top up**, then on Render set `SMS_BACKEND=termii`, `TERMII_API_KEY` and `TERMII_SENDER_ID` (exactly as approved). | Parent sign-in codes and SMS messages on a live system |
+| **Termii** (SMS) | _(new)_ **Account opened** (2026-10-22, ₦30 balance; KYC documents still to come). Still to do: request a **Sender ID** (up to 11 characters, e.g. `WardPay`; Termii approves it), ask Termii to **switch on the DND route** (sign-in codes must reach numbers on Do-Not-Disturb), **top up**, then on Render set `SMS_BACKEND=termii`, `TERMII_API_KEY` and `TERMII_SENDER_ID` (exactly as approved). | Parent sign-in codes and SMS messages on a live system |
 | **Email sending** | _(new)_ **Zoho Mail chosen** (2026-10-19). Create the mailbox on your domain, then set `EMAIL_BACKEND=smtp`, `SMTP_HOST=smtp.zoho.com` (or `smtppro.zoho.com` for a paid domain plan), `SMTP_PORT=587`, `SMTP_USERNAME`, `SMTP_PASSWORD` (an app password) and `EMAIL_FROM`. Nothing to build. | Staff invites and password resets on a live system |
 | _(new)_ **Voice calls** | **Built** with Africa's Talking (calls in English and Pidgin, read by text-to-speech). To go live: an Africa's Talking account and voice number, the env settings and callback URL in `docs/DEPLOYMENT.md`. If you'd rather use Zoho Voice, confirm its API can call Nigerian numbers and read out text, and it can be added as another provider. **Decide:** who pays for calls (included in the per-pupil fee, or charged to the school per call?); whether to add Yoruba, Hausa and Igbo, which need voices recorded by native speakers (text-to-speech in those languages isn't good enough yet). Listen to a test call in Pidgin before launch: it's read by an English voice. | Phone calls to parents |
-| _(new)_ **Platform bank account** | A business account for SchoolPay itself (not a school's). Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` so subscription invoices tell schools where to pay. | Schools paying their subscription |
+| _(new)_ **Platform bank account** | A business account for WardPay itself (not a school's). Set `PLATFORM_BANK_NAME`, `PLATFORM_ACCOUNT_NUMBER` and `PLATFORM_ACCOUNT_NAME` so subscription invoices tell schools where to pay. | Schools paying their subscription |
 | _(new)_ **Backups** | Off-site storage (any S3-compatible bucket or similar) and an [age](https://age-encryption.org) key pair. The private key and the `FIELD_ENCRYPTION_KEYS` are kept by you, off the server, apart from each other. See `docs/DEPLOYMENT.md` → Backups. | Recovering from a lost server |
 | _(new)_ **Error monitoring** (optional) | A Sentry project; set `SENTRY_DSN`. | Hearing about errors before schools do |
 | _(new)_ **Support email** | A mailbox schools and parents can write to; set `SUPPORT_EMAIL` (shown on the website and privacy notice). | Parents' data requests |
@@ -92,4 +100,4 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 
 ## Done
 
-- Pricing model chosen: ParentPay's (2026-10-18).
+- Pricing model chosen: ParentPay UK's (2026-10-18).

@@ -5,7 +5,7 @@ const b = await chromium.launch({ channel: 'msedge' });
 const page = await b.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
 await page.goto('http://localhost:5175/console/login');
-await page.getByLabel('Email').fill('wizard@demo.schoolpay.ng');
+await page.getByLabel('Email').fill('wizard@demo.wardpay.ng');
 await page.getByLabel('Password').fill('demo-password-123');
 await page.getByRole('button', { name: /sign in/i }).click();
 await page.waitForURL(/\/console\/?$/);

@@ -19,7 +19,7 @@ from pathlib import Path
 from sqlalchemy.engine import make_url
 
 TEST_SCHEMA = f"test_{uuid.uuid4().hex[:12]}"
-_raw_url = os.environ.get("TEST_DATABASE_URL", "postgresql+psycopg://schoolpay@localhost:5433/schoolpay_test")
+_raw_url = os.environ.get("TEST_DATABASE_URL", "postgresql+psycopg://wardpay@localhost:5433/wardpay_test")
 _parsed = make_url(_raw_url)
 if _parsed.host not in {"localhost", "127.0.0.1", "::1"} or not (_parsed.database or "").endswith("_test"):
     raise RuntimeError(
@@ -32,7 +32,7 @@ _SCHEMA_URL = _parsed.update_query_dict({"options": f"-csearch_path={TEST_SCHEMA
 
 os.environ.update(
     {
-        "SCHOOLPAY_ENV_FILE": str(Path(__file__).with_name(".env.does-not-exist")),
+        "WARDPAY_ENV_FILE": str(Path(__file__).with_name(".env.does-not-exist")),
         "ENVIRONMENT": "test",
         "DEBUG": "false",
         "SECRET_KEY": "test-signing-key-only-used-by-the-test-suite-0123456789",

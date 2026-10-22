@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { signIn } from './helpers';
 
 test('the platform admin bills the term and records a school paying', async ({ page }) => {
-  await signIn(page, 'platform@demo.schoolpay.ng', { mfa: true, landing: 'Platform overview' });
+  await signIn(page, 'platform@demo.wardpay.ng', { mfa: true, landing: 'Platform overview' });
   const nav = page.getByRole('navigation', { name: 'Main' });
 
   await nav.getByRole('link', { name: 'Billing', exact: true }).click();

@@ -20,7 +20,7 @@ settings = get_settings()
 configure_logging(settings.log_level)
 init_monitoring(settings, component="worker")
 
-celery_app = Celery("schoolpay", broker=settings.redis_url, backend=None, include=["app.workers.tasks"])
+celery_app = Celery("wardpay", broker=settings.redis_url, backend=None, include=["app.workers.tasks"])
 celery_app.conf.update(
     task_always_eager=settings.celery_task_always_eager,
     task_eager_propagates=True,

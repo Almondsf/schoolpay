@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# SchoolPay API image. Targets:
+# WardPay API image. Targets:
 #   runtime (default)  API / Celery worker / migrator, non-root, no dev tools
 #   test               runs the test suite against TEST_DATABASE_URL
 ARG PYTHON_IMAGE=python:3.12-slim
@@ -24,7 +24,7 @@ CMD ["python", "-m", "pytest", "-q"]
 FROM ${PYTHON_IMAGE} AS runtime
 WORKDIR /code
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH="/code/.venv/bin:$PATH"
-RUN groupadd --gid 10001 schoolpay && useradd --uid 10001 --gid schoolpay --no-create-home schoolpay
+RUN groupadd --gid 10001 wardpay && useradd --uid 10001 --gid wardpay --no-create-home wardpay
 COPY --from=build /code/.venv /code/.venv
 COPY --chown=10001:10001 app /code/app
 COPY --chown=10001:10001 alembic /code/alembic

@@ -581,7 +581,7 @@ def create_invoice(
     lines: list[DraftLine],
     due_date: date | None,
 ) -> Invoice:
-    """An opening balance (debt from before SchoolPay) or a one-off charge for one student."""
+    """An opening balance (debt from before WardPay) or a one-off charge for one student."""
     if kind == InvoiceKind.TERM:
         raise DomainError("Term invoices are generated for the whole term.", field="kind")
     if not lines or any(ln.kind != LineKind.FEE or not 0 < ln.amount_kobo <= MAX_AMOUNT_KOBO for ln in lines):

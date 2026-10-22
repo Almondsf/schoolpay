@@ -4,12 +4,12 @@
 #   open http://localhost:8080 (API health: http://localhost:8080/api/v1/health)
 x-backend: &backend
   build: ./backend
-  image: schoolpay-backend:local
+  image: wardpay-backend:local
   environment: &backend-env
     ENVIRONMENT: production
     SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
     FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:?set FIELD_ENCRYPTION_KEYS in .env}
-    DATABASE_URL: postgresql+psycopg://schoolpay_app:${APP_DB_PASSWORD}@db:5432/schoolpay
+    DATABASE_URL: postgresql+psycopg://wardpay_app:${APP_DB_PASSWORD}@db:5432/wardpay
     REDIS_URL: redis://redis:6379/0
     RATE_LIMIT_STORAGE_URL: redis://redis:6379/1
     FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
@@ -23,15 +23,15 @@ services:
   db:
     image: postgres:18-alpine
     environment:
-      POSTGRES_DB: schoolpay
-      POSTGRES_USER: schoolpay
+      POSTGRES_DB: wardpay
+      POSTGRES_USER: wardpay
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql
       - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U schoolpay -d schoolpay"]
+      test: ["CMD-SHELL", "pg_isready -U wardpay -d wardpay"]
       interval: 5s
       retries: 20
     restart: unless-stopped
@@ -50,7 +50,7 @@ services:
   migrate:
     <<: *backend
     environment:
-      MIGRATION_DATABASE_URL: postgresql+psycopg://schoolpay:${POSTGRES_PASSWORD}@db:5432/schoolpay
+      MIGRATION_DATABASE_URL: postgresql+psycopg://wardpay:${POSTGRES_PASSWORD}@db:5432/wardpay
     command: ["python", "-m", "app.core.migrate"]
     depends_on:
       db: {condition: service_healthy}
@@ -83,7 +83,7 @@ services:
 
   frontend:
     build: ./frontend
-    image: schoolpay-frontend:local
+    image: wardpay-frontend:local
     ports: ["127.0.0.1:8080:8080"]
     depends_on: [backend]
     restart: unless-stopped

@@ -9,7 +9,7 @@ in to the school.
 
 The answer is the same whether or not the email already has an account (an
 existing user gets a "you already have an account" email instead), so signup
-can't be used to find out who uses SchoolPay. Requests are rate limited per
+can't be used to find out who uses WardPay. Requests are rate limited per
 IP, and the form has a honeypot field bots fill in.
 
 Pending schools whose proprietor never confirms are deleted after

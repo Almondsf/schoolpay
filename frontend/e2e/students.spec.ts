@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { signIn, navigate } from './helpers';
 
-const signInAsAdmin = (page: Parameters<typeof signIn>[0]) => signIn(page, 'admin@demo.schoolpay.ng', { mfa: true });
+const signInAsAdmin = (page: Parameters<typeof signIn>[0]) => signIn(page, 'admin@demo.wardpay.ng', { mfa: true });
 
 test('school admin imports students from a spreadsheet', async ({ page }) => {
   await signInAsAdmin(page);
