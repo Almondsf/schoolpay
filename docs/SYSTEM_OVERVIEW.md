@@ -699,8 +699,15 @@ left, as the pupil's page works them out (`fee_breakdowns`: tuition first, fees 
 terms. For example ": Tuition ₦142,500, WAEC ₦100,000, School bus ₦45,000, 2 more ₦15,000".
 A reminder for a bill uses that bill's term; "Send reminder" on a pupil uses the current term;
 a reminder for an instalment plan leaves it out (it asks for the instalment, not the total).
-With the child's account number (`{pay_to}`) and the family link, a reminder is about 400
+With the child's account number (`{pay_to}`) and the family link, a reminder is about 420
 characters, three SMS pages.
+
+**Texts use the SMS alphabet** (`sms.to_gsm`, applied in `send_sms` to every text). One
+character outside the GSM 03.38 alphabet (₦, a phone keyboard's curly quote or long dash, an
+emoji) makes the whole text Unicode, billed at 70 characters a page instead of 160; a reminder
+went from seven pages to three. So texts write NGN for ₦ (owner, 2026-10-22), plain quotes and
+dashes, and drop anything else outside the alphabet. WhatsApp, email and the message log keep
+the ₦ sign. The wording preview shows the text version and its page count (`sms_pages`).
 
 **Wording** (`templates.py`): each school can replace the standard wording of
 each kind (`message_templates`) using a fixed set of `{placeholders}`. Unknown

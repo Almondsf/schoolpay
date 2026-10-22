@@ -19,6 +19,7 @@ from app.modules.students.models import Guardian, Language, Student
 
 from . import admin, service, templates
 from .models import Channel, MessageKind, MessageLog, MessageStatus
+from .sms import sms_pages, to_gsm
 
 router = APIRouter(tags=["messaging"], responses=ERROR_RESPONSES)
 parent_router = APIRouter(prefix="/parent", tags=["parent"], responses=ERROR_RESPONSES)
@@ -64,6 +65,8 @@ class PreviewIn(BaseModel):
 
 class PreviewOut(BaseModel):
     text: str
+    sms_text: str = Field(description="As a text message: ₦ becomes NGN, emoji dropped (the cheaper SMS alphabet)")
+    sms_pages: int = Field(description="SMS pages it's billed as, per parent")
 
 
 class ReminderSettingsIO(BaseModel):
@@ -168,7 +171,9 @@ def put_template(
 
 @router.post("/message-templates/preview", response_model=PreviewOut, summary="See wording with sample details")
 def preview(body: PreviewIn, ctx: StaffContext = MANAGE) -> PreviewOut:
-    return PreviewOut(text=admin.preview(body.body))
+    text = admin.preview(body.body)
+    sms_text = to_gsm(text)
+    return PreviewOut(text=text, sms_text=sms_text, sms_pages=sms_pages(sms_text))
 
 
 @router.get("/reminder-settings", response_model=ReminderSettingsIO, summary="When fee reminders go out")

@@ -177,7 +177,7 @@ function Wording() {
 function TemplateEditor({ template, placeholders }: { template: Template; placeholders: Record<string, string> }) {
   const queryClient = useQueryClient();
   const [body, setBody] = useState(template.body);
-  const [preview, setPreview] = useState('');
+  const [preview, setPreview] = useState<{ text: string; pages: number } | null>(null);
   useEffect(() => setBody(template.body), [template.body]);
 
   const showPreview = useMutation({
@@ -187,7 +187,7 @@ function TemplateEditor({ template, placeholders }: { template: Template; placeh
           body: { body: text },
         }),
       ),
-    onSuccess: (data) => setPreview(data.text),
+    onSuccess: (data) => setPreview({ text: data.text, pages: data.sms_pages }),
   });
   const save = useMutation({
     mutationFn: async (text: string | null) =>
@@ -232,7 +232,10 @@ function TemplateEditor({ template, placeholders }: { template: Template; placeh
       </details>
       {preview && (
         <div className="alert info" role="status" aria-label="Preview">
-          {preview}
+          <div>{preview.text}</div>
+          <div className="small muted">
+            By SMS (₦ shown as NGN): {preview.pages} {preview.pages === 1 ? 'page' : 'pages'} per parent, each billed separately.
+          </div>
         </div>
       )}
       <ErrorAlert error={[save.error, showPreview.error].find((e) => e && !fieldError(e, 'body')) ?? null} />

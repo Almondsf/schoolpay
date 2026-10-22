@@ -46,6 +46,7 @@ What each kind of user needs from SchoolPay. Stories are marked ✅ when built.
 - ✅ Send polite reminders without phoning every parent: reminders go automatically before and after the due date on a schedule I set, stop as soon as the bill is paid, and never exceed a cap per bill.
 - ✅ Tell every parent about their new bill when I generate the term's invoices.
 - ✅ Send one parent a reminder right now from the student's page.
+- ✅ See how many SMS pages my wording costs per parent before saving it (texts write NGN for ₦, which keeps them in the cheaper SMS alphabet).
 - ✅ Reminders and new-bill messages say what the money is for ("Tuition ₦142,500, WAEC ₦100,000, …"), with the child's account number and the parent's payment link.
 - ✅ Write the messages in our own words, with a preview, or keep the standard wording.
 - ✅ See every message sent to parents: when, how (WhatsApp, text or email), or why it wasn't sent.

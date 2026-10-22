@@ -5660,13 +5660,25 @@
       },
       "PreviewOut": {
         "properties": {
+          "sms_pages": {
+            "description": "SMS pages it's billed as, per parent",
+            "title": "Sms Pages",
+            "type": "integer"
+          },
+          "sms_text": {
+            "description": "As a text message: \u20a6 becomes NGN, emoji dropped (the cheaper SMS alphabet)",
+            "title": "Sms Text",
+            "type": "string"
+          },
           "text": {
             "title": "Text",
             "type": "string"
           }
         },
         "required": [
-          "text"
+          "text",
+          "sms_text",
+          "sms_pages"
         ],
         "title": "PreviewOut",
         "type": "object"

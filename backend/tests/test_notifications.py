@@ -175,7 +175,7 @@ async def test_falls_back_to_sms_then_email(client, world, db, monkeypatch):
     await pay_cash(client, world, 1_000)
     [logged] = await messages(client, world)
     assert logged["channel"] == "sms" and logged["error"] == ""
-    assert sms.sent_sms[-1].to == PHONE and "received ₦1,000.00" in sms.sent_sms[-1].text
+    assert sms.sent_sms[-1].to == PHONE and "received NGN 1,000.00" in sms.sent_sms[-1].text
 
     def no_sms(_message):
         raise sms.SmsError("provider down")
@@ -505,3 +505,27 @@ def test_fee_list_wording():
          "student_name": "Chuka Okafor", "due_phrase": " (due 30 Oct 2026)", "fees": fees_phrase(two)},
     )  # fmt: skip
     assert "₦135,000.00 is outstanding for Chuka Okafor (due 30 Oct 2026): Tuition ₦130,000, PTA levy ₦5,000" in body
+
+
+def test_text_messages_use_the_cheaper_sms_alphabet():
+    """₦ or a phone's curly quote would make the whole text Unicode: 70 characters a page instead of 160."""
+    from app.modules.notifications.sms import Sms, send_sms, sms_pages, to_gsm
+
+    assert to_gsm("₦302,500.00 is owed – “thanks” 🙏 Kayode’s fees…") == (  # noqa: RUF001 (look-alikes on purpose)
+        'NGN 302,500.00 is owed - "thanks" Kayode\'s fees...'
+    )
+    assert to_gsm("Café @ £5 é") == "Café @ £5 é"  # already in the SMS alphabet
+    assert (sms_pages("x" * 160), sms_pages("x" * 161), sms_pages("x" * 306), sms_pages("x" * 307)) == (1, 2, 2, 3)
+    assert sms_pages("€" * 80) == 1 and sms_pages("€" * 81) == 2  # € takes two characters' room
+    sms.sent_sms.clear()
+    send_sms(Sms(to="+2348030000001", text="Balance: ₦5,000.00"))
+    assert sms.sent_sms[-1].text == "Balance: NGN 5,000.00"
+
+
+async def test_wording_preview_counts_sms_pages(client, world):
+    body = "Dear {parent_name}, {balance} is outstanding for {student_name}{fees}. {pay_to} Pay online: {pay_link}"
+    preview = await client.post("/api/v1/message-templates/preview", headers=world["bursar"], json={"body": body})
+    assert preview.status_code == 200, preview.text
+    out = preview.json()
+    assert "₦" in out["text"] and "₦" not in out["sms_text"] and "NGN 55,000.00" in out["sms_text"]
+    assert out["sms_pages"] == 2

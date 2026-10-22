@@ -4864,6 +4864,16 @@ export interface components {
         };
         /** PreviewOut */
         PreviewOut: {
+            /**
+             * Sms Pages
+             * @description SMS pages it's billed as, per parent
+             */
+            sms_pages: number;
+            /**
+             * Sms Text
+             * @description As a text message: ₦ becomes NGN, emoji dropped (the cheaper SMS alphabet)
+             */
+            sms_text: string;
             /** Text */
             text: string;
         };

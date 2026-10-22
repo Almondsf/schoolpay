@@ -99,7 +99,7 @@ describe('messages page', () => {
               },
               400,
             )
-          : json({ text: body.replace('{balance}', '₦55,000.00') });
+          : json({ text: body.replace('{balance}', '₦55,000.00'), sms_text: body.replace('{balance}', 'NGN 55,000.00'), sms_pages: 1 });
       },
       'PUT /api/v1/message-templates/reminder': async (request) => {
         saved = await request.json();
@@ -124,6 +124,7 @@ describe('messages page', () => {
     await userEvent.type(box, 'Please pay {{balance}');
     await userEvent.click(within(form).getByRole('button', { name: 'Preview' }));
     expect(await within(form).findByText('Please pay ₦55,000.00')).toBeInTheDocument();
+    expect(within(form).getByText(/1 page per parent/)).toBeInTheDocument();
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
     await vi.waitFor(() => expect(saved).toEqual({ body: 'Please pay {balance}' }));
   });
