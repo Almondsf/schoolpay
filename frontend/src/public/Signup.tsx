@@ -52,8 +52,8 @@ export function Signup() {
       >
         <h1>Sign your school up</h1>
         <p className="muted">
-          Fee invoicing, automatic matching of bank transfers, receipts and reminders. Free for parents. The school pays a set-up fee, a
-          yearly licence and a small fee per pupil each term.
+          Fee invoicing, automatic matching of bank transfers, receipts and reminders. Free for parents. The school pays a set-up fee and a
+          small fee per pupil each term.
         </p>
         <ErrorAlert error={submit.error && !['email', 'phone', 'school_name'].some((f) => fieldError(submit.error, f)) ? submit.error : null} />
         <Field label="School name" error={fieldError(submit.error, 'school_name')}>

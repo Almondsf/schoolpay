@@ -2,12 +2,11 @@ import { expect, test } from '@playwright/test';
 
 const PHONE = '08035000000';
 
-test('the website shows the real prices and the privacy notice', async ({ page }) => {
+test('the website explains pricing and links to the privacy notice', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /School fees, collected and reconciled/ })).toBeVisible();
-  const pricing = page.getByRole('region', { name: 'Pricing' });
-  await expect(pricing.getByText(/per pupil, per term/)).toBeVisible();
-  await expect(pricing.getByText(/₦[\d,]+\.\d\d/).first()).toBeVisible();
+  const pricing = page.getByRole('region', { name: 'Pricing for schools' });
+  await expect(pricing.getByText('Pupil fee')).toBeVisible();
   await page.getByRole('link', { name: 'Read our privacy notice' }).click();
   await expect(page.getByRole('heading', { name: 'Privacy notice' })).toBeVisible();
   await expect(page.getByText(/data processor/)).toBeVisible();

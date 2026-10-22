@@ -22,7 +22,7 @@ const SUMMARY = [
   'Parents see all their children in one place on their phone, pay by transfer or card, get a receipt on WhatsApp or by text, ' +
     'and are reminded politely before and after fees are due. Proprietors see billed, collected and owed at a glance.',
   `The school’s money goes straight into the school’s own bank account; ${BRAND} never holds it. ` +
-    `Parents use ${BRAND} free; the school pays a set-up fee, a yearly licence and a small fee per pupil each term.`,
+    `Parents use ${BRAND} free; the school pays a set-up fee and a small fee per pupil each term.`,
 ];
 
 const AREAS = [
@@ -171,7 +171,6 @@ const AREAS = [
 
 const PRICING = [
   ['Set-up fee', 'Once, when the school joins'],
-  ['Licence', 'Once per school year'],
   ['Per pupil', 'A third of the yearly fee each term, for the pupils enrolled that term'],
   ['Parents', 'Free. Card and bank charges come off each payment.'],
 ];

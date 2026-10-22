@@ -54,11 +54,15 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
       urgent announcements reach parents who turned off reminders. Talk to a few schools first. Ask
       Termii for their current rate card (generic and DND routes).
 
-- [ ] _(new)_ **Set the actual prices.** The model is decided (ParentPay UK's:
-      set-up fee + annual licence + per pupil per year, billed termly, free
-      for parents; PLAN.md §3.4). The built-in "Standard" plan has
-      placeholder amounts; change them in the platform console (Plans)
-      before selling.
+- [ ] _(new)_ **Set the actual prices.** The model (2026-10-22): a **set-up fee** and a
+      **pupil fee each term**, no yearly licence, free for parents. In the platform console
+      (Plans), set the "Standard" plan's **licence to ₦0** (live site too: it's ₦100,000 there
+      now; with ₦0 no licence line is billed) and put in your real set-up and per-pupil
+      amounts. The website no longer shows figures, only what the two fees are.
+- [ ] _(new)_ **Home page photos** (2026-10-22): four free stock photos (Ben White on
+      Unsplash; Mickael Ange Konan, Roman Odintsov and Emmanuel Abiodun on Pexels), credited
+      in the footer. The three iStock previews you found are paid: buy them before using them.
+      Best of all later: photos from a pilot school, with the parents' written consent.
 - [ ] _(new)_ **Product renamed to WardPay** (2026-10-22). Still to do:
       - check nobody else trades as WardPay (a quick search and the Nigerian trademark register),
         and get the domain (e.g. wardpay.ng / wardpay.com.ng);

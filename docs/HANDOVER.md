@@ -87,6 +87,10 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 
 - 2026-10-18 Pricing model: set-up fee + yearly licence + per pupil per term, free for parents (prices in
   the platform plan are defaults: ₦50,000 / ₦100,000 / ₦500).
+- 2026-10-22 Pricing: a set-up fee and a pupil fee each term; **no yearly licence** (set the plan's
+  licence to ₦0; billing then adds no licence line). The website explains the fees without figures.
+- 2026-10-22 Home page redesigned (ideas from schoolpaynigeria.com and parentpaygroup.com): photos of
+  Black pupils, product mock-ups, short copy, "Built for Nigerian schools" (not "private").
 - 2026-10-19 Product name "ParentPay" for now (trademark to be checked: it's a UK company's brand).
 - 2026-10-22 Product renamed **WardPay** everywhere: the app, the docs, the code (`wardpay`) and the GitHub
   repository. Two fixed hashing labels in the code still say `schoolpay` (`core/crypto.py` blind index,

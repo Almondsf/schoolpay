@@ -1138,9 +1138,13 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   the term with a preview, record a transfer, void, PDF), Plans (prices, with
   the termly per-pupil amount worked out), and Support lookup.
 - **Public website** (`src/public/Landing.tsx` at `/`, `PrivacyNotice.tsx` at
-  `/privacy`): what WardPay does, how it works, the default plan's prices
-  (from `GET /public/info`, so they always match), and the plain-language
-  privacy notice. The parent portal has "Download my data"; a student's
+  `/privacy`): a short home page (hero photo with example payment cards, plain facts,
+  proprietors / bursars / parents, how it works, features, a parents band with an
+  example phone, a class photo banner, pricing for schools without figures, FAQ,
+  sign-up band) and the plain-language privacy notice. The name and whether
+  sign-up is open come from `GET /public/info`. Photos are self-hosted WebP files
+  in `src/assets/photos/` (the CSP allows only our own images), credited in the
+  footer; the people, numbers and school in the examples are made up. The parent portal has "Download my data"; a student's
   page has "Export data" and "Erase" for parents, and "Erase personal
   details" for a former pupil.
 - **Sign-up** (`src/public/Signup.tsx`, `/signup`, linked from the sign-in
