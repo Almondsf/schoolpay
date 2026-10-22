@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatKobo, koboToInput, parseNairaToKobo } from './format';
+import { formatKobo, koboToInput, lagosToday, parseNairaToKobo } from './format';
 
 describe('money', () => {
   it.each([
@@ -23,5 +23,12 @@ describe('money', () => {
 
   it('formats kobo as naira', () => {
     expect(formatKobo(15_000_050).replace(/\s/g, '')).toBe('₦150,000.50');
+  });
+});
+
+describe('today in Lagos', () => {
+  it('is already tomorrow in Lagos at 11:30pm UTC, whatever the device clock zone', () => {
+    expect(lagosToday(new Date('2026-10-22T23:30:00Z'))).toBe('2026-10-23');
+    expect(lagosToday(new Date('2026-10-22T22:59:00Z'))).toBe('2026-10-22');
   });
 });

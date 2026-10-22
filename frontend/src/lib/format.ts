@@ -7,6 +7,13 @@ export function humanize(value: string): string {
 const dateTime = new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' });
 const date = new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeZone: 'Africa/Lagos' });
 
+const isoDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }); // en-CA writes YYYY-MM-DD
+
+/** Today in Lagos as YYYY-MM-DD: the date the server checks against, whatever the device's clock zone. */
+export function lagosToday(now: Date = new Date()): string {
+  return isoDay.format(now);
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   return iso ? dateTime.format(new Date(iso)) : '—';
 }

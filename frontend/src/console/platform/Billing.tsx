@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { saveBlob } from '../../lib/download';
-import { formatDate, formatKobo, parseNairaToKobo } from '../../lib/format';
+import { formatDate, formatKobo, lagosToday, parseNairaToKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Pager, fieldError } from '../../lib/ui';
 
 type Invoice = Schemas['SubscriptionInvoiceOut'];
@@ -219,7 +219,7 @@ function Generate({ onClose }: { onClose: () => void }) {
 function RecordPayment({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
   const refresh = useRefreshBilling();
   const [amount, setAmount] = useState(String(invoice.balance_kobo / 100));
-  const [receivedOn, setReceivedOn] = useState(new Date().toISOString().slice(0, 10));
+  const [receivedOn, setReceivedOn] = useState(lagosToday());
   const [reference, setReference] = useState('');
   const kobo = parseNairaToKobo(amount);
   const save = useMutation({

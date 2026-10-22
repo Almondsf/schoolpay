@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { errorMessage, filenameFrom, saveBlob } from '../../lib/download';
-import { formatDate, formatKobo, parseNairaToKobo } from '../../lib/format';
+import { formatDate, formatKobo, lagosToday, parseNairaToKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Loading, PageHeader, Pager } from '../../lib/ui';
 import { METHOD_LABELS } from '../Dashboard';
 import { useClassLevels, useSessions } from '../hooks';
@@ -12,10 +12,6 @@ import { useClassLevels, useSessions } from '../hooks';
 type Sort = Schemas['DebtorSort'];
 type Format = 'xlsx' | 'pdf';
 const PAGE = 50;
-
-function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export function Reports() {
   const [tab, setTab] = useState<'debtors' | 'collections' | 'fees'>('debtors');
@@ -219,9 +215,9 @@ function Debtors() {
 }
 
 function Collections() {
-  const today = new Date();
-  const [start, setStart] = useState(isoDate(new Date(today.getFullYear(), today.getMonth(), 1)));
-  const [end, setEnd] = useState(isoDate(today));
+  const today = lagosToday();
+  const [start, setStart] = useState(`${today.slice(0, 8)}01`);
+  const [end, setEnd] = useState(today);
   const period = { start, end };
   const collections = useQuery({
     queryKey: ['collections', period],

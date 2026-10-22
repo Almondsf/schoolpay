@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { INVOICE_KIND_LABELS, formatDate, formatDateTime, formatKobo, parseNairaToKobo } from '../../lib/format';
+import { INVOICE_KIND_LABELS, formatDate, formatDateTime, formatKobo, lagosToday, parseNairaToKobo } from '../../lib/format';
 import { PlanSchedule, splitEvenly, stepDates } from '../../lib/PlanSchedule';
 import { BackLink, ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, fieldError } from '../../lib/ui';
 
@@ -235,10 +235,7 @@ function VoidInvoice({ invoice, onClose }: { invoice: Invoice; onClose: () => vo
   );
 }
 
-function isoToday(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+const isoToday = lagosToday; // the server rejects a first instalment before today in Lagos
 
 /** Split what's owed into instalments: start from an even split on regular dates, then adjust any row. */
 function NewPlan({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {

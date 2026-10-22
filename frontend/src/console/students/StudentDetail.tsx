@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { formatDate, formatKobo, humanize } from '../../lib/format';
+import { formatDate, formatKobo, humanize, lagosToday } from '../../lib/format';
 import { ErrorAlert, Field, Loading, Menu, Modal, Notice, StatusBadge, Tabs, fieldError } from '../../lib/ui';
 import { StudentAccount } from '../billing/StudentAccount';
 import { StudentPayIn } from '../payments/StudentPayIn';
@@ -404,7 +404,7 @@ function ChangeClass({ student, onClose, onDone }: DialogProps) {
 }
 
 function Withdraw({ student, onClose, onDone }: DialogProps) {
-  const [leftOn, setLeftOn] = useState(new Date().toISOString().slice(0, 10));
+  const [leftOn, setLeftOn] = useState(lagosToday());
   const [reason, setReason] = useState('');
   const save = useMutation({
     mutationFn: async () =>

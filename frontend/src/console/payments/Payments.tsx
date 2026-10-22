@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { formatDate, formatDateTime, formatKobo, humanize, koboToInput, parseNairaToKobo } from '../../lib/format';
+import { formatDate, formatDateTime, formatKobo, humanize, koboToInput, lagosToday, parseNairaToKobo } from '../../lib/format';
 import { METHOD_LABELS } from '../Dashboard';
 import { Empty, ErrorAlert, Field, Loading, Menu, Modal, Notice, PageHeader, Pager, Tabs } from '../../lib/ui';
 import { ReceiptLink } from './ReceiptLink';
@@ -243,7 +243,7 @@ function RecordManual({ onClose, onDone }: { onClose: () => void; onDone: () => 
   const [form, setForm] = useState({
     amount: '',
     method: 'cash' as (typeof MANUAL_METHODS)[number],
-    received_on: new Date().toISOString().slice(0, 10),
+    received_on: lagosToday(),
     reference: '',
     note: '',
   });
