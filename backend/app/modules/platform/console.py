@@ -206,6 +206,7 @@ def _rows(session: Session, page: list[School]) -> list[SchoolRow]:
 
 @dataclass(frozen=True)
 class StaffRow:
+    id: uuid.UUID
     full_name: str
     email: str
     role: Role
@@ -233,7 +234,9 @@ def school_detail(session: Session, school_id: uuid.UUID) -> SchoolDetail:
         raise NotFound("School not found.")
     [row] = _rows(session, [school])
     staff = [
-        StaffRow(u.full_name, u.email, u.role, u.is_active, u.mfa_enabled, u.password_hash is None, u.last_login_at)
+        StaffRow(
+            u.id, u.full_name, u.email, u.role, u.is_active, u.mfa_enabled, u.password_hash is None, u.last_login_at
+        )
         for u in session.scalars(select(User).where(User.school_id == school_id).order_by(User.role, User.full_name))
     ]
     since = datetime.now(UTC) - timedelta(days=30)

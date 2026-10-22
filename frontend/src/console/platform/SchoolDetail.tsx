@@ -4,10 +4,58 @@ import { useParams } from 'react-router-dom';
 
 import { api, unwrap } from '../../api/client';
 import { ROLE_LABELS, formatDate, formatDateTime, formatKobo } from '../../lib/format';
-import { BackLink, ErrorAlert, Loading, PageHeader, StatusBadge } from '../../lib/ui';
+import { BackLink, ErrorAlert, Loading, Notice, PageHeader, StatusBadge } from '../../lib/ui';
 import { InvoiceTable } from './Billing';
 import { Card } from './Overview';
 import { ChangeStatus } from './Schools';
+
+type Staff = { id: string; full_name: string; is_active: boolean; mfa_enabled: boolean };
+
+/** For a locked-out staff member: their password link again, or a two-factor reset after a lost phone. */
+function StaffHelp({ schoolId, staff }: { schoolId: string; staff: Staff }) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const path = { params: { path: { school_id: schoolId, user_id: staff.id } } };
+  const link = useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/platform/schools/{school_id}/staff/{user_id}/password-link', path)),
+  });
+  const reset = useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/platform/schools/{school_id}/staff/{user_id}/reset-mfa', path)),
+    onSuccess: () => {
+      setConfirming(false);
+      void queryClient.invalidateQueries({ queryKey: ['platform-school', schoolId] });
+    },
+  });
+  if (!staff.is_active) return null;
+  return (
+    <div className="row wrap small">
+      <button className="small secondary" onClick={() => link.mutate()} disabled={link.isPending}>
+        Send password link
+      </button>
+      {staff.mfa_enabled &&
+        (confirming ? (
+          <>
+            <span>Turn off {staff.full_name}'s two-factor sign-in and sign them out?</span>
+            <button className="small danger" onClick={() => reset.mutate()} disabled={reset.isPending}>
+              Yes, reset
+            </button>
+            <button className="small secondary" onClick={() => setConfirming(false)}>
+              No
+            </button>
+          </>
+        ) : (
+          <button className="small secondary" onClick={() => setConfirming(true)}>
+            Reset two-factor
+          </button>
+        ))}
+      {link.isSuccess && (
+        <Notice>{link.data.sent === 'invite' ? 'Invite sent again to their email.' : 'Password-reset link sent to their email.'}</Notice>
+      )}
+      {reset.isSuccess && <Notice>Two-factor sign-in turned off. They'll set it up again when they next sign in.</Notice>}
+      <ErrorAlert error={link.error ?? reset.error} />
+    </div>
+  );
+}
 
 /** One school, as support sees it: figures, staff, plan and subscription. No pupils' or parents' details. */
 export function PlatformSchoolDetail() {
@@ -122,6 +170,7 @@ export function PlatformSchoolDetail() {
                   {u.mfa_enabled ? 'on' : 'off'}
                 </div>
                 <div className="muted small">Last sign-in: {u.last_login_at ? formatDateTime(u.last_login_at) : 'never'}</div>
+                <StaffHelp schoolId={schoolId} staff={u} />
               </li>
             ))}
           </ul>

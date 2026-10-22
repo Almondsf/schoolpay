@@ -163,6 +163,8 @@ const AREAS = [
         'Run the business from one screen'],
       ['Bill every school for the term in one click; schools pay by card from the console, or by transfer that you record; PDF invoices emailed to proprietors',
         'Subscription income is collected without spreadsheets'],
+      ['Help a locked-out school: send a staff member their password link again or reset their two-factor sign-in',
+        'A proprietor who lost their phone is back in within minutes'],
       ['Problems to fix: payments set aside, card payments in review, stuck tasks and failed messages across every school, with retry',
         'Nothing gets lost quietly; problems are found before a school calls'],
       ['Support lookup by school, staff email, payment reference, account number or receipt (children shown as initials only)',
@@ -184,6 +186,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['22 Oct 2026', 'WardPay team can resend password links and reset two-factor sign-in for a school’s staff'],
   ['22 Oct 2026', 'Problems to fix: one page for the WardPay team showing everything stuck across schools'],
   ['22 Oct 2026', 'Texts can go through Termii or Africa’s Talking, switched at any time from the platform console'],
   ['22 Oct 2026', 'Schools pay their WardPay bill by card from the console; the money goes to the platform’s own account'],

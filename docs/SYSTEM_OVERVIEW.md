@@ -875,7 +875,10 @@ and overdue. The schools list shows each school's plan, pupils, proprietor,
 whether payments are set up, what it owes, and its last sign-in (filter by
 status). A school's page adds its staff (invited, two-factor, last sign-in),
 this term's bills and collections, the plan picker, its subscription bills,
-and suspend/reactivate.
+and suspend/reactivate. For a locked-out staff member (`staff_support.py`):
+**Send password link** (`POST /platform/schools/{id}/staff/{user_id}/password-link`:
+the invite again, or a reset link if they have a password) and **Reset two-factor**
+(`.../reset-mfa`: off, signed out everywhere, enrol again at next sign-in).
 
 **Problems to fix (`problems.py`, `GET /platform/problems`).** Everything stuck
 across schools, newest first, in a fixed number of queries:

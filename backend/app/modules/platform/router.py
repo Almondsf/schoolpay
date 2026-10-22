@@ -25,7 +25,7 @@ from app.modules.payments.models import IntentStatus
 from app.modules.schools.models import School, SchoolOrigin, SchoolStatus
 from app.modules.schools.schemas import SchoolOut
 
-from . import billing, card_payments, console, onboarding, pdf, plans, problems, signup
+from . import billing, card_payments, console, onboarding, pdf, plans, problems, signup, staff_support
 from .models import SubscriptionCheckout, SubscriptionLineKind
 
 router = APIRouter(prefix="/platform", tags=["platform"], responses=ERROR_RESPONSES)
@@ -71,6 +71,7 @@ class PlatformSchoolOut(SchoolOut):
 class SchoolStaffOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    id: uuid.UUID
     full_name: str
     email: str
     role: Role
@@ -821,3 +822,33 @@ def resolve_checkout(
 )
 def retry_task(task_id: uuid.UUID, admin: Principal = ADMIN, db: Session = Depends(get_db)) -> None:
     problems.retry_task(db, admin, task_id)
+
+
+# --- Helping a school's staff ------------------------------------------------------------------------
+
+
+class LinkSentOut(BaseModel):
+    sent: Literal["invite", "reset"]
+
+
+@router.post(
+    "/schools/{school_id}/staff/{user_id}/password-link",
+    response_model=LinkSentOut,
+    summary="Email a staff member their invite again, or a password-reset link",
+)
+def send_staff_password_link(
+    school_id: uuid.UUID, user_id: uuid.UUID, admin: Principal = ADMIN, db: Session = Depends(get_db)
+) -> LinkSentOut:
+    get_limiter().hit("platform-staff-link:user", "30/hour", str(admin.user.id))
+    return LinkSentOut(sent=staff_support.send_link(db, admin, school_id, user_id))
+
+
+@router.post(
+    "/schools/{school_id}/staff/{user_id}/reset-mfa",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Turn off a staff member's two-factor sign-in (lost phone); they enrol again at next sign-in",
+)
+def reset_staff_mfa(
+    school_id: uuid.UUID, user_id: uuid.UUID, admin: Principal = ADMIN, db: Session = Depends(get_db)
+) -> None:
+    staff_support.reset_two_factor(db, admin, school_id, user_id)
