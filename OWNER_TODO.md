@@ -48,13 +48,14 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 - [ ] _(new)_ **Product renamed to WardPay** (2026-10-22). Still to do:
       - check nobody else trades as WardPay (a quick search and the Nigerian trademark register),
         and get the domain (e.g. wardpay.ng / wardpay.com.ng);
-      - on **Render**, set `APP_NAME=WardPay` and `MFA_ISSUER=WardPay` if they're set there, and
-        `EMAIL_FROM` / `TERMII_SENDER_ID` when those are set up; then Manual Deploy;
-      - on **Netlify**, set `VITE_APP_NAME=WardPay` if it's set, and if you like rename the site to
-        `wardpay` (Site configuration → Change site name) so the address becomes
-        wardpay.netlify.app. Then set Render's `FRONTEND_URL` and `CORS_ORIGINS` to the new
-        address (and tell Claude, so the docs follow). Receipts printed before the change carry a
-        QR code to the old address;
+      - _(new)_ on **Render**, set `APP_NAME=WardPay` (the website header and the names in emails,
+        texts and receipts come from it) and `MFA_ISSUER=WardPay`; set `FRONTEND_URL` to
+        `https://wardpay.netlify.app` and `CORS_ORIGINS` to the same address (links in emails and
+        texts are built from it); `EMAIL_FROM` / `TERMII_SENDER_ID` when those are set up; then
+        Manual Deploy;
+      - on **Netlify**, set `VITE_APP_NAME=WardPay` if it's set there. The site is renamed to
+        wardpay.netlify.app (done 22 Oct); receipts printed before that carry a QR code to the
+        old address, which no longer works;
       - the Render service keeps its address (schoolpay-a97t.onrender.com) unless you make a new
         service; nobody sees it, Netlify forwards to it.
 
@@ -72,7 +73,7 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 | _(new)_ **Backups** | Off-site storage (any S3-compatible bucket or similar) and an [age](https://age-encryption.org) key pair. The private key and the `FIELD_ENCRYPTION_KEYS` are kept by you, off the server, apart from each other. See `docs/DEPLOYMENT.md` → Backups. | Recovering from a lost server |
 | _(new)_ **Error monitoring** (optional) | A Sentry project; set `SENTRY_DSN`. | Hearing about errors before schools do |
 | _(new)_ **Support email** | A mailbox schools and parents can write to; set `SUPPORT_EMAIL` (shown on the website and privacy notice). | Parents' data requests |
-| **Hosting and domain** | _(new)_ Hosting chosen: the API, worker, database and Redis on **Render**, the web app on **Netlify** (https://parentpay.netlify.app); setup in `docs/DEPLOYMENT.md`. Still to do: buy a domain and add it on Netlify, then update `FRONTEND_URL` and `CORS_ORIGINS` on Render. | Going live |
+| **Hosting and domain** | _(new)_ Hosting chosen: the API, worker, database and Redis on **Render**, the web app on **Netlify** (https://wardpay.netlify.app, renamed from parentpay.netlify.app on 22 Oct); setup in `docs/DEPLOYMENT.md`. Still to do: buy a domain and add it on Netlify, then update `FRONTEND_URL` and `CORS_ORIGINS` on Render. | Going live |
 
 ## Validate with schools (PLAN.md §7)
 
