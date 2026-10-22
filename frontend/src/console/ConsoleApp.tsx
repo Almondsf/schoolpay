@@ -38,6 +38,7 @@ import { Messages } from './messages/Messages';
 import { Reports } from './reports/Reports';
 import { Dashboard } from './Dashboard';
 import { FeeSetup } from './fees/FeeSetup';
+import { GetStarted } from './GetStarted';
 import { Payments } from './payments/Payments';
 import { PaymentSettings } from './payments/PaymentSettings';
 import { PlatformBilling } from './platform/Billing';
@@ -110,6 +111,7 @@ export function ConsoleApp() {
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="account" element={<Account />} />
+          <Route path="get-started" element={<Guard capability="school.manage"><GetStarted /></Guard>} />
           <Route path="students" element={<Guard capability="students.view"><Students /></Guard>} />
           <Route path="students/import" element={<Guard capability="students.manage"><ImportStudents /></Guard>} />
           <Route path="students/:studentId" element={<Guard capability="students.view"><StudentDetail /></Guard>} />

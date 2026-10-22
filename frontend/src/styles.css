@@ -2192,3 +2192,90 @@ td a:hover {
   font-size: 0.9rem;
   text-decoration: none;
 }
+
+/* --- Set-up wizard ------------------------------------------------------------------------------ */
+
+.stepper {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.stepper li {
+  flex: 1;
+  min-width: 112px;
+}
+
+.stepper .step {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: none;
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+
+.stepper .step:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+
+.stepper .step.current {
+  border-color: var(--primary);
+  color: var(--ink);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+
+.step-dot {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-2);
+}
+
+.step.done .step-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.step.current .step-dot {
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.step.done.current .step-dot {
+  color: #fff;
+}
+
+.wizard-card {
+  max-width: 920px;
+}
+
+.wizard-nav {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+table.quick-fees td {
+  min-width: 140px;
+}
+
+table.quick-fees td:first-child {
+  min-width: 190px;
+}

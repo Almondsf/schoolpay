@@ -1122,7 +1122,7 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   shown (`staleTime: 0`), so the figures are never 30 seconds stale.
   Set-up pages (fees, classes, calendar, staff, school profile, payment
   settings, subscription, activity log) are listed under **Setup** in the
-  sidebar. New schools see a **Getting started** checklist on the dashboard.
+  sidebar. New schools see a **Getting started** checklist on the dashboard, with **Set up step by step**: a wizard at `/console/get-started` (`GetStarted.tsx`) through six steps (details, school year filled in, classes ticked, this term's fees typed once per section and set for every class in it, pupils, bills). It opens on the first step the checklist says isn't done, every step can be skipped, and it reuses the Calendar's `SessionForm`, `ClassSetup` and Billing's `Generate`. Fees go through the usual `PUT /terms/{id}/fee-schedule`; a class not on the usual list counts as section "Other".
   **Subscription** shows the school's plan, a term's cost at its pupil
   numbers, where to pay, and its bills (PDF).
 - **Platform console** (`src/console/platform/`, platform admins): Overview,

@@ -109,7 +109,7 @@ function NewSession({ onClose, hasCurrent }: { onClose: () => void; hasCurrent: 
 }
 
 /** A session and its three terms, filled in with the usual dates for the next school year (from the server). */
-function SessionForm({ hasCurrent, onDone, onCancel }: { hasCurrent: boolean; onDone?: () => void; onCancel?: () => void }) {
+export function SessionForm({ hasCurrent, onDone, onCancel }: { hasCurrent: boolean; onDone?: () => void; onCancel?: () => void }) {
   const suggested = useQuery({
     queryKey: ['academic-sessions', 'suggested'],
     queryFn: async () => unwrap(await api.GET('/api/v1/academic-sessions/suggested')),

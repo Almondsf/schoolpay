@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import { api, unwrap } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 /** A new school's getting-started steps, worked out from its data. Hidden once every step is done. */
 export function GettingStarted() {
+  const { can } = useAuth();
   const steps = useQuery({
     queryKey: ['onboarding'],
     queryFn: async () => unwrap(await api.GET('/api/v1/school/onboarding')),
@@ -20,6 +22,14 @@ export function GettingStarted() {
           {done} of {steps.data.length} done
         </span>
       </div>
+      {can('school.manage') && (
+        <p>
+          <Link to="/console/get-started" className="button">
+            Set up step by step
+          </Link>{' '}
+          <span className="muted small">Details, school year, classes, fees, pupils and bills, one at a time.</span>
+        </p>
+      )}
       <ol className="checklist">
         {steps.data.map((s) => (
           <li key={s.key} className={s.done ? 'done' : ''}>

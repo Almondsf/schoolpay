@@ -169,7 +169,7 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
   );
 }
 
-function Generate({ termId, onClose }: { termId: string; onClose: () => void }) {
+export function Generate({ termId, onClose }: { termId: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [dueDate, setDueDate] = useState('');
   const [notify, setNotify] = useState(true);
