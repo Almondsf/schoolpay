@@ -108,8 +108,8 @@ const AREAS = [
     rows: [
       ['Sign in with the phone number the school has on record and a one-time code; no password',
         'Nothing to forget, and nothing to reset'],
-      ['All their children at the school on one screen: what’s owed, credit, and each child’s account number',
-        'One place for every child, with a copy button for the account number'],
+      ['One simple page with everything needed to pay: the total at the top, then each child with what’s owed, a Pay online button, their own account number (with a copy button) and the term’s fees; “Pay for all your children” at the bottom. Bills, receipts and settings are a tap away',
+        'Built for parents who aren’t confident on smartphones: nothing to search for, no tapping around to pay'],
       ['Pay by bank transfer to the child’s own account number, or by card',
         'Pay the way that suits them; the payment finds the right child automatically'],
       ['Parents who don’t read messages easily can get a phone call, in English or Pidgin: what’s owed, the child’s account number read out slowly twice, and a call when the payment arrives',
@@ -124,8 +124,8 @@ const AREAS = [
         'Clarity on what’s due and when'],
       ['Turn off bill messages and reminders (receipts still come); download all their data',
         'Parents stay in control of their messages and information'],
-      ['Works comfortably on a phone; free for parents',
-        'No app to install and no extra charges'],
+      ['Made for phones first; the phone’s own keypad comes up for numbers, and the texted sign-in code can be filled in with one tap; free for parents',
+        'No app to install, nothing new to learn, and no extra charges'],
     ],
   },
   {
