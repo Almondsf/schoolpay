@@ -27,6 +27,11 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 - [ ] **Paystack "Dedicated NUBAN"** (each pupil's own account number) is not enabled on your
       Paystack business yet: email support@paystack.com to request it. Until then, parents pay
       by card or bank transfer on Paystack's checkout page.
+      _(new)_ When asking, also ask them to **raise the 1,000-account limit**: Paystack allows 1,000
+      virtual accounts per business by default, and every school's pupils count against the
+      platform's one Paystack business. Ask too what the fee per transfer into these accounts is
+      (their help pages say both 1% capped at ₦300 and 1.5% + ₦100) and whether parents need
+      identity checks.
 - [x] **Provider decided: Paystack** (2026-10-20). Bachs is built in and can be switched on
       later from Platform → Providers (it needs its keys), but isn't configured. Reason: Bachs
       can't give each pupil their own account number.
@@ -34,6 +39,15 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
       and set the live key and webhook URL as in `docs/DEPLOYMENT.md`.
 
 ## Decisions
+
+- [ ] _(new)_ **School groups with several branches** (idea, 2026-10-22; design in
+      `docs/HANDOVER.md`, "Ideas waiting on the owner"). Before anything is built, answer:
+      do branches of a group usually share one bank account or each have their own; can one
+      bursar cover several branches, or only the proprietor; should a group get a group price
+      (e.g. one set-up fee). A real group to talk to would settle most of it.
+- [ ] _(new)_ **One virtual account per family** (idea, 2026-10-22): only after Paystack approves
+      Dedicated NUBAN. Decide how a transfer into it is shared between the children (oldest debt
+      first, in proportion, or held until the parent or bursar shares it out).
 
 - [ ] _(new, on hold)_ **Announcements to parents** (2026-10-22): decide who pays for the messages
       (prepaid credits per school, or an allowance in each plan), your price per SMS page, and whether

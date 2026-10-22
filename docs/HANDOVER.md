@@ -116,6 +116,30 @@ sending, a free copy in the parent portal, delivery report. Also discussed: an S
 the payment one, and optional browser push notifications (ideas from diplace). Costs research: Termii
 about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.0516 a message.
 
+**Ideas waiting on the owner (2026-10-22), not started:**
+
+- **School groups with several branches.** Today each branch would sign up as its own school: a staff
+  account belongs to one school and an email is unique, so a proprietor needs one email per branch;
+  there's no combined view; a parent with children in two branches picks a branch at sign-in; each
+  branch is billed separately. Proposed: keep each branch a full school (own bills, receipt numbers,
+  fees, staff, bank account; tenant isolation unchanged) and add a **group** above them. Group staff
+  (proprietor, head-office bursar) sign in once, switch branches and see combined dashboard/reports;
+  branch staff see only their branch; parents see all their children across the group on one page; the
+  platform can bill the group as one customer. Stages: (1) groups, group staff, branch switcher,
+  combined reports; (2) parent portal across branches; (3) group billing. One payment covering two
+  branches only works if they share a bank account (a Paystack split goes to one subaccount). The
+  alternative, branches as a campus label inside one school, was rejected: it fits only groups run as
+  one school, and limiting staff to a campus would need a weaker second isolation layer. **Open
+  questions** (in `OWNER_TODO.md`): shared or separate bank accounts per branch; can one bursar cover
+  several branches; a group price. This changes who sees which school's data, so confirm before
+  building.
+- **One virtual account per family** (alongside each child's own). Needs Paystack Dedicated NUBAN
+  approval first. A plain transfer says nothing about which child it's for, so it needs a split rule
+  (oldest debt first across the children with tuition first, in proportion to what each owes, or held
+  as family credit until shared out). That's a money rule for the owner and goes against the 19 Oct
+  decision that nothing is split automatically. Until then the family payment link covers paying for
+  all children at once.
+
 1. **Card payment of school subscriptions** (step 3 of the plan agreed on 19 Oct): schools pay their
    WardPay bill by card/transfer through Paystack, not only by bank transfer recorded by hand.
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in

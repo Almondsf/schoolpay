@@ -1220,6 +1220,8 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
 
 - The product is called "WardPay" (`APP_NAME` / `VITE_APP_NAME`); the trademark and domain are still
   to be checked.
+- No school groups: a group with several branches signs each branch up as its own school, and a staff
+  account belongs to one school only. A design is in `docs/HANDOVER.md` ("Ideas waiting on the owner").
 - Gateway virtual-account KYC requirements and messaging-provider accounts
   are still open (see OWNER_TODO.md). Plan prices are placeholders.
 - Schools pay subscriptions by bank transfer, recorded by a platform admin;
