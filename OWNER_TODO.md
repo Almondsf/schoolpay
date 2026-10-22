@@ -35,6 +35,11 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
 
 ## Decisions
 
+- [ ] _(new, on hold)_ **Announcements to parents** (2026-10-22): decide who pays for the messages
+      (prepaid credits per school, or an allowance in each plan), your price per SMS page, and whether
+      urgent announcements reach parents who turned off reminders. Talk to a few schools first. Ask
+      Termii for their current rate card (generic and DND routes).
+
 - [ ] _(new)_ **Set the actual prices.** The model is decided (ParentPay's:
       set-up fee + annual licence + per pupil per year, billed termly, free
       for parents; PLAN.md §3.4). The built-in "Standard" plan has

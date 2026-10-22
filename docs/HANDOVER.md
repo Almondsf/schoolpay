@@ -101,6 +101,15 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 
 ## Next: what's open, roughly in order
 
+**On hold (owner, 2026-10-22): announcements and messaging costs.** Designed but not built until the
+owner decides: (1) who pays for announcement messages (prepaid credits per school, or an allowance in
+each plan); (2) the price per SMS page; (3) whether urgent announcements reach parents who turned off
+reminders. The plan: write, choose who (school/classes/owing/pupils, one per family), SMS by default
+(cheaper than WhatsApp marketing at about ₦77 a message), 160-character counter and cost estimate before
+sending, a free copy in the parent portal, delivery report. Also discussed: an SMS-provider switch like
+the payment one, and optional browser push notifications (ideas from diplace). Costs research: Termii
+about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.0516 a message.
+
 1. **Card payment of school subscriptions** (step 3 of the plan agreed on 19 Oct): schools pay their
    ParentPay bill by card/transfer through Paystack, not only by bank transfer recorded by hand.
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in
