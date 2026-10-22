@@ -5,6 +5,7 @@ import { api, unwrap } from '../../api/client';
 import { BRAND } from '../../lib/brand';
 import { formatKobo } from '../../lib/format';
 import { ErrorAlert, Loading, PageHeader } from '../../lib/ui';
+import { PlatformTrends } from './Trends';
 
 /** The platform at a glance: schools, pupils, money through WardPay, and subscription income. */
 export function PlatformOverview() {
@@ -24,6 +25,8 @@ export function PlatformOverview() {
           {o.problems_open === 1 ? '1 thing needs' : `${o.problems_open} things need`} a person: <Link to="/console/platform/problems">see Problems</Link>.
         </div>
       )}
+      <h2 className="section-title">Last 12 months</h2>
+      <PlatformTrends />
       <h2 className="section-title">Schools</h2>
       <div className="stats">
         <Card label="Active schools" value={String(o.schools_active)} note={<Link to="/console/platform/schools">See all schools</Link>} />

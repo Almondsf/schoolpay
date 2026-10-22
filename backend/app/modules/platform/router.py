@@ -25,7 +25,7 @@ from app.modules.payments.models import IntentStatus
 from app.modules.schools.models import School, SchoolOrigin, SchoolStatus
 from app.modules.schools.schemas import SchoolOut
 
-from . import billing, card_payments, console, onboarding, pdf, plans, problems, signup, staff_support
+from . import billing, card_payments, console, onboarding, pdf, plans, problems, signup, staff_support, trends
 from .models import SubscriptionCheckout, SubscriptionLineKind
 
 router = APIRouter(prefix="/platform", tags=["platform"], responses=ERROR_RESPONSES)
@@ -852,3 +852,24 @@ def reset_staff_mfa(
     school_id: uuid.UUID, user_id: uuid.UUID, admin: Principal = ADMIN, db: Session = Depends(get_db)
 ) -> None:
     staff_support.reset_two_factor(db, admin, school_id, user_id)
+
+
+# --- Trends ------------------------------------------------------------------------------------------
+
+
+class TrendMonthOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    month: str = Field(description='"2026-10"')
+    processed_kobo: int = Field(description="Money parents paid schools through WardPay, net of reversals")
+    payments: int
+    subscription_received_kobo: int
+    schools_joined: int
+    schools_suspended: int
+
+
+@router.get("/trends", response_model=list[TrendMonthOut], summary="The platform month by month, oldest first")
+def get_trends(
+    months: int = Query(default=12, ge=1, le=trends.MAX_MONTHS), admin: Principal = ADMIN, db: Session = Depends(get_db)
+) -> list[TrendMonthOut]:
+    return [TrendMonthOut.model_validate(m) for m in trends.trends(db, months)]

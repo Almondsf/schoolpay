@@ -880,6 +880,13 @@ and suspend/reactivate. For a locked-out staff member (`staff_support.py`):
 the invite again, or a reset link if they have a password) and **Reset two-factor**
 (`.../reset-mfa`: off, signed out everywhere, enrol again at next sign-in).
 
+**Trends (`trends.py`, `GET /platform/trends?months=12`, up to 36).** The last
+months in Lagos time, oldest first: money parents paid through WardPay (net of
+reversals) and the number of payments, subscription money received, schools that
+joined (confirmed sign-ups only) and schools suspended (from the platform trail).
+Four grouped queries whatever the range; empty months are zeros. The overview
+shows them as bars with tabs: your income, money through WardPay, schools.
+
 **Problems to fix (`problems.py`, `GET /platform/problems`).** Everything stuck
 across schools, newest first, in a fixed number of queries:
 

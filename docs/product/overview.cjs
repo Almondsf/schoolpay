@@ -159,7 +159,7 @@ const AREAS = [
     rows: [
       ['Schools sign themselves up on the website; the proprietor confirms by email',
         'New schools can start without a sales call'],
-      ['Platform overview: active schools, new sign-ups, pupils, money processed, subscription income owed',
+      ['Platform overview: active schools, new sign-ups, pupils, money processed, subscription income owed, and 12-month charts of income and schools',
         'Run the business from one screen'],
       ['Bill every school for the term in one click; schools pay by card from the console, or by transfer that you record; PDF invoices emailed to proprietors',
         'Subscription income is collected without spreadsheets'],
@@ -186,6 +186,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['23 Oct 2026', 'Month-by-month charts for the WardPay team: income, money through WardPay, schools joining'],
   ['22 Oct 2026', 'WardPay team can resend password links and reset two-factor sign-in for a school’s staff'],
   ['22 Oct 2026', 'Problems to fix: one page for the WardPay team showing everything stuck across schools'],
   ['22 Oct 2026', 'Texts can go through Termii or Africa’s Talking, switched at any time from the platform console'],

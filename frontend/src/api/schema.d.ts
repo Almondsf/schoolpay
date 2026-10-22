@@ -1715,6 +1715,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/trends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The platform month by month, oldest first */
+        get: operations["platform_get_trends"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/info": {
         parameters: {
             query?: never;
@@ -6234,6 +6251,27 @@ export interface components {
             students_enrolled: number;
             /** Students Invoiced */
             students_invoiced: number;
+        };
+        /** TrendMonthOut */
+        TrendMonthOut: {
+            /**
+             * Month
+             * @description "2026-10"
+             */
+            month: string;
+            /** Payments */
+            payments: number;
+            /**
+             * Processed Kobo
+             * @description Money parents paid schools through WardPay, net of reversals
+             */
+            processed_kobo: number;
+            /** Schools Joined */
+            schools_joined: number;
+            /** Schools Suspended */
+            schools_suspended: number;
+            /** Subscription Received Kobo */
+            subscription_received_kobo: number;
         };
         /** UnplacedOut */
         UnplacedOut: {
@@ -15715,6 +15753,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SchoolOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    platform_get_trends: {
+        parameters: {
+            query?: {
+                months?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrendMonthOut"][];
                 };
             };
             /** @description Bad Request */

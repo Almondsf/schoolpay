@@ -8453,6 +8453,46 @@
         "title": "TermSummaryOut",
         "type": "object"
       },
+      "TrendMonthOut": {
+        "properties": {
+          "month": {
+            "description": "\"2026-10\"",
+            "title": "Month",
+            "type": "string"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "integer"
+          },
+          "processed_kobo": {
+            "description": "Money parents paid schools through WardPay, net of reversals",
+            "title": "Processed Kobo",
+            "type": "integer"
+          },
+          "schools_joined": {
+            "title": "Schools Joined",
+            "type": "integer"
+          },
+          "schools_suspended": {
+            "title": "Schools Suspended",
+            "type": "integer"
+          },
+          "subscription_received_kobo": {
+            "title": "Subscription Received Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "processed_kobo",
+          "payments",
+          "subscription_received_kobo",
+          "schools_joined",
+          "schools_suspended"
+        ],
+        "title": "TrendMonthOut",
+        "type": "object"
+      },
       "UnplacedOut": {
         "properties": {
           "admission_number": {
@@ -20902,6 +20942,120 @@
           }
         ],
         "summary": "Suspend a school (signs out its staff)",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/trends": {
+      "get": {
+        "operationId": "platform_get_trends",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 36,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrendMonthOut"
+                  },
+                  "title": "Response Platform Get Trends",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The platform month by month, oldest first",
         "tags": [
           "platform"
         ]
