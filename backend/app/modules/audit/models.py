@@ -56,6 +56,8 @@ class AuditAction(enum.StrEnum):
     PROBLEM_RETRIED = "platform.problem_retried"
     PROBLEM_RESOLVED = "platform.problem_resolved"
     PLATFORM_STAFF_LINK_SENT = "platform.staff_link_sent"
+    SUBSCRIPTION_DISCOUNTED = "platform.subscription_discount"
+    SUBSCRIPTION_DUE_DATE_CHANGED = "platform.subscription_due_date"
     SUPPORT_LOOKUP = "platform.support_lookup"
     PRIVACY_EXPORTED = "privacy.exported"
     PRIVACY_ERASED = "privacy.erased"

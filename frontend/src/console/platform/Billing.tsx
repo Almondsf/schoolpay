@@ -65,6 +65,7 @@ export function PlatformBilling() {
 export function InvoiceTable({ invoices, showSchool = false }: { invoices: Invoice[]; showSchool?: boolean }) {
   const [paying, setPaying] = useState<Invoice | null>(null);
   const [voiding, setVoiding] = useState<Invoice | null>(null);
+  const [adjusting, setAdjusting] = useState<Invoice | null>(null);
   const pdf = useMutation({
     mutationFn: async (invoice: Invoice) => {
       const { data, response } = await api.GET('/api/v1/platform/billing/invoices/{invoice_id}/pdf', {
@@ -123,6 +124,9 @@ export function InvoiceTable({ invoices, showSchool = false }: { invoices: Invoi
                         <button className="secondary small" onClick={() => setPaying(i)}>
                           Record payment
                         </button>
+                        <button className="link small" onClick={() => setAdjusting(i)}>
+                          Adjust
+                        </button>
                         {i.paid_kobo === 0 && (
                           <button className="link small" onClick={() => setVoiding(i)}>
                             Void
@@ -139,6 +143,7 @@ export function InvoiceTable({ invoices, showSchool = false }: { invoices: Invoi
       </div>
       {paying && <RecordPayment invoice={paying} onClose={() => setPaying(null)} />}
       {voiding && <VoidInvoice invoice={voiding} onClose={() => setVoiding(null)} />}
+      {adjusting && <AdjustInvoice invoice={adjusting} onClose={() => setAdjusting(null)} />}
     </>
   );
 }
@@ -266,6 +271,104 @@ function RecordPayment({ invoice, onClose }: { invoice: Invoice; onClose: () => 
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+/** Take money off a bill (a discount line; waiving the set-up fee is one click) or move its due date. */
+function AdjustInvoice({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const refresh = useRefreshBilling();
+  const path = { params: { path: { invoice_id: invoice.id } } };
+  const detail = useQuery({
+    queryKey: ['platform-invoice', invoice.id],
+    queryFn: async () => unwrap(await api.GET('/api/v1/platform/billing/invoices/{invoice_id}', path)),
+  });
+  const setupLine = detail.data?.lines.find((ln) => ln.kind === 'setup');
+  const alreadyDiscounted = detail.data?.lines.some((ln) => ln.kind === 'discount');
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [dueDate, setDueDate] = useState(invoice.due_date);
+  const [dueReason, setDueReason] = useState('');
+  const kobo = parseNairaToKobo(amount);
+  const done = () => {
+    refresh();
+    onClose();
+  };
+  const discount = useMutation({
+    mutationFn: async (body: { amount_kobo: number; reason: string }) =>
+      unwrap(await api.POST('/api/v1/platform/billing/invoices/{invoice_id}/discount', { ...path, body })),
+    onSuccess: done,
+  });
+  const due = useMutation({
+    mutationFn: async () =>
+      unwrap(await api.PUT('/api/v1/platform/billing/invoices/{invoice_id}/due-date', { ...path, body: { due_date: dueDate, reason: dueReason } })),
+    onSuccess: done,
+  });
+  return (
+    <Modal title={`Adjust invoice ${invoice.number}`} onClose={onClose}>
+      <p>
+        {invoice.school_name} still owes <strong>{formatKobo(invoice.balance_kobo)}</strong>. Changes are kept in the activity log and show
+        on the school's bill.
+      </p>
+      <section aria-label="Discount">
+        <h3>Take money off</h3>
+        {setupLine && !alreadyDiscounted && setupLine.amount_kobo <= invoice.balance_kobo && (
+          <p>
+            <button
+              type="button"
+              className="secondary small"
+              onClick={() => discount.mutate({ amount_kobo: setupLine.amount_kobo, reason: 'Set-up fee waived' })}
+              disabled={discount.isPending}
+            >
+              Waive the set-up fee ({formatKobo(setupLine.amount_kobo)})
+            </button>
+          </p>
+        )}
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            if (kobo) discount.mutate({ amount_kobo: kobo, reason });
+          }}
+        >
+          <ErrorAlert error={fieldError(discount.error, 'amount_kobo') ? null : discount.error} />
+          <Field label="Discount (₦)" error={fieldError(discount.error, 'amount_kobo') ?? (amount && kobo === null ? 'Not a valid amount' : undefined)}>
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" required />
+          </Field>
+          <Field label="Reason (shown on the bill)">
+            <input value={reason} onChange={(e) => setReason(e.target.value)} required minLength={3} maxLength={150} placeholder="e.g. First-year discount" />
+          </Field>
+          <div className="row end">
+            <button type="submit" disabled={!kobo || discount.isPending}>
+              Take it off
+            </button>
+          </div>
+        </form>
+      </section>
+      <section aria-label="Due date">
+        <h3>Due date</h3>
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            due.mutate();
+          }}
+        >
+          <ErrorAlert error={fieldError(due.error, 'due_date') ? null : due.error} />
+          <Field label="Due on" error={fieldError(due.error, 'due_date')}>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required />
+          </Field>
+          <Field label="Reason (kept in the activity log)">
+            <input value={dueReason} onChange={(e) => setDueReason(e.target.value)} required minLength={3} maxLength={300} />
+          </Field>
+          <div className="row end">
+            <button type="button" className="secondary" onClick={onClose}>
+              Close
+            </button>
+            <button type="submit" disabled={dueDate === invoice.due_date || due.isPending}>
+              Change due date
+            </button>
+          </div>
+        </form>
+      </section>
     </Modal>
   );
 }

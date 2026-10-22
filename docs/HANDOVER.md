@@ -148,6 +148,11 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
 
 1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).
    ~~SMS provider switch~~ (done 22 Oct: Termii or Africa's Talking, `notifications/providers.py`).
+   ~~Owner tools~~ (done 22–23 Oct): Problems page, helping locked-out staff, 12-month trends, bill discounts
+   and due dates (`platform/problems.py`, `staff_support.py`, `trends.py`, `billing.add_discount`).
+   Bachs re-checked 23 Oct: it does have virtual accounts, but **one per account** (so one per school as a
+   connected account, not one per pupil); a deposit carries the sender's account number and narration and
+   must be matched by us. Fees: deposit 1% capped at ₦300, card 2%, checkout transfer 1.5% capped at ₦2,000.
 2. **Parent consent in the portal** (step 4): a parent confirms consent themselves on first sign-in
    (`ConsentMethod.PORTAL` already exists).
 3. **The "later" list in PLAN.md** (step 5): only when the owner says so.

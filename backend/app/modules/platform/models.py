@@ -63,6 +63,7 @@ class SubscriptionLineKind(enum.StrEnum):
     SETUP = "setup"  # once, on a school's first bill
     LICENCE = "licence"  # once per school year (academic session)
     PUPILS = "pupils"  # a third of the yearly per-pupil fee, for the pupils enrolled that term
+    DISCOUNT = "discount"  # taken off by a platform admin (e.g. the set-up fee waived): the only negative line
 
 
 class SubscriptionInvoice(TenantMixin, UUIDPrimaryKey, Base):
@@ -101,7 +102,11 @@ class SubscriptionLine(TenantMixin, UUIDPrimaryKey, Base):
 
     __tablename__ = "subscription_lines"
     __table_args__ = (
-        CheckConstraint("amount_kobo >= 0 AND quantity >= 0", name="not_negative"),
+        # Charges are never negative; a discount is always negative
+        CheckConstraint(
+            "quantity >= 0 AND CASE WHEN kind = 'discount' THEN amount_kobo < 0 ELSE amount_kobo >= 0 END",
+            name="amount_sign",
+        ),
         Index("ix_subscription_lines_invoice", "invoice_id"),
     )
 

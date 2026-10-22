@@ -443,6 +443,83 @@ def void(session: Session, admin: Principal, invoice_id: uuid.UUID, reason: str)
     return invoice_detail(session, invoice_id)[0]
 
 
+# --- Adjusting a bill ------------------------------------------------------------------------------
+
+
+def _live_invoice(session: Session, invoice_id: uuid.UUID) -> SubscriptionInvoice:
+    invoice = session.get(SubscriptionInvoice, invoice_id, with_for_update=True)
+    if invoice is None:
+        raise NotFound("Invoice not found.")
+    if invoice.voided_at is not None:
+        raise Conflict("This invoice was voided.")
+    return invoice
+
+
+def add_discount(
+    session: Session, admin: Principal, invoice_id: uuid.UUID, *, amount_kobo: int, reason: str
+) -> InvoiceRow:
+    """
+    Take money off a bill (e.g. the set-up fee waived for an early school): a new negative
+    "discount" line, since lines are never edited. At most what's still owed, so a bill
+    never ends up owing the school money.
+    """
+    invoice = _live_invoice(session, invoice_id)
+    row, _, _ = invoice_detail(session, invoice_id)
+    if amount_kobo <= 0:
+        raise DomainError("Enter the amount to take off.", field="amount_kobo")
+    if amount_kobo > row.balance_kobo:
+        raise DomainError(f"Only {format_naira(row.balance_kobo)} is still owed on this invoice.", field="amount_kobo")
+    reason = reason.strip()[:150]
+    session.add(
+        SubscriptionLine(
+            school_id=invoice.school_id,
+            invoice_id=invoice.id,
+            kind=SubscriptionLineKind.DISCOUNT,
+            description=f"Discount: {reason}",
+            quantity=1,
+            unit_kobo=-amount_kobo,
+            amount_kobo=-amount_kobo,
+        )
+    )
+    for school in (None, invoice.school_id):
+        record(
+            session,
+            AuditAction.SUBSCRIPTION_DISCOUNTED,
+            school_id=school,
+            actor=admin.actor,
+            meta=admin.meta,
+            target=invoice,
+            changes={"number": invoice.number, "amount_kobo": amount_kobo, "reason": reason},
+        )
+    session.commit()
+    return invoice_detail(session, invoice_id)[0]
+
+
+def change_due_date(
+    session: Session, admin: Principal, invoice_id: uuid.UUID, *, due_date: date, reason: str
+) -> InvoiceRow:
+    """Give a school more (or less) time to pay. Not before the bill was issued."""
+    invoice = _live_invoice(session, invoice_id)
+    if due_date < invoice.issued_at.astimezone(LAGOS).date():
+        raise DomainError("The due date can't be before the bill was issued.", field="due_date")
+    before = invoice.due_date
+    if due_date == before:
+        raise DomainError("That's already the due date.", field="due_date")
+    invoice.due_date = due_date
+    for school in (None, invoice.school_id):
+        record(
+            session,
+            AuditAction.SUBSCRIPTION_DUE_DATE_CHANGED,
+            school_id=school,
+            actor=admin.actor,
+            meta=admin.meta,
+            target=invoice,
+            changes={"number": invoice.number, "before": before, "after": due_date, "reason": reason.strip()[:300]},
+        )
+    session.commit()
+    return invoice_detail(session, invoice_id)[0]
+
+
 # --- The school's own view -------------------------------------------------------------------------
 
 

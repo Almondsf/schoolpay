@@ -161,7 +161,7 @@ const AREAS = [
         'New schools can start without a sales call'],
       ['Platform overview: active schools, new sign-ups, pupils, money processed, subscription income owed, and 12-month charts of income and schools',
         'Run the business from one screen'],
-      ['Bill every school for the term in one click; schools pay by card from the console, or by transfer that you record; PDF invoices emailed to proprietors',
+      ['Bill every school for the term in one click; schools pay by card from the console, or by transfer that you record; waive the set-up fee, give a discount or more time; PDF invoices emailed to proprietors',
         'Subscription income is collected without spreadsheets'],
       ['Help a locked-out school: send a staff member their password link again or reset their two-factor sign-in',
         'A proprietor who lost their phone is back in within minutes'],
@@ -186,6 +186,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['23 Oct 2026', 'WardPay team can discount a school’s bill (e.g. waive the set-up fee) or move its due date'],
   ['23 Oct 2026', 'Month-by-month charts for the WardPay team: income, money through WardPay, schools joining'],
   ['22 Oct 2026', 'WardPay team can resend password links and reset two-factor sign-in for a school’s staff'],
   ['22 Oct 2026', 'Problems to fix: one page for the WardPay team showing everything stuck across schools'],

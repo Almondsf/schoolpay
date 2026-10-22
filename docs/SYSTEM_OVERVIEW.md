@@ -831,6 +831,14 @@ printed on the invoice and its PDF). A platform admin records each payment,
 which can't exceed the balance or be dated in the future. An unpaid bill can
 be voided with a reason, and the term billed again.
 
+**Adjusting a bill.** **Adjust** on a bill gives a discount
+(`POST /platform/billing/invoices/{id}/discount`, at most what's still owed, with a
+reason shown on the bill): a new `discount` line, the only kind allowed to be
+negative (database constraint `amount_sign`), since lines are append-only.
+Waiving the set-up fee is a one-click discount for the set-up line. The due date
+can be moved (`PUT .../due-date`, not before the bill was issued, with a reason).
+Both are audited for the school and the platform.
+
 **Paying by card (`card_payments.py`).** Staff with `payments.record` press
 **Pay by card** on an unpaid bill (`POST /subscription/invoices/{id}/checkout`).
 A `SubscriptionCheckout` (reference `WS…`; school-fee checkouts are `SP…`) opens a

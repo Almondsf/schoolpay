@@ -203,6 +203,16 @@ class SubscriptionVoidIn(BaseModel):
     reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
 
 
+class SubscriptionDiscountIn(BaseModel):
+    amount_kobo: Annotated[int, Field(gt=0, le=10**12)]
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=150)]
+
+
+class SubscriptionDueDateIn(BaseModel):
+    due_date: date
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
 class SupportLookupHitOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -504,6 +514,30 @@ def void_invoice(
     invoice_id: uuid.UUID, body: SubscriptionVoidIn, admin: Principal = ADMIN, db: Session = Depends(get_db)
 ) -> SubscriptionInvoiceDetailOut:
     billing.void(db, admin, invoice_id, body.reason)
+    return _detail_out(db, invoice_id)
+
+
+@router.post(
+    "/billing/invoices/{invoice_id}/discount",
+    response_model=SubscriptionInvoiceDetailOut,
+    summary="Take money off a bill (e.g. waive the set-up fee); at most what's still owed",
+)
+def discount_invoice(
+    invoice_id: uuid.UUID, body: SubscriptionDiscountIn, admin: Principal = ADMIN, db: Session = Depends(get_db)
+) -> SubscriptionInvoiceDetailOut:
+    billing.add_discount(db, admin, invoice_id, amount_kobo=body.amount_kobo, reason=body.reason)
+    return _detail_out(db, invoice_id)
+
+
+@router.put(
+    "/billing/invoices/{invoice_id}/due-date",
+    response_model=SubscriptionInvoiceDetailOut,
+    summary="Change when a bill is due",
+)
+def change_due_date(
+    invoice_id: uuid.UUID, body: SubscriptionDueDateIn, admin: Principal = ADMIN, db: Session = Depends(get_db)
+) -> SubscriptionInvoiceDetailOut:
+    billing.change_due_date(db, admin, invoice_id, due_date=body.due_date, reason=body.reason)
     return _detail_out(db, invoice_id)
 
 
