@@ -37,6 +37,10 @@ const backendEnv = {
   // Every test signs in from the same address
   LOGIN_RATE_PER_IP: '1000/minute',
   LOGIN_RATE_PER_ACCOUNT: '1000/hour',
+  // Several specs sign the demo parent in; a retried test mustn't use up the number's codes for the
+  // rest (the per-phone limit itself is covered by the backend tests)
+  OTP_RATE_PER_PHONE: '1000/10minutes',
+  OTP_RATE_PER_IP: '1000/hour',
   CORS_ORIGINS: `http://localhost:${WEB_PORT}`,
   FRONTEND_URL: `http://localhost:${WEB_PORT}`,
 } as Record<string, string>;

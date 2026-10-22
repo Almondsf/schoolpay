@@ -57,6 +57,7 @@ test('a parent turns reminders off and back on', async ({ page }) => {
   await page.getByLabel('Code').fill(/\b(\d{6})\b/.exec((await latest.json()).text)![1]!);
   await page.getByRole('button', { name: 'Sign in' }).click();
 
+  await page.getByRole('link', { name: 'Settings' }).click();
   const toggle = page.getByLabel('Send me new bills and payment reminders');
   await expect(toggle).toBeChecked();
   await toggle.click(); // the box follows the saved setting, so it changes once the server answers
