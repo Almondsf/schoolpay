@@ -1107,8 +1107,11 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   term" exemptions). Billing has "Add a fee to classes" (preview, untick
   pupils, apply); the Fees page sets each item's standard price. `src/lib/format.ts` converts between naira
   text and kobo with string arithmetic.
+  **Billing** has the term picker and actions in its header, one strip of figures (billed, paid with a
+  progress bar, outstanding, not billed yet) and a list of pupils' bills (total, left to pay, status).
   Payments: **Payments** (received payments with where each was applied, a
-  record-cash/teller form with a student search, an approval queue that hides
+  record-cash/teller form with a student search (the Awaiting approval tab shows how many wait;
+  each row's Mark for fees and Reverse sit in a ⋯ menu), an approval queue that hides
   Approve on your own entries, reversals), **Payment settings** (connect the
   school's bank account, issue students' account numbers), and on each
   student a **Paying in** panel (their account number, a card payment link,

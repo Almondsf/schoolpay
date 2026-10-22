@@ -56,40 +56,56 @@ export function Billing() {
     <>
       <PageHeader
         title="Billing"
-        subtitle="Invoices for the term and what's still owed."
+        subtitle="The term's bills and what's still owed."
         actions={
-          can('invoices.issue') && (
-            <>
-              <button className="secondary" onClick={() => setCharging(true)}>
-                Add a fee to classes
-              </button>
-              <button onClick={() => setGenerating(true)}>Generate invoices</button>
-            </>
-          )
+          <>
+            <select aria-label="Term" value={term} onChange={(e) => reset(setTermId)(e.target.value)}>
+              {(sessions.data ?? []).flatMap((ses) =>
+                ses.terms.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {ses.name} · {t.label}
+                    {t.is_current ? ' (current)' : ''}
+                  </option>
+                )),
+              )}
+            </select>
+            {can('invoices.issue') && (
+              <>
+                <button className="secondary" onClick={() => setCharging(true)}>
+                  Add a fee to classes
+                </button>
+                <button onClick={() => setGenerating(true)}>Generate invoices</button>
+              </>
+            )}
+          </>
         }
       />
-      <div className="filters">
-        <select aria-label="Term" value={term} onChange={(e) => reset(setTermId)(e.target.value)}>
-          {(sessions.data ?? []).flatMap((ses) =>
-            ses.terms.map((t) => (
-              <option key={t.id} value={t.id}>
-                {ses.name} · {t.label}
-                {t.is_current ? ' (current)' : ''}
-              </option>
-            )),
-          )}
-        </select>
-      </div>
       {s && (
-        <div className="stats">
-          <Stat label="Billed" value={formatKobo(s.billed_kobo)} note={`${s.invoices} invoices`} />
-          <Stat label="Paid" value={formatKobo(s.paid_kobo)} />
-          <Stat label="Outstanding" value={formatKobo(s.outstanding_kobo)} tone={s.outstanding_kobo > 0 ? 'warn' : 'ok'} />
-          <Stat
-            label="Not yet invoiced"
-            value={String(Math.max(0, s.students_enrolled - s.students_invoiced))}
-            note={`of ${s.students_enrolled} students`}
-          />
+        <div className="card mini-stats">
+          <div>
+            <span className="stat-label">Billed</span>
+            <span className="stat-value">{formatKobo(s.billed_kobo)}</span>
+            <span className="stat-note">{s.invoices} bills</span>
+          </div>
+          <div className="stat ok">
+            <span className="stat-label">Paid</span>
+            <span className="stat-value">{formatKobo(s.paid_kobo)}</span>
+            <div className="progress-row">
+              <div className="progress">
+                <div className="progress-fill" style={{ width: `${s.billed_kobo > 0 ? Math.min(100, Math.floor((s.paid_kobo * 100) / s.billed_kobo)) : 0}%` }} />
+              </div>
+              <span className="small muted">{s.billed_kobo > 0 ? Math.floor((s.paid_kobo * 100) / s.billed_kobo) : 0}%</span>
+            </div>
+          </div>
+          <div className={s.outstanding_kobo > 0 ? 'stat warn' : 'stat'}>
+            <span className="stat-label">Outstanding</span>
+            <span className="stat-value">{formatKobo(s.outstanding_kobo)}</span>
+          </div>
+          <div>
+            <span className="stat-label">Not billed yet</span>
+            <span className="stat-value">{Math.max(0, s.students_enrolled - s.students_invoiced)}</span>
+            <span className="stat-note">of {s.students_enrolled} pupils in a class</span>
+          </div>
         </div>
       )}
       <div className="filters">
@@ -122,11 +138,10 @@ export function Billing() {
           <table>
             <thead>
               <tr>
-                <th>Invoice</th>
-                <th>Student</th>
+                <th>Pupil</th>
+                <th>Bill</th>
                 <th className="num">Total</th>
-                <th className="num">Paid</th>
-                <th className="num">Balance</th>
+                <th className="num">Left to pay</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -134,15 +149,16 @@ export function Billing() {
               {invoices.data.items.map((i) => (
                 <tr key={i.id}>
                   <td>
-                    <Link to={`/console/invoices/${i.id}`}>#{i.number}</Link>
-                  </td>
-                  <td>
                     <Link to={`/console/students/${i.student.id}`}>{i.student.full_name}</Link>
                     <div className="muted small">{i.student.admission_number}</div>
                   </td>
+                  <td>
+                    <Link to={`/console/invoices/${i.id}`} className="small">
+                      #{i.number}
+                    </Link>
+                  </td>
                   <td className="num">{formatKobo(i.total_kobo)}</td>
-                  <td className="num">{formatKobo(i.paid_kobo)}</td>
-                  <td className="num">{formatKobo(i.balance_kobo)}</td>
+                  <td className="num">{i.balance_kobo > 0 ? <strong>{formatKobo(i.balance_kobo)}</strong> : <span className="muted">—</span>}</td>
                   <td>
                     <StatusBadge status={i.status} />
                   </td>
@@ -159,15 +175,6 @@ export function Billing() {
   );
 }
 
-function Stat({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: 'ok' | 'warn' }) {
-  return (
-    <div className={`card stat ${tone ?? ''}`}>
-      <div className="muted small">{label}</div>
-      <div className="stat-value">{value}</div>
-      {note && <div className="muted small">{note}</div>}
-    </div>
-  );
-}
 
 export function Generate({ termId, onClose }: { termId: string; onClose: () => void }) {
   const queryClient = useQueryClient();

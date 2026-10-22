@@ -43,6 +43,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 22 Oct | **Fees in reminders**: `{fees}` in new-bill notices and reminders (fees with money left, biggest first, max four then "N more"); WhatsApp templates get it as their last parameter | `notifications/service.py` (`fees_phrase`), `templates.py` |
 | 22 Oct | **SMS alphabet**: every text is converted to GSM-7 (NGN for ₦, plain quotes/dashes, emoji dropped) so it isn't billed as Unicode (7 pages became 3); wording preview shows SMS pages | `notifications/sms.py` (`to_gsm`, `sms_pages`) |
 | 22 Oct | **Set-up wizard** (`/console/get-started`): details, school year, classes, fees once per section, pupils, bills; from the dashboard's getting-started card | `console/GetStarted.tsx` |
+| 22 Oct | **Billing and Payments decluttered**: term picker in the header, one strip of figures, lighter lists; a count on Awaiting approval; payment actions in a ⋯ menu | `console/billing/Billing.tsx`, `console/payments/Payments.tsx` |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:

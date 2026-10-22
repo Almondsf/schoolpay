@@ -2279,3 +2279,22 @@ table.quick-fees td {
 table.quick-fees td:first-child {
   min-width: 190px;
 }
+
+/* A small count on a tab, e.g. payments waiting for approval */
+.tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--warn);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.mini-stats .progress-row {
+  margin: 6px 0 0;
+}

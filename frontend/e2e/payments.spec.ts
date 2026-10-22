@@ -52,5 +52,5 @@ test('cash recorded by the admin is approved by the bursar', async ({ browser })
   await row.getByRole('button', { name: 'Approve' }).click();
   await expect(row).toHaveCount(0);
   await bursar.getByRole('tab', { name: 'Received' }).click();
-  await expect(bursar.getByRole('cell', { name: '₦12,345.00', exact: true })).toBeVisible();
+  await expect(bursar.getByRole('cell', { name: /^₦12,345\.00/ })).toBeVisible(); // the amount, then how it was paid
 });

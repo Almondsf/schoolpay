@@ -13,8 +13,8 @@ test('bursar generates the term invoices in one click and corrects one', async (
   await page.getByRole('button', { name: 'Close' }).click();
 
   const first = page.getByRole('row').nth(1);
-  const student = (await first.getByRole('link').nth(1).textContent())!;
-  await first.getByRole('link').first().click();
+  const student = (await first.getByRole('link').first().textContent())!; // the pupil, then their bill
+  await first.getByRole('link').nth(1).click();
   await expect(page.getByRole('heading', { name: /Invoice #\d+/ })).toBeVisible();
   await page.getByRole('button', { name: 'Correct amount' }).click();
   await page.getByLabel('Description').fill('PTA levy waived');

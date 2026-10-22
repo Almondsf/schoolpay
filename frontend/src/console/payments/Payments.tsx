@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ellipsis } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -6,7 +7,7 @@ import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate, formatDateTime, formatKobo, humanize, koboToInput, parseNairaToKobo } from '../../lib/format';
 import { METHOD_LABELS } from '../Dashboard';
-import { Empty, ErrorAlert, Field, Loading, Modal, Notice, PageHeader, Pager } from '../../lib/ui';
+import { Empty, ErrorAlert, Field, Loading, Menu, Modal, Notice, PageHeader, Pager, Tabs } from '../../lib/ui';
 import { ReceiptLink } from './ReceiptLink';
 import { StudentPicker, type PickedStudent } from './StudentPicker';
 import { FeePicker, leftOn } from '../../lib/FeeBreakdown';
@@ -20,6 +21,13 @@ export function Payments() {
   const { can } = useAuth();
   const [tab, setTab] = useState<'received' | 'pending'>('received');
   const [recording, setRecording] = useState(false);
+  // The same query as the approvals tab, so its count costs nothing extra
+  const waiting = useQuery({
+    queryKey: ['manual-payments', 'pending'],
+    enabled: can('payments.view'),
+    queryFn: async () => unwrap(await api.GET('/api/v1/manual-payments', { params: { query: { status: 'pending' } } })),
+  });
+  const count = waiting.data?.total ?? 0;
   return (
     <>
       <PageHeader
@@ -27,14 +35,21 @@ export function Payments() {
         subtitle="Transfers into students' account numbers appear here automatically. Cash and tellers need a second person to approve."
         actions={can('payments.record') && <button onClick={() => setRecording(true)}>Record cash or teller</button>}
       />
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'received'} className={tab === 'received' ? 'tab active' : 'tab'} onClick={() => setTab('received')}>
-          Received
-        </button>
-        <button role="tab" aria-selected={tab === 'pending'} className={tab === 'pending' ? 'tab active' : 'tab'} onClick={() => setTab('pending')}>
-          Awaiting approval
-        </button>
-      </div>
+      <Tabs
+        tabs={[
+          { key: 'received', label: 'Received' },
+          {
+            key: 'pending',
+            label: (
+              <>
+                Awaiting approval{count > 0 && <span className="tab-count" aria-hidden="true">{count}</span>}
+              </>
+            ),
+          },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       {tab === 'received' ? <Received /> : <Pending />}
       {recording && <RecordManual onClose={() => setRecording(false)} onDone={() => setTab('pending')} />}
     </>
@@ -76,33 +91,28 @@ function Received() {
             <thead>
               <tr>
                 <th>Received</th>
-                <th>Student</th>
-                <th>How</th>
+                <th>Pupil</th>
                 <th className="num">Amount</th>
-                <th>Applied to</th>
+                <th>On bills</th>
                 {(can('payments.reverse') || can('payments.record')) && <th aria-label="Actions" />}
               </tr>
             </thead>
             <tbody>
               {payments.data.items.map((p) => (
                 <tr key={p.id} className={p.reversed || p.kind === 'reversal' ? 'retired' : ''}>
-                  <td className="nowrap">{formatDateTime(p.received_at)}</td>
+                  <td className="nowrap small">{formatDateTime(p.received_at)}</td>
                   <td>
                     <Link to={`/console/students/${p.student.id}`}>{p.student.full_name}</Link>
                     <div className="muted small">{p.student.admission_number}</div>
                   </td>
-                  <td>
-                    {p.kind === 'reversal' ? 'Reversal' : METHOD_LABELS[p.method]}
-                    {(p.reference || p.gateway_reference) && <div className="muted small">{p.reference || p.gateway_reference}</div>}
-                    {p.for_fees.length > 0 && <div className="small">For: {p.for_fees.join(', ')}</div>}
+                  <td className="num">
+                    <strong>{formatKobo(p.amount_kobo)}</strong>
+                    <div className="muted small" title={p.reference || p.gateway_reference || undefined}>
+                      {p.kind === 'reversal' ? 'Reversal' : METHOD_LABELS[p.method]}
+                    </div>
+                    {p.for_fees.length > 0 && <div className="small">For {p.for_fees.join(', ')}</div>}
                     {p.reversed && <span className="badge danger">Reversed</span>}
-                    {p.receipt_id && p.receipt_number && (
-                      <div>
-                        <ReceiptLink receiptId={p.receipt_id} number={p.receipt_number} />
-                      </div>
-                    )}
                   </td>
-                  <td className="num">{formatKobo(p.amount_kobo)}</td>
                   <td className="small">
                     {p.applied.map((a) => (
                       <div key={a.invoice_id}>
@@ -110,18 +120,21 @@ function Received() {
                       </div>
                     ))}
                     {p.unapplied_kobo !== 0 && <div className="muted">{formatKobo(p.unapplied_kobo)} as credit</div>}
+                    {p.receipt_id && p.receipt_number && <ReceiptLink receiptId={p.receipt_id} number={p.receipt_number} />}
                   </td>
                   {(can('payments.reverse') || can('payments.record')) && (
-                    <td className="actions nowrap">
-                      {can('payments.record') && p.kind === 'receipt' && !p.reversed && p.for_fees.length === 0 && p.applied.length > 0 && (
-                        <button className="secondary small" onClick={() => setMarking(p)} title="Say which fees this payment was for">
-                          Mark for fees
-                        </button>
-                      )}{' '}
-                      {can('payments.reverse') && p.kind === 'receipt' && !p.reversed && (
-                        <button className="secondary small" onClick={() => setReversing(p)}>
-                          Reverse
-                        </button>
+                    <td className="actions">
+                      {p.kind === 'receipt' && !p.reversed && (
+                        <Menu label={`Actions for ${formatKobo(p.amount_kobo)} from ${p.student.full_name}`} icon={<Ellipsis size={18} />}>
+                          {can('payments.record') && p.for_fees.length === 0 && p.applied.length > 0 && (
+                            <button onClick={() => setMarking(p)}>Mark for fees</button>
+                          )}
+                          {can('payments.reverse') && (
+                            <button className="danger-item" onClick={() => setReversing(p)}>
+                              Reverse
+                            </button>
+                          )}
+                        </Menu>
                       )}
                     </td>
                   )}
