@@ -130,8 +130,10 @@ signs in without a code locally; production refuses it) and `SMS_BACKEND=memory`
 
 **Demo accounts** (password `demo-password-123`, authenticator setup key `JBSWY3DPEHPK3PXP`):
 `admin@demo.schoolpay.ng` (Ada Obi, school admin; no code locally), `bursar@…` and `proprietor@…`
-(code required), `platform@…` (platform admin). Demo parent: phone **0803 500 0000**; the texted code is
-readable locally at `http://localhost:8002/api/v1/dev/sms/latest?to=08035000000`. Paystack test card:
+(code required), `platform@…` (platform admin). Demo parent: phone **0803 500 0000**; on the code step,
+**"Fill in the code (demo on this computer)"** reads the texted code from the local inbox (the owner demos
+this way until Termii is set up; the button exists only in the Vite dev server), or open
+`http://localhost:8002/api/v1/dev/sms/latest?to=08035000000`. Paystack test card:
 4084 0840 8408 4081, any future expiry, CVV 408, PIN 0000, OTP 123456.
 
 **After every `seed-demo --reset`**, reconnect the demo school to the Paystack sandbox. Paystack's test

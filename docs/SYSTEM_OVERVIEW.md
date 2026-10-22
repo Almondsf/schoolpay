@@ -1034,7 +1034,7 @@ production.
 | Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/debtors/export`, `/reports/collections/export`, `/reports/fee-status/export` (`format=xlsx|pdf`) |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
-| Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only). Neither exists in production. |
+| Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only; the parent sign-in page's "Fill in the code" button uses it, shown only in the Vite dev server via `import.meta.env.DEV` and absent from production builds). Neither exists in production. |
 | Invoices | `POST /terms/{id}/invoices/generate`; `GET /terms/{id}/billing-summary`; `GET/POST /invoices`; `GET /invoices/{id}`; `POST /invoices/{id}/lines`, `/void`; `POST /invoices/{id}/plan`, `/plan/cancel`; `POST /terms/{id}/class-charges`; `POST /terms/{id}/bills/sync`; `GET/POST /students/{id}/exemptions`, `DELETE /students/{id}/exemptions/{fee_item_id}`; `POST /students/{id}/charges`; `GET /students/{id}/account` |
 
 Lists are paginated with `limit`/`offset` and return `{items, total, limit, offset}`.

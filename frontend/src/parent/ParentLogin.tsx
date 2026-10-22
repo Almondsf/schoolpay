@@ -85,6 +85,7 @@ export function ParentLogin() {
             <Field label="Code">
               <input inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} autoFocus required />
             </Field>
+            {import.meta.env.DEV && <DemoCode phone={phone} onCode={setCode} />}
             <button type="submit" className="block" disabled={busy}>
               {busy ? 'Checking…' : 'Sign in'}
             </button>
@@ -106,5 +107,29 @@ export function ParentLogin() {
         )}
       </div>
     </main>
+  );
+}
+
+/**
+ * Demos on a laptop: fill in the code the app "texted", read from the development inbox. Only in the
+ * Vite dev server (`import.meta.env.DEV`); production builds drop it, and the inbox doesn't exist there.
+ */
+function DemoCode({ phone, onCode }: { phone: string; onCode: (code: string) => void }) {
+  const [note, setNote] = useState('');
+  async function fill() {
+    setNote('');
+    const response = await fetch(`/api/v1/dev/sms/latest?to=${encodeURIComponent(phone)}`);
+    const text = response.ok ? ((await response.json()) as { text: string }).text : '';
+    const code = /\b(\d{6})\b/.exec(text)?.[1];
+    if (code) onCode(code);
+    else setNote('No code was sent to this number (is it a parent at a school?).');
+  }
+  return (
+    <p className="small">
+      <button type="button" className="link" onClick={() => void fill()}>
+        Fill in the code (demo on this computer)
+      </button>
+      {note && <span className="muted"> {note}</span>}
+    </p>
   );
 }
