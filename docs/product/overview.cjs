@@ -190,6 +190,7 @@ const CHANGES = [
   ['20 Oct 2026', 'Payment provider switchable at any time (Paystack or Bachs), with Bachs checkout and onboarding'],
   ['20 Oct 2026', 'Fee status by pupil: every fee paid, part paid or unpaid, for the school or one class (Excel and PDF)'],
   ['21 Oct 2026', 'Fee status download: each class with only its own fees, what was paid on part-paid fees, a printable page per class'],
+  ['22 Oct 2026', 'Parent portal redesigned: one simple page with the total, each child’s amount, account number and fees, and one button to pay for everyone'],
   ['21 Oct 2026', 'Money that doesn’t say what it’s for covers tuition first; a payment can be marked afterwards for the fee the parent meant (e.g. PTA)'],
   ['21 Oct 2026', 'A fee added to a class after billing (e.g. WAEC for SSS 3) goes straight onto every pupil’s bill in that class'],
   ['21 Oct 2026', 'Printable pay cards: each child’s account number in large type and this term’s fees with what’s left to pay, a class at a time'],

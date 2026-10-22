@@ -39,6 +39,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 21 Oct | **School year filled in** (usual Nigerian term dates from the Lagos date, today's term made current) | `schools/academics_service.py` (`suggest_session`), `console/setup/Calendar.tsx` |
 | 21 Oct | **Printable pay cards** (one pupil or a class, four to an A4 page: account number + this term's fees with what's left, total to pay; no QR code); Lagos time in one place (`core/clock.py`) | `payments/paycards.py`, `console/payments/PayCards.tsx` |
 | 21 Oct | **Tuition first** for money not marked for a fee; **mark a payment for fees afterwards** (once, audited) from the Payments page | `reports/fee_status.py` (`_fill`), `payments/earmarks.py` (`mark_payment`) |
+| 22 Oct | **Parent portal redesign**: one page (total at the top, each child with owed, Pay online, account number and fees; pay-all at the bottom), history and settings a tap away; demo code-fill button on laptops | `parent/ParentApp.tsx`, `parent/ParentLogin.tsx` |
 | 21 Oct | Real `favicon.ico` + PNG icons (Apple touch, 192/512 in `site.webmanifest`): Netlify's app fallback was answering `/favicon.ico` with the page, so Safari and some tabs showed no icon | `frontend/public/` |
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:
@@ -93,6 +94,7 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 - 2026-10-21 Pay cards list the term's fees and what's left to pay; no QR code.
 - 2026-10-21 A fee added to a class in the fee grid goes onto every bill in that class already sent, as soon as it's saved (no confirmation).
 - 2026-10-21 Money not marked for particular fees covers tuition first, then the bill's other fees in order.
+- 2026-10-22 The parent portal stays one page for paying (no tapping into each child), for parents who aren't smartphone-savvy.
 
 ## Next: what's open, roughly in order
 

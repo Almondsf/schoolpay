@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronRight, Copy, LogOut, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 
@@ -7,7 +8,7 @@ import { saveBlob } from '../lib/download';
 import { FeeList } from '../lib/FeeBreakdown';
 import { PlanSchedule } from '../lib/PlanSchedule';
 import { INVOICE_KIND_LABELS, formatDate, formatKobo, humanize, parseNairaToKobo } from '../lib/format';
-import { BackLink, Empty, ErrorAlert, Field, Loading, Modal, StatusBadge } from '../lib/ui';
+import { BackLink, Empty, ErrorAlert, Field, Loading, Modal, StatusBadge, Tabs } from '../lib/ui';
 import { ParentAuthProvider, useParentAuth } from './ParentAuth';
 import { FamilyPayment } from '../public/FamilyPay';
 import { ParentLogin } from './ParentLogin';
@@ -24,6 +25,7 @@ export function ParentApp() {
           <Route index element={<Home />} />
           <Route path="children/:studentId" element={<ChildPage />} />
           <Route path="pay" element={<PayAll />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/parent" replace />} />
         </Route>
       </Routes>
@@ -41,9 +43,14 @@ function RequireParent() {
         <Link to="/parent" className="brand-link">
           School fees
         </Link>
-        <button className="link small light" onClick={() => void signOut()}>
-          Sign out
-        </button>
+        <nav className="row" aria-label="Account">
+          <Link to="/parent/settings" className="bar-icon" aria-label="Settings" title="Settings">
+            <Settings size={20} />
+          </Link>
+          <button className="bar-icon" onClick={() => void signOut()} aria-label="Sign out" title="Sign out">
+            <LogOut size={20} />
+          </button>
+        </nav>
       </header>
       <main className="parent-page">
         <Outlet />
@@ -54,25 +61,58 @@ function RequireParent() {
 
 const useHome = () => useQuery({ queryKey: ['parent-home'], queryFn: async () => unwrap(await api.GET('/api/v1/parent/home')) });
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((w) => w && !/^(mr|mrs|ms|miss|dr|chief|prof|alhaji|alhaja|barr)\.?$/i.test(w.replace(/[()]/g, '')))
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
+}
+
 function Home() {
   const home = useHome();
   if (home.isPending) return <Loading />;
   if (home.isError) return <ErrorAlert error={home.error} />;
-  const totalOwed = home.data.children.reduce((sum, c) => sum + c.owed_kobo, 0);
-  const owing = home.data.children.filter((c) => c.owed_kobo > 0).length;
+  const { children } = home.data;
+  const totalOwed = children.reduce((sum, c) => sum + c.owed_kobo, 0);
+  const credit = children.reduce((sum, c) => sum + c.credit_kobo, 0);
+  const owing = children.filter((c) => c.owed_kobo > 0).length;
   return (
     <>
-      <p className="muted">{home.data.school_name}</p>
+      <p className="muted small">{home.data.school_name}</p>
       <h1>Hello, {home.data.guardian_name}</h1>
-      {home.data.children.length === 0 && <Empty>No children are linked to your number yet. Please contact the school.</Empty>}
-      {home.data.children.map((child) => (
-        <ChildCard key={child.id} child={child} />
-      ))}
+      {children.length === 0 ? (
+        <Empty>No children are linked to your number yet. Please contact the school.</Empty>
+      ) : (
+        <section className={`parent-hero ${totalOwed > 0 ? '' : 'clear'}`} aria-label="Summary">
+          {totalOwed > 0 ? (
+            <>
+              <span className="hero-label">To pay</span>
+              <strong className="hero-amount">{formatKobo(totalOwed)}</strong>
+              <span className="hero-note">
+                {owing === 1 ? 'for 1 child' : `for ${owing} children`}
+                {credit > 0 && ` · ${formatKobo(credit)} credit`}
+              </span>
+            </>
+          ) : (
+            <>
+              <strong className="hero-amount">All paid</strong>
+              <span className="hero-note">Thank you! Nothing is owed right now.</span>
+            </>
+          )}
+        </section>
+      )}
+      {children.length > 0 && <h2 className="section-title">Your children</h2>}
+      <div className="child-list">
+        {children.map((child) => (
+          <ChildCard key={child.id} child={child} />
+        ))}
+      </div>
       {totalOwed > 0 && (
         <section className="card total-owed" aria-label="Pay for all your children">
           <div>
-            {owing > 1 ? `Total owed for ${owing} children` : 'Total owed'}:{' '}
-            <strong>{formatKobo(totalOwed)}</strong>
+            {owing > 1 ? `Total owed for ${owing} children` : 'Total owed'}: <strong>{formatKobo(totalOwed)}</strong>
           </div>
           <Link to="/parent/pay" className="button block">
             {owing > 1 ? 'Pay for all your children' : 'Pay now'}
@@ -80,6 +120,39 @@ function Home() {
           <p className="hint">One payment: bank transfer, card or USSD. You choose how much goes to each child.</p>
         </section>
       )}
+    </>
+  );
+}
+
+/** One child on the home page, everything needed to pay: what's owed, the ways to pay, the fees. */
+function ChildCard({ child }: { child: Child }) {
+  return (
+    <section className="card child-card" aria-label={child.full_name}>
+      <div className="child-head">
+        <span className="avatar" aria-hidden="true">
+          {initials(child.full_name)}
+        </span>
+        <span className="child-row-main">
+          <strong>{child.full_name}</strong>
+          <span className="muted small">
+            {child.class_name ?? 'No class this term'} · {child.admission_number}
+          </span>
+        </span>
+      </div>
+      <ChildSummary child={child} />
+      <FeeList fees={child.fees} earlierKobo={child.earlier_left_kobo} />
+      <Link to={`/parent/children/${child.id}`} className="child-more">
+        Bills and receipts <ChevronRight size={16} aria-hidden="true" />
+      </Link>
+    </section>
+  );
+}
+
+function SettingsPage() {
+  return (
+    <>
+      <BackLink to="/parent">All children</BackLink>
+      <h1>Settings</h1>
       <MessagePreferences />
     </>
   );
@@ -146,21 +219,11 @@ function MessagePreferences() {
   );
 }
 
-function ChildCard({ child }: { child: Child }) {
+/** What's owed and the two ways to pay: online, or a transfer into the child's own account number. */
+function ChildSummary({ child }: { child: Child }) {
   const [paying, setPaying] = useState(false);
   return (
-    <section className="card child-card">
-      <div className="row between">
-        <div>
-          <h2>{child.full_name}</h2>
-          <div className="muted small">
-            {child.class_name ?? 'No class this term'} · {child.admission_number}
-          </div>
-        </div>
-        <Link to={`/parent/children/${child.id}`} className="small">
-          Details
-        </Link>
-      </div>
+    <div className="child-pay">
       <div className={`owed ${child.owed_kobo > 0 ? 'due' : 'clear'}`}>
         {child.owed_kobo > 0 ? (
           <>
@@ -172,15 +235,14 @@ function ChildCard({ child }: { child: Child }) {
         )}
         {child.credit_kobo > 0 && <span className="small">{formatKobo(child.credit_kobo)} credit towards next term</span>}
       </div>
-      <FeeList fees={child.fees} earlierKobo={child.earlier_left_kobo} />
-      {child.pay_in && <TransferDetails account={child.pay_in} />}
       {child.owed_kobo > 0 && (
-        <button className="block secondary" onClick={() => setPaying(true)}>
-          Pay online for {child.first_name} only
+        <button className="block" onClick={() => setPaying(true)}>
+          Pay online for {child.first_name}
         </button>
       )}
+      {child.pay_in && <TransferDetails account={child.pay_in} />}
       {paying && <PayByCard child={child} onClose={() => setPaying(false)} />}
-    </section>
+    </div>
   );
 }
 
@@ -188,11 +250,12 @@ function TransferDetails({ account }: { account: Schemas['PayInAccount'] }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="transfer">
-      <div className="muted small">Transfer to {account.bank_name}</div>
+      <div className="muted small">Or transfer from any bank app to {account.bank_name}</div>
       <div className="row between">
         <span className="account-number">{account.account_number}</span>
         <button
           className="secondary small"
+          aria-label="Copy the account number"
           onClick={() =>
             void navigator.clipboard?.writeText(account.account_number).then(() => {
               setCopied(true);
@@ -200,11 +263,11 @@ function TransferDetails({ account }: { account: Schemas['PayInAccount'] }) {
             })
           }
         >
-          {copied ? 'Copied' : 'Copy'}
+          <Copy size={14} /> {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
       <div className="small">{account.account_name}</div>
-      <div className="hint">This number is for this child only. Payments show up within minutes and you'll get a receipt.</div>
+      <div className="hint">Only for this child. Any amount, any time; you get a receipt within minutes.</div>
     </div>
   );
 }
@@ -263,13 +326,36 @@ function ChildPage() {
     queryFn: async () => unwrap(await api.GET('/api/v1/parent/children/{student_id}', { params: { path: { student_id: studentId } } })),
   });
   const [openInvoice, setOpenInvoice] = useState<string | null>(null);
+  const [tab, setTab] = useState<'bills' | 'payments'>('bills');
   if (account.isPending) return <Loading />;
   if (account.isError) return <ErrorAlert error={account.error} />;
   const { child, invoices, payments } = account.data;
   return (
     <>
       <BackLink to="/parent">All children</BackLink>
-      <ChildCard child={child} />
+      <div className="profile-head">
+        <span className="avatar" aria-hidden="true">
+          {initials(child.full_name)}
+        </span>
+        <div className="who">
+          <h1>{child.full_name}</h1>
+          <div className="meta">
+            <span>{child.class_name ?? 'No class this term'}</span>
+            <span className="dot" />
+            <span>{child.admission_number}</span>
+          </div>
+        </div>
+      </div>
+      <Tabs
+        tabs={[
+          { key: 'bills', label: 'Bills' },
+          { key: 'payments', label: 'Payments and receipts' },
+        ]}
+        value={tab}
+        onChange={setTab}
+        label="History"
+      />
+      {tab === 'bills' && (
       <section className="card">
         <h2>Bills</h2>
         {invoices.length === 0 && <p className="muted">No bills yet.</p>}
@@ -297,6 +383,8 @@ function ChildPage() {
           </div>
         ))}
       </section>
+      )}
+      {tab === 'payments' && (
       <section className="card">
         <h2>Payments and receipts</h2>
         {payments.length === 0 && <p className="muted">No payments yet.</p>}
@@ -310,6 +398,7 @@ function ChildPage() {
           </div>
         ))}
       </section>
+      )}
     </>
   );
 }

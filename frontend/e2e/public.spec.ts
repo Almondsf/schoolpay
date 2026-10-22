@@ -22,6 +22,7 @@ test('a parent downloads their data', async ({ page }) => {
   await page.getByLabel('Code').fill(/\b(\d{6})\b/.exec((await latest.json()).text)![1]!);
   await page.getByRole('button', { name: 'Sign in' }).click();
 
+  await page.getByRole('link', { name: 'Settings' }).click();
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download my data' }).click()]);
   expect(download.suggestedFilename()).toBe('my-data.json');
   const data = JSON.parse(await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks).toString()));

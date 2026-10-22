@@ -78,8 +78,11 @@ describe('parent portal', () => {
     await userEvent.type(await screen.findByLabelText('Code'), '123456');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('Hello, Mrs Adeyemi')).toBeInTheDocument();
+    // One page: the total, then each child with everything needed to pay
+    expect(screen.getByRole('region', { name: 'Summary' })).toHaveTextContent('for 1 child');
     expect(screen.getByText('9820000015')).toBeInTheDocument();
     expect(screen.getByText('All paid. Thank you!')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Bills and receipts/ })).toHaveLength(2);
     expect(screen.getByText(/^Total owed:/)).toBeInTheDocument(); // only one of the two still owes
     expect(screen.getByRole('link', { name: 'Pay now' })).toHaveAttribute('href', '/parent/pay');
     const verify = calls.find((c) => c.url.endsWith('/parent/auth/verify'))!;
@@ -126,7 +129,7 @@ describe('parent portal', () => {
       'GET /api/v1/parent/preferences': () => json({ reminders: true }),
       'PUT /api/v1/parent/preferences': async (request) => json(await request.json()),
     });
-    renderAt('/parent');
+    renderAt('/parent/settings');
     const toggle = await screen.findByLabelText('Send me new bills and payment reminders');
     expect(toggle).toBeChecked();
     await userEvent.click(toggle);
@@ -147,7 +150,7 @@ describe('parent portal', () => {
         return json(prefs);
       },
     });
-    renderAt('/parent');
+    renderAt('/parent/settings');
     await userEvent.click(await screen.findByLabelText(/Also phone me/));
     const language = await screen.findByLabelText('Language on the call');
     await userEvent.selectOptions(language, 'pcm');

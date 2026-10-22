@@ -22,13 +22,15 @@ test('a parent signs in with a texted code and pays into a child account', async
   const accountNumber = (await cards.first().locator('.account-number').textContent())!.trim();
   await page.request.post('/api/v1/dev/fake-gateway/transfers', { data: { account_number: accountNumber, amount_kobo: 1_000_000 } });
 
-  await cards.first().getByRole('link', { name: 'Details' }).click();
+  await cards.first().getByRole('link', { name: /Bills and receipts/ }).click();
+  await page.getByRole('tab', { name: 'Payments and receipts' }).click();
   await expect(page.getByText('₦10,000.00').first()).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Receipt #\d+$/ }).first().click()]);
   expect(download.suggestedFilename()).toMatch(/^receipt-\d+\.pdf$/);
 
   // The session survives a reload (refresh cookie), and signing out ends it
   await page.reload();
+  await page.getByRole('tab', { name: 'Bills' }).click();
   await expect(page.getByRole('heading', { name: 'Bills' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByLabel('Phone number')).toBeVisible();

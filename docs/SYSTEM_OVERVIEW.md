@@ -1128,10 +1128,13 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   "Send reminder" and a per-parent "Stop/Restart reminders" on the student
   page; and "send each parent a message" when generating bills.
 - **Parent portal** (`src/parent/`): phone, then texted code, then (if needed)
-  the school; a home page with a card per child (amount owed, their account
-  number with a copy button, pay by card); and a child page (bills with lines,
-  payments, receipt downloads), with a switch on the home page to stop bill
-  notices and reminders. It has its own auth provider. The API client's
+  the school; then **one page** (owner, 2026-10-22: parents who aren't
+  confident on smartphones shouldn't have to tap around to pay): the total to
+  pay at the top, then each child in full (what's owed with "Pay online", their
+  account number with a copy button, the term's fees) and "Pay for all your
+  children" at the bottom. History is a tap away ("Bills and receipts": bills
+  with lines, payments, receipt downloads), and so are settings (gear icon:
+  stop bill notices and reminders, phone calls, download my data). It has its own auth provider. The API client's
   "realm" (`setAuthRealm`) picks the staff or parent refresh endpoint, so the
   two never share a session.
 - **Public pages:** `/verify/:code` checks a receipt (genuine, reversed or not
