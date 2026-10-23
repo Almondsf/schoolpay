@@ -18,7 +18,15 @@ from app.modules.fees.router import PaymentPlanOut
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.payments import checkout, family, family_links
 from app.modules.payments import service as payment_service
-from app.modules.payments.family_router import FamilyCheckoutIn, FamilyCheckoutOut, FamilyPageOut, page_out
+from app.modules.payments.family_router import (
+    FamilyCheckoutIn,
+    FamilyCheckoutOut,
+    FamilyPageOut,
+    FamilySplitIn,
+    FamilySplitOut,
+    page_out,
+    split_out,
+)
 from app.modules.payments.models import PaymentKind, PaymentMethod
 from app.modules.receipts.pdf import render_receipt
 from app.modules.receipts.service import is_reversed, receipts_for_payments
@@ -370,17 +378,33 @@ def family_page(ctx: ParentContext = Depends(get_parent), db: Session = Depends(
     "/family/checkout",
     response_model=FamilyCheckoutOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Pay for several children at once (card, transfer or USSD), with the amount chosen per child",
+    summary="Pay for several children at once (card, transfer or USSD): one amount, or chosen per child",
 )
 def family_checkout(
     body: FamilyCheckoutIn, ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)
 ) -> FamilyCheckoutOut:
     get_limiter().hit("parent-pay:guardian", "20/hour", str(ctx.guardian_id))
     found = family_links.resolved_for(db, ctx.guardian_id, ctx.school_id)
-    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo, p.fees) for p in body.items], ctx.meta)
+    if body.total_kobo is not None:  # one amount, shared by the school's rule
+        intent = family.start_family_checkout(db, found, body.total_kobo, ctx.meta)
+    else:
+        parts = [(p.student_id, p.amount_kobo, p.fees) for p in body.items or []]
+        intent = family.start_checkout(db, found, parts, ctx.meta)
     return FamilyCheckoutOut(
         reference=intent.reference, amount_kobo=intent.amount_kobo, authorization_url=intent.authorization_url
     )
+
+
+@router.post(
+    "/family/split",
+    response_model=FamilySplitOut,
+    summary="How one amount would be shared between the children, by the school's rule (nothing is paid)",
+)
+def family_split(
+    body: FamilySplitIn, ctx: ParentContext = Depends(get_parent), db: Session = Depends(get_db)
+) -> FamilySplitOut:
+    get_limiter().hit("parent-split:guardian", "120/hour", str(ctx.guardian_id))
+    return split_out(db, family_links.resolved_for(db, ctx.guardian_id, ctx.school_id), body.total_kobo)
 
 
 @router.get(

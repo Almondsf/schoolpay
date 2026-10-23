@@ -14,6 +14,7 @@ const page = {
   school_name: 'Alpha College',
   card_payments: true,
   min_part_kobo: 100_000,
+  split_rule: 'clear_most',
   children: [
     {
       student_id: 's1',
@@ -70,7 +71,54 @@ function renderPage() {
 describe('family payment page', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('starts with what is due now per child and pays the split the parent chose', async () => {
+  it('opens on one button that pays everything due now for all the children', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const calls = mockApi({
+      [`GET /api/v1/public/pay/${TOKEN}`]: () => json(page),
+      [`POST /api/v1/public/pay/${TOKEN}/checkout`]: () =>
+        json({ reference: 'SP1', amount_kobo: 20_500_000, authorization_url: 'https://gateway.example/pay/SP1' }, 201),
+    });
+    renderPage();
+    const top = within(await screen.findByRole('region', { name: 'Pay for all your children' }));
+    expect(top.getByText('₦205,000.00')).toBeInTheDocument(); // Ada's 155k + Bayo's next instalment (50k)
+    expect(screen.queryByLabelText(/Amount for Ada/)).not.toBeInTheDocument(); // no typing needed
+    await userEvent.click(top.getByRole('button', { name: 'Pay ₦205,000.00' }));
+    const post = calls.find((c) => c.method === 'POST')!;
+    expect(await post.json()).toEqual({ total_kobo: 20_500_000 });
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('https://gateway.example/pay/SP1'));
+  });
+
+  it('shows how a different amount will be shared before paying it', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const calls = mockApi({
+      [`GET /api/v1/public/pay/${TOKEN}`]: () => json(page),
+      [`POST /api/v1/public/pay/${TOKEN}/split`]: () =>
+        json({
+          split_rule: 'clear_most',
+          shares: [
+            { student_id: 's1', amount_kobo: 15_500_000, clears: true },
+            { student_id: 's2', amount_kobo: 4_500_000, clears: false },
+          ],
+        }),
+      [`POST /api/v1/public/pay/${TOKEN}/checkout`]: () =>
+        json({ reference: 'SP1', amount_kobo: 20_000_000, authorization_url: 'https://gateway.example/pay/SP1' }, 201),
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Pay a different amount' }));
+    const box = within(screen.getByRole('region', { name: 'Pay a different amount' }));
+    expect(box.getByText(/as many children as possible are fully paid/)).toBeInTheDocument();
+    await userEvent.type(box.getByLabelText(/Amount for all the children/), '200000');
+    const shared = within(await box.findByRole('list', { name: 'How it will be shared' }));
+    expect(shared.getByText('Ada')).toBeInTheDocument();
+    expect(shared.getByText('Fully paid')).toBeInTheDocument();
+    await userEvent.click(box.getByRole('button', { name: 'Pay ₦200,000.00' }));
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/checkout'))!;
+    expect(await post.json()).toEqual({ total_kobo: 20_000_000 });
+  });
+
+  it('can still choose the amount per child', async () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { ...window.location, assign });
     const calls = mockApi({
@@ -87,10 +135,11 @@ describe('family payment page', () => {
     expect(within(screen.getByRole('region', { name: 'Bayo' })).getByText('From earlier terms')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Bayo' })).getByText(/₦50,000.00 is due next/)).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Chidi' })).getByText('All paid')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Choose the amount for each child' }));
     expect(screen.queryByLabelText(/Amount for Chidi/)).not.toBeInTheDocument();
 
     // Starts at Ada's 155k + Bayo's next instalment (50k)
-    const top = within(screen.getByRole('region', { name: 'Pay for all your children' }));
+    const top = within(screen.getByRole('region', { name: 'Pay the amounts chosen' }));
     expect(top.getByRole('button', { name: 'Pay ₦205,000.00 now' })).toBeEnabled();
     expect(top.getByText(/bank transfer/)).toBeInTheDocument();
     const bayo = screen.getByLabelText(/Amount for Bayo/);
@@ -115,7 +164,8 @@ describe('family payment page', () => {
         json({ reference: 'SP1', amount_kobo: 400_000, authorization_url: 'https://gateway.example/pay/SP1' }, 201),
     });
     renderPage();
-    const ada = await screen.findByRole('region', { name: 'Ada' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose the amount for each child' }));
+    const ada = screen.getByRole('region', { name: 'Ada' });
     await userEvent.click(within(ada).getByRole('checkbox', { name: /WAEC/ }));
     expect(within(ada).getByLabelText(/Amount for Ada/)).toHaveValue('4000');
     expect(within(ada).getByText('For WAEC')).toBeInTheDocument();

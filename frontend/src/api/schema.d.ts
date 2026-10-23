@@ -1005,8 +1005,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Pay for several children at once (card, transfer or USSD), with the amount chosen per child */
+        /** Pay for several children at once (card, transfer or USSD): one amount, or chosen per child */
         post: operations["parent_family_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/parent/family/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** How one amount would be shared between the children, by the school's rule (nothing is paid) */
+        post: operations["parent_family_split"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1161,6 +1178,24 @@ export interface paths {
         /** Banks the gateway can pay out to */
         get: operations["payments_list_banks"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payment-settings/family-split-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How one amount a parent pays for several children is shared */
+        get: operations["payments_get_family_split_rule"];
+        /** Choose how one amount for several children is shared (proprietor; audited) */
+        put: operations["payments_set_family_split_rule"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1811,6 +1846,23 @@ export interface paths {
         put?: never;
         /** Pay for several children at once (card, transfer or USSD), with the amount chosen per child */
         post: operations["public_family_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/pay/{token}/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** How one amount would be shared between the children, by the school's rule (nothing is paid) */
+        post: operations["public_family_split_preview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3707,10 +3759,15 @@ export interface components {
              */
             term_id: string;
         };
-        /** FamilyCheckoutIn */
+        /**
+         * FamilyCheckoutIn
+         * @description Either one amount for the family (shared by the school's rule) or the amount per child.
+         */
         FamilyCheckoutIn: {
             /** Items */
-            items: components["schemas"]["FamilyPartIn"][];
+            items?: components["schemas"]["FamilyPartIn"][] | null;
+            /** Total Kobo */
+            total_kobo?: number | null;
         };
         /** FamilyCheckoutOut */
         FamilyCheckoutOut: {
@@ -3788,6 +3845,8 @@ export interface components {
             min_part_kobo: number;
             /** School Name */
             school_name: string;
+            /** @description How the school shares one amount between the children */
+            split_rule: components["schemas"]["FamilySplitRule"];
         };
         /** FamilyPartIn */
         FamilyPartIn: {
@@ -3806,6 +3865,42 @@ export interface components {
              * Format: uuid
              */
             student_id: string;
+        };
+        /** FamilyShareOut */
+        FamilyShareOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            /**
+             * Clears
+             * @description This pays everything the child owes
+             */
+            clears: boolean;
+            /**
+             * Student Id
+             * Format: uuid
+             */
+            student_id: string;
+        };
+        /** FamilySplitIn */
+        FamilySplitIn: {
+            /** Total Kobo */
+            total_kobo: number;
+        };
+        /** FamilySplitOut */
+        FamilySplitOut: {
+            /** Shares */
+            shares: components["schemas"]["FamilyShareOut"][];
+            split_rule: components["schemas"]["FamilySplitRule"];
+        };
+        /**
+         * FamilySplitRule
+         * @description How one amount a parent pays for several children is shared (see payments/family_split.py).
+         * @enum {string}
+         */
+        FamilySplitRule: "clear_most" | "proportional" | "eldest_first" | "youngest_first";
+        /** FamilySplitRuleIo */
+        FamilySplitRuleIo: {
+            rule: components["schemas"]["FamilySplitRule"];
         };
         /** FeeBreakdownOut */
         FeeBreakdownOut: {
@@ -11919,6 +12014,93 @@ export interface operations {
             };
         };
     };
+    parent_family_split: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamilySplitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilySplitOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     parent_home: {
         parameters: {
             query?: never;
@@ -12781,6 +12963,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BankOut"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    payments_get_family_split_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilySplitRuleIo"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    payments_set_family_split_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamilySplitRuleIo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilySplitRuleIo"];
                 };
             };
             /** @description Bad Request */
@@ -16324,6 +16676,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FamilyCheckoutOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    public_family_split_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamilySplitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilySplitOut"];
                 };
             };
             /** @description Bad Request */

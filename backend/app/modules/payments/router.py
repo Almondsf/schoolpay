@@ -21,7 +21,7 @@ from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.receipts.service import receipts_for_payments
-from app.modules.schools.models import School
+from app.modules.schools.models import FamilySplitRule, School
 from app.modules.students.models import Student
 
 from . import accounts, checkout, earmarks, manual, paycards, providers, service, webhooks
@@ -274,6 +274,47 @@ def get_settings_(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> Pa
         account=PaymentAccountOut.model_validate(account) if account else None,
         accounts=[PaymentAccountOut.model_validate(a) for a in accounts.school_accounts(db)],
     )
+
+
+class FamilySplitRuleIo(BaseModel):
+    rule: FamilySplitRule
+
+
+@router.get(
+    "/payment-settings/family-split-rule",
+    response_model=FamilySplitRuleIo,
+    summary="How one amount a parent pays for several children is shared",
+)
+def get_family_split_rule(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> FamilySplitRuleIo:
+    school = db.get(School, ctx.school_id)
+    return FamilySplitRuleIo(rule=school.family_split_rule if school else FamilySplitRule.CLEAR_MOST)
+
+
+@router.put(
+    "/payment-settings/family-split-rule",
+    response_model=FamilySplitRuleIo,
+    summary="Choose how one amount for several children is shared (proprietor; audited)",
+)
+def set_family_split_rule(
+    body: FamilySplitRuleIo, ctx: StaffContext = SETUP, db: Session = Depends(get_db)
+) -> FamilySplitRuleIo:
+    school = db.get(School, ctx.school_id, with_for_update=True)
+    if school is None:
+        raise NotFound("School not found.")
+    before = school.family_split_rule
+    if before != body.rule:
+        school.family_split_rule = body.rule
+        record(
+            db,
+            AuditAction.FAMILY_SPLIT_RULE_CHANGED,
+            school_id=ctx.school_id,
+            actor=ctx.actor,
+            meta=ctx.meta,
+            target=school,
+            changes={"before": before, "after": body.rule},
+        )
+        db.commit()
+    return FamilySplitRuleIo(rule=school.family_split_rule)
 
 
 @router.post(

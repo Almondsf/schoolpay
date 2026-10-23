@@ -87,8 +87,10 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 
 - 2026-10-18 Pricing model: set-up fee + yearly licence + per pupil per term, free for parents (prices in
   the platform plan are defaults: ₦50,000 / ₦100,000 / ₦500).
-- 2026-10-23 Family account numbers: how a transfer is shared between children is a per-school setting
-  (default "old debts first, then clear as many children as possible"); see "Ideas waiting on the owner".
+- 2026-10-23 How one family amount is shared between children is a per-school setting (default "old debts
+  first, then clear as many children as possible"). Built for the family payment link (one tap pays
+  everything; a smaller amount follows the rule); family account numbers are on hold (owner: "stick
+  with the payment link for now").
 - 2026-10-22 Platform admins may send a school's staff their invite / a reset link and reset their two-factor
   sign-in (for locked-out proprietors); not change their email or password.
 - 2026-10-22 Pricing: a set-up fee and a pupil fee each term; **no yearly licence** (set the plan's
@@ -141,7 +143,8 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
   questions** (in `OWNER_TODO.md`): shared or separate bank accounts per branch; can one bursar cover
   several branches; a group price. This changes who sees which school's data, so confirm before
   building.
-- **One virtual account per family** (alongside each child's own). Needs a provider that issues virtual
+- **One virtual account per family** (on hold, owner 2026-10-23; the split rule below is built and used by
+  the family payment link, so family numbers would reuse it). Needs a provider that issues virtual
   accounts (Paystack Dedicated NUBAN, or Fincra / Figo / Squad / Monnify: published caps ₦250 / ₦200 /
   ₦1,000 / ₦500 vs Paystack ₦300). A plain transfer says nothing about which child it's for, so it's
   split by a **rule each school chooses** (owner, 2026-10-23), a school setting:

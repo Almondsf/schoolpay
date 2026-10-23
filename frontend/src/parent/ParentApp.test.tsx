@@ -167,6 +167,7 @@ describe('parent portal', () => {
       school_name: 'Alpha College',
       card_payments: true,
       min_part_kobo: 100_000,
+      split_rule: 'clear_most',
       children: [
         { student_id: 'c1', first_name: 'Tolu', class_name: 'JSS 1 A', owed_kobo: 5_000_000, suggested_kobo: 5_000_000, on_plan: false, account_number: null, bank_name: null, fees: [], earlier_left_kobo: 0 },
       ],
@@ -181,10 +182,10 @@ describe('parent portal', () => {
     renderAt('/parent');
     const box = await screen.findByRole('region', { name: 'Pay for all your children' });
     await userEvent.click(within(box).getByRole('link'));
-    const pay = within(await screen.findByRole('region', { name: 'Pay for all your children' })).getByRole('button', { name: 'Pay ₦50,000.00 now' });
+    const pay = within(await screen.findByRole('region', { name: 'Pay for all your children' })).getByRole('button', { name: 'Pay ₦50,000.00' });
     await userEvent.click(pay);
     const post = calls.find((c) => c.url.endsWith('/parent/family/checkout'))!;
-    expect(await post.json()).toEqual({ items: [{ student_id: 'c1', amount_kobo: 5_000_000, fees: [] }] });
+    expect(await post.json()).toEqual({ total_kobo: 5_000_000 });
     await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('https://pay.example/SP1'));
   });
 

@@ -45,10 +45,10 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
       do branches of a group usually share one bank account or each have their own; can one
       bursar cover several branches, or only the proprietor; should a group get a group price
       (e.g. one set-up fee). A real group to talk to would settle most of it.
-- [x] _(new)_ **One virtual account per family: how a transfer is shared** (decided 2026-10-23): each
-      school chooses its own rule in its settings (default: old debts first, then clear as many
-      children as possible). Built together with family account numbers, once a provider issues
-      virtual accounts.
+- [x] _(new)_ **How one family payment is shared between children** (decided and built 2026-10-23):
+      each school's proprietor chooses the rule under Payment settings (default: old debts first,
+      then clear as many children as possible). It's used by the family payment link: one tap pays
+      everything, a smaller amount follows the rule. Family account numbers are on hold.
 
 - [ ] _(new, on hold)_ **Announcements to parents** (2026-10-22): decide who pays for the messages
       (prepaid credits per school, or an allowance in each plan), your price per SMS page, and whether

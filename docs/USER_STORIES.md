@@ -3,6 +3,7 @@
 What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ Choose how one amount a parent pays for several children is shared: old balances first then clear as many children as possible, in proportion, eldest first or youngest first.
 - ✅ Sign my school up online, confirm my email, and get a checklist of what to set up next.
 - ✅ See our plan, what a term costs at our pupil numbers, where to pay, and our WardPay bills (PDF).
 - ✅ Pay a WardPay bill by card from the console, and see it marked paid as soon as the payment clears.
@@ -70,6 +71,8 @@ What each kind of user needs from WardPay. Stories are marked ✅ when built.
 - ✅ Move everyone into the next term, or promote them a class at the start of a new session (final-year students graduate), with a preview first.
 
 ## Parent
+- ✅ Pay for all my children with one tap from the link in my WhatsApp or text message, straight to the payment page, without working out amounts.
+- ✅ Pay a smaller amount for all my children and see how the school will share it before I pay.
 - ✅ Pay for a particular fee (say WAEC) rather than the bill in general, by ticking it on the payment page; the receipt says what it was for.
 - ✅ When a parent says what a transfer was for after it arrived ("that was for PTA"), mark the payment for that fee on the Payments page, once; the fees then show it as paid.
 - ✅ Money that doesn't say what it's for covers tuition first, then the bill's other fees.

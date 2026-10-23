@@ -3,9 +3,10 @@ A parent's family payment page and its card checkout (the link itself: `family_l
 
 The page shows each child's first name, class, what's owed (or, on a payment plan,
 what's needed up to the next instalment) and their account number for transfers.
-For a card payment the parent sets the amount per child; one card charge becomes one
-payment per child (`checkout.confirm`), each applied oldest bill first with its own
-receipt. Nothing is split automatically, so the receipts match what the parent meant.
+The parent either pays **one amount** for the whole family (the usual way: one tap pays
+everything), shared between the children by the school's own rule (`family_split.py`), or sets
+the amount per child. One card charge becomes one payment per child (`checkout.confirm`), each
+applied oldest bill first with its own receipt.
 """
 
 import uuid
@@ -25,13 +26,14 @@ from app.modules.fees.models import Invoice
 from app.modules.fees.plans import plan_views
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.reports.fee_status import FeeBreakdown, fee_breakdowns, fee_targets
-from app.modules.schools.models import Arm, ClassLevel, School, Term
+from app.modules.schools.models import Arm, ClassLevel, FamilySplitRule, School, Term
 from app.modules.students.models import Enrollment, Guardian, GuardianStudent, Student, StudentStatus
 
 from .accounts import payment_account, require_payment_account
 from .checkout import checkout_email, new_reference
 from .earmarks import Earmark, choose_from
 from .family_links import Resolved
+from .family_split import load_debts, split
 from .gateways import get_gateway
 from .models import FamilyPayLink, PaymentIntent, PaymentIntentItem, VirtualAccount, VirtualAccountStatus
 
@@ -58,6 +60,7 @@ class FamilyPage:
     school_name: str
     card_payments: bool
     children: list[FamilyChild]
+    split_rule: FamilySplitRule
 
 
 def _children(session: Session, guardian_id: uuid.UUID) -> list[Student]:
@@ -141,9 +144,34 @@ def family_page(session: Session, found: Resolved) -> FamilyPage:
             FamilyChild(s.id, s.first_name, classes.get(s.id), *owed[s.id], accounts.get(s.id), breakdowns[s.id])
             for s in students
         ],
+        split_rule=school.family_split_rule,
     )
     session.commit()
     return page
+
+
+def family_shares(session: Session, found: Resolved, total_kobo: int) -> dict[uuid.UUID, int]:
+    """How one amount would be shared between the family's children, by the school's rule."""
+    school = session.get(School, found.school_id)
+    if school is None:
+        raise NotFound("This link has expired.")
+    children = [s.id for s in _children(session, found.guardian_id)]
+    debts = load_debts(session, children)
+    owed = sum(d.owed_kobo for d in debts)
+    if owed <= 0:
+        raise DomainError("Nothing is owed at the moment.", field="total_kobo")
+    if total_kobo > owed:
+        raise DomainError(f"That's more than the {len(children)} children owe together.", field="total_kobo")
+    if total_kobo < min(MIN_PART_KOBO, owed):
+        raise DomainError("Pay at least ₦1,000 (or everything owed).", field="total_kobo")
+    return split(total_kobo, debts, school.family_split_rule)
+
+
+def start_family_checkout(session: Session, found: Resolved, total_kobo: int, meta: RequestMeta) -> PaymentIntent:
+    """One amount for the whole family, shared by the school's rule, then paid as one checkout."""
+    shares = family_shares(session, found, total_kobo)
+    parts: list[tuple[uuid.UUID, int, list[str]]] = [(sid, amount, []) for sid, amount in shares.items() if amount > 0]
+    return start_checkout(session, found, parts, meta, shared_by_rule=True)
 
 
 def start_checkout(
@@ -151,10 +179,13 @@ def start_checkout(
     found: Resolved,
     parts: list[tuple[uuid.UUID, int, list[str]]],
     meta: RequestMeta,
+    *,
+    shared_by_rule: bool = False,
 ) -> PaymentIntent:
     """
-    One online payment for the amounts the parent chose per child (zero means not this time),
-    each optionally for particular fees (earmarked, see `earmarks.py`).
+    One online payment for the amounts per child (zero means not this time), each optionally for
+    particular fees (earmarked, see `earmarks.py`). `shared_by_rule`: the school's rule chose the
+    amounts, so a child's share may be small (the ₦1,000 minimum applies to the whole amount).
     """
     account = require_payment_account(session)
     chosen = [(sid, amount, fees) for sid, amount, fees in parts if amount != 0]
@@ -179,7 +210,7 @@ def start_checkout(
             raise DomainError(f"{name} owes nothing at the moment.", field="items")
         if amount < 0 or amount > left:
             raise DomainError(f"For {name}, enter up to what's owed.", field="items")
-        if amount < min(MIN_PART_KOBO, left):
+        if not shared_by_rule and amount < min(MIN_PART_KOBO, left):
             raise DomainError(f"For {name}, pay at least ₦1,000 (or everything owed).", field="items")
     total = sum(amount for _, amount, _ in chosen)
     if total > MAX_AMOUNT_KOBO:
@@ -232,6 +263,7 @@ def start_checkout(
             "amount_kobo": total,
             "reference": intent.reference,
             "children": [{"student": sid, "amount_kobo": amount, "for": fees} for sid, amount, fees in chosen],
+            "shared_by": "school rule" if shared_by_rule else "parent",
         },
     )
     session.commit()

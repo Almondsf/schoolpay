@@ -2127,20 +2127,38 @@
         "type": "object"
       },
       "FamilyCheckoutIn": {
+        "description": "Either one amount for the family (shared by the school's rule) or the amount per child.",
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/FamilyPartIn"
-            },
-            "maxItems": 20,
-            "minItems": 1,
-            "title": "Items",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FamilyPartIn"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "total_kobo": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Kobo"
           }
         },
-        "required": [
-          "items"
-        ],
         "title": "FamilyCheckoutIn",
         "type": "object"
       },
@@ -2296,12 +2314,17 @@
           "school_name": {
             "title": "School Name",
             "type": "string"
+          },
+          "split_rule": {
+            "$ref": "#/components/schemas/FamilySplitRule",
+            "description": "How the school shares one amount between the children"
           }
         },
         "required": [
           "school_name",
           "card_payments",
           "min_part_kobo",
+          "split_rule",
           "children"
         ],
         "title": "FamilyPageOut",
@@ -2337,6 +2360,89 @@
           "amount_kobo"
         ],
         "title": "FamilyPartIn",
+        "type": "object"
+      },
+      "FamilyShareOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "clears": {
+            "description": "This pays everything the child owes",
+            "title": "Clears",
+            "type": "boolean"
+          },
+          "student_id": {
+            "format": "uuid",
+            "title": "Student Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_id",
+          "amount_kobo",
+          "clears"
+        ],
+        "title": "FamilyShareOut",
+        "type": "object"
+      },
+      "FamilySplitIn": {
+        "properties": {
+          "total_kobo": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 10000000000.0,
+            "title": "Total Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_kobo"
+        ],
+        "title": "FamilySplitIn",
+        "type": "object"
+      },
+      "FamilySplitOut": {
+        "properties": {
+          "shares": {
+            "items": {
+              "$ref": "#/components/schemas/FamilyShareOut"
+            },
+            "title": "Shares",
+            "type": "array"
+          },
+          "split_rule": {
+            "$ref": "#/components/schemas/FamilySplitRule"
+          }
+        },
+        "required": [
+          "split_rule",
+          "shares"
+        ],
+        "title": "FamilySplitOut",
+        "type": "object"
+      },
+      "FamilySplitRule": {
+        "description": "How one amount a parent pays for several children is shared (see payments/family_split.py).",
+        "enum": [
+          "clear_most",
+          "proportional",
+          "eldest_first",
+          "youngest_first"
+        ],
+        "title": "FamilySplitRule",
+        "type": "string"
+      },
+      "FamilySplitRuleIo": {
+        "properties": {
+          "rule": {
+            "$ref": "#/components/schemas/FamilySplitRule"
+          }
+        },
+        "required": [
+          "rule"
+        ],
+        "title": "FamilySplitRuleIo",
         "type": "object"
       },
       "FeeBreakdownOut": {
@@ -15859,7 +15965,113 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Pay for several children at once (card, transfer or USSD), with the amount chosen per child",
+        "summary": "Pay for several children at once (card, transfer or USSD): one amount, or chosen per child",
+        "tags": [
+          "parent"
+        ]
+      }
+    },
+    "/api/v1/parent/family/split": {
+      "post": {
+        "operationId": "parent_family_split",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilySplitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilySplitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "How one amount would be shared between the children, by the school's rule (nothing is paid)",
         "tags": [
           "parent"
         ]
@@ -16970,6 +17182,206 @@
           }
         ],
         "summary": "Banks the gateway can pay out to",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payment-settings/family-split-rule": {
+      "get": {
+        "operationId": "payments_get_family_split_rule",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilySplitRuleIo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "How one amount a parent pays for several children is shared",
+        "tags": [
+          "payments"
+        ]
+      },
+      "put": {
+        "operationId": "payments_set_family_split_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilySplitRuleIo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilySplitRuleIo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose how one amount for several children is shared (proprietor; audited)",
         "tags": [
           "payments"
         ]
@@ -21643,6 +22055,119 @@
           }
         },
         "summary": "Pay for several children at once (card, transfer or USSD), with the amount chosen per child",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/pay/{token}/split": {
+      "post": {
+        "operationId": "public_family_split_preview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{20,64}$",
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilySplitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilySplitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "How one amount would be shared between the children, by the school's rule (nothing is paid)",
         "tags": [
           "public"
         ]

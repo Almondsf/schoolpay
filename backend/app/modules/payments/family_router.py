@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -20,8 +20,10 @@ from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
 from app.modules.fees.setup_service import MAX_AMOUNT_KOBO
 from app.modules.reports.router import FeeLineOut, breakdown_out
+from app.modules.schools.models import FamilySplitRule, School
 
 from . import family, family_links
+from .family_split import load_debts
 
 public_router = APIRouter(prefix="/public/pay", tags=["public"], responses=ERROR_RESPONSES)
 router = APIRouter(tags=["payments"], responses=ERROR_RESPONSES)
@@ -50,6 +52,7 @@ class FamilyPageOut(BaseModel):
     school_name: str
     card_payments: bool = Field(description="Whether the school takes card payments")
     min_part_kobo: int = Field(description="Smallest card payment per child (unless less is owed)")
+    split_rule: FamilySplitRule = Field(description="How the school shares one amount between the children")
     children: list[FamilyChildOut]
 
 
@@ -64,7 +67,31 @@ class FamilyPartIn(BaseModel):
 
 
 class FamilyCheckoutIn(BaseModel):
-    items: list[FamilyPartIn] = Field(min_length=1, max_length=20)
+    """Either one amount for the family (shared by the school's rule) or the amount per child."""
+
+    total_kobo: int | None = Field(default=None, gt=0, le=MAX_AMOUNT_KOBO)
+    items: list[FamilyPartIn] | None = Field(default=None, min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def one_way(self) -> "FamilyCheckoutIn":
+        if (self.total_kobo is None) == (self.items is None):
+            raise ValueError("Send either total_kobo or items.")
+        return self
+
+
+class FamilySplitIn(BaseModel):
+    total_kobo: int = Field(gt=0, le=MAX_AMOUNT_KOBO)
+
+
+class FamilyShareOut(BaseModel):
+    student_id: uuid.UUID
+    amount_kobo: int
+    clears: bool = Field(description="This pays everything the child owes")
+
+
+class FamilySplitOut(BaseModel):
+    split_rule: FamilySplitRule
+    shares: list[FamilyShareOut]
 
 
 class FamilyCheckoutOut(BaseModel):
@@ -100,6 +127,7 @@ def page_out(page: family.FamilyPage) -> FamilyPageOut:
         school_name=page.school_name,
         card_payments=page.card_payments,
         min_part_kobo=family.MIN_PART_KOBO,
+        split_rule=page.split_rule,
         children=[
             FamilyChildOut(
                 student_id=c.student_id,
@@ -131,9 +159,37 @@ def family_checkout(
     meta: RequestMeta = Depends(request_meta),
 ) -> FamilyCheckoutOut:
     get_limiter().hit("family-link:checkout", "20/hour", str(found.link_id))
-    intent = family.start_checkout(db, found, [(p.student_id, p.amount_kobo, p.fees) for p in body.items], meta)
+    if body.total_kobo is not None:
+        intent = family.start_family_checkout(db, found, body.total_kobo, meta)
+    else:
+        parts = [(p.student_id, p.amount_kobo, p.fees) for p in body.items or []]
+        intent = family.start_checkout(db, found, parts, meta)
     return FamilyCheckoutOut(
         reference=intent.reference, amount_kobo=intent.amount_kobo, authorization_url=intent.authorization_url
+    )
+
+
+@public_router.post(
+    "/{token}/split",
+    response_model=FamilySplitOut,
+    summary="How one amount would be shared between the children, by the school's rule (nothing is paid)",
+)
+def family_split_preview(
+    body: FamilySplitIn, found: family_links.Resolved = Depends(_link), db: Session = Depends(get_db)
+) -> FamilySplitOut:
+    return split_out(db, found, body.total_kobo)
+
+
+def split_out(db: Session, found: family_links.Resolved, total_kobo: int) -> FamilySplitOut:
+    shares = family.family_shares(db, found, total_kobo)
+    owed = {d.student_id: d.owed_kobo for d in load_debts(db, list(shares))}
+    school = db.get(School, found.school_id)
+    return FamilySplitOut(
+        split_rule=school.family_split_rule if school else FamilySplitRule.CLEAR_MOST,
+        shares=[
+            FamilyShareOut(student_id=sid, amount_kobo=amount, clears=amount > 0 and amount >= owed.get(sid, 0))
+            for sid, amount in shares.items()
+        ],
     )
 
 

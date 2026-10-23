@@ -507,6 +507,26 @@ one is made on the next message). Staff can replace it
 (`POST /guardians/{id}/pay-link/replace`, audited), and erasing the parent ends
 it. Unknown, expired and replaced links get the same answer.
 
+**One amount for the family** (`family_split.py`). The page opens on one button that
+pays everything due now: `POST /public/pay/{token}/checkout` with `total_kobo` (the
+portal's `POST /parent/family/checkout` takes the same). A parent paying less types
+one amount and sees how it will be shared first (`POST .../split`, nothing paid). The
+share follows the school's own rule, `School.family_split_rule`, chosen by the
+proprietor under Payment settings (`GET`/`PUT /payment-settings/family-split-rule`,
+`payments.setup` to change, audited `payments.family_split_rule`; owner,
+2026-10-23):
+
+- `clear_most` (default): bills from earlier terms and one-off bills first, oldest
+  first across the children; then this term, the smallest balance first, so as many
+  children as possible are fully paid;
+- `proportional`: by what each child owes, exact to the kobo (largest remainder);
+- `eldest_first` / `youngest_first`: by date of birth, or class where none is recorded.
+
+A share is never more than a child owes and the total never more than the family
+owes; the ₦1,000 minimum applies to the whole amount. Each share becomes its own
+payment and receipt, applied within the child as usual (oldest bill, tuition first).
+Choosing the amount per child (with particular fees) is still there.
+
 **Pay cards** (`paycards.py`) are for parents who don't use apps: a printable card
 per child with the school, the child's name and class, their own account number in
 large type (bank and account name, "pay any amount, any time, from your bank app, a
@@ -1225,9 +1245,10 @@ development Vite serves on 5175 and proxies `/api` to the backend on 8002.
   genuine) from its QR code. `/pay/complete` is where the gateway returns parents after a
   card payment. It shows the outcome from `POST /payments/verify` (never from
   the URL) and polls while the payment is pending. `/pay/f/:token`
-  (`src/public/FamilyPay.tsx`) is a parent's family payment page: each child's
-  account number with a copy button and an amount box per child (prefilled with
-  what's due now) for one card payment. Staff open a parent's link from the
+  (`src/public/FamilyPay.tsx`) is a parent's family payment page: one big
+  "Pay ₦X" for everything due now, "Pay a different amount" (shows how the school's
+  rule will share it), or the amount per child; each child's account number with a
+  copy button. Staff open a parent's link from the
   student page ("Payment link": copy or replace, `console/students/FamilyLink.tsx`).
   Navigation and routes are filtered by the user's capabilities. Users who
   must enrol in MFA can only reach their account page until they do.

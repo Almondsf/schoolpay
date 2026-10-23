@@ -314,7 +314,8 @@ function PayAll() {
       <BackLink to="/parent">All children</BackLink>
       <FamilyPayment
         data={family.data}
-        checkout={async (items) => unwrap(await api.POST('/api/v1/parent/family/checkout', { body: { items } }))}
+        checkout={async (body) => unwrap(await api.POST('/api/v1/parent/family/checkout', { body }))}
+        preview={async (total) => unwrap(await api.POST('/api/v1/parent/family/split', { body: { total_kobo: total } }))}
       />
     </>
   );

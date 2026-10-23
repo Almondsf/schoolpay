@@ -186,6 +186,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['23 Oct 2026', 'Parents pay for all their children with one tap from their WhatsApp or text link; the school chooses how a smaller amount is shared'],
   ['23 Oct 2026', 'WardPay team can discount a school’s bill (e.g. waive the set-up fee) or move its due date'],
   ['23 Oct 2026', 'Month-by-month charts for the WardPay team: income, money through WardPay, schools joining'],
   ['22 Oct 2026', 'WardPay team can resend password links and reset two-factor sign-in for a school’s staff'],

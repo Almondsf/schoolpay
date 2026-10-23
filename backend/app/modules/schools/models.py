@@ -20,6 +20,15 @@ class SchoolOrigin(enum.StrEnum):
     SIGNUP = "signup"  # the school signed itself up
 
 
+class FamilySplitRule(enum.StrEnum):
+    """How one amount a parent pays for several children is shared (see payments/family_split.py)."""
+
+    CLEAR_MOST = "clear_most"  # earlier bills first, then the smallest balance this term first
+    PROPORTIONAL = "proportional"
+    ELDEST_FIRST = "eldest_first"
+    YOUNGEST_FIRST = "youngest_first"
+
+
 class School(UUIDPrimaryKey, Timestamped, Base):
     """The tenant. Everything a school owns hangs off this row via TenantMixin."""
 
@@ -38,6 +47,12 @@ class School(UUIDPrimaryKey, Timestamped, Base):
     )
     # Its subscription plan; None means the default plan
     plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plans.id", ondelete="RESTRICT"))
+    # The proprietor's choice for sharing a family's one-amount payment between its children
+    family_split_rule: Mapped[FamilySplitRule] = mapped_column(
+        enum_type(FamilySplitRule, "family_split_rule"),
+        default=FamilySplitRule.CLEAR_MOST,
+        server_default=FamilySplitRule.CLEAR_MOST.value,
+    )
 
     def __repr__(self) -> str:
         return f"<School {self.slug}>"

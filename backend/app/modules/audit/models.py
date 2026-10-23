@@ -58,6 +58,7 @@ class AuditAction(enum.StrEnum):
     PLATFORM_STAFF_LINK_SENT = "platform.staff_link_sent"
     SUBSCRIPTION_DISCOUNTED = "platform.subscription_discount"
     SUBSCRIPTION_DUE_DATE_CHANGED = "platform.subscription_due_date"
+    FAMILY_SPLIT_RULE_CHANGED = "payments.family_split_rule"
     SUPPORT_LOOKUP = "platform.support_lookup"
     PRIVACY_EXPORTED = "privacy.exported"
     PRIVACY_ERASED = "privacy.erased"

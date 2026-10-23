@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../api/client';
@@ -9,8 +9,17 @@ import { FeeList, FeePicker, leftOn } from '../lib/FeeBreakdown';
 import { ErrorAlert, Field, Loading } from '../lib/ui';
 
 type Child = Schemas['FamilyChildOut'];
-type Part = Schemas['FamilyPartIn'];
-type Checkout = (items: Part[]) => Promise<Schemas['FamilyCheckoutOut']>;
+type Checkout = (body: Schemas['FamilyCheckoutIn']) => Promise<Schemas['FamilyCheckoutOut']>;
+type Preview = (totalKobo: number) => Promise<Schemas['FamilySplitOut']>;
+type Mode = 'all' | 'amount' | 'each';
+
+/** How the school shares one amount, in a parent's words. */
+const RULE_WORDS: Record<Schemas['FamilySplitRule'], string> = {
+  clear_most: 'older balances first, then so that as many children as possible are fully paid',
+  proportional: 'in proportion to what each child owes',
+  eldest_first: 'eldest child first',
+  youngest_first: 'youngest child first',
+};
 
 /** A parent's family payment page, opened from the link in their bills and reminders (no sign-in). */
 export function FamilyPay() {
@@ -21,8 +30,10 @@ export function FamilyPay() {
     retry: false,
     queryFn: async () => unwrap(await api.GET('/api/v1/public/pay/{token}', { params: { path: { token } } })),
   });
-  const checkout: Checkout = async (items) =>
-    unwrap(await api.POST('/api/v1/public/pay/{token}/checkout', { params: { path: { token } }, body: { items } }));
+  const checkout: Checkout = async (body) =>
+    unwrap(await api.POST('/api/v1/public/pay/{token}/checkout', { params: { path: { token } }, body }));
+  const preview: Preview = async (total) =>
+    unwrap(await api.POST('/api/v1/public/pay/{token}/split', { params: { path: { token } }, body: { total_kobo: total } }));
 
   return (
     <div className="parent-shell">
@@ -30,7 +41,13 @@ export function FamilyPay() {
         <strong>{page.data?.school_name ?? BRAND}</strong>
       </header>
       <main className="parent-page">
-        {page.isPending ? <Loading /> : page.isError ? <ErrorAlert error={page.error} /> : <FamilyPayment data={page.data} checkout={checkout} />}
+        {page.isPending ? (
+          <Loading />
+        ) : page.isError ? (
+          <ErrorAlert error={page.error} />
+        ) : (
+          <FamilyPayment data={page.data} checkout={checkout} preview={preview} />
+        )}
       </main>
     </div>
   );
@@ -38,11 +55,13 @@ export function FamilyPay() {
 
 /**
  * Paying for all of a parent's children at once (the family link, and "Pay for all your
- * children" in the portal). Each child's account number for transfers, and one online
- * payment (transfer, card or USSD on the provider's page) with the amount chosen per child.
+ * children" in the portal). It opens on one button that pays everything due now on the
+ * provider's page (transfer, card or USSD). A parent can instead pay one smaller amount, shared
+ * by the school's rule, or choose per child. Each child's own account number is shown too.
  */
-export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut']; checkout: Checkout }) {
+export function FamilyPayment({ data, checkout, preview }: { data: Schemas['FamilyPageOut']; checkout: Checkout; preview: Preview }) {
   const owing = data.children.filter((c) => c.owed_kobo > 0);
+  const [mode, setMode] = useState<Mode>('all');
   // What the parent will pay per child, as typed (prefilled with what's due now)
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
     Object.fromEntries(owing.map((c) => [c.student_id, koboToInput(c.suggested_kobo)])),
@@ -69,15 +88,18 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
   const total = parsed.reduce((sum, p) => sum + p.kobo, 0);
   const valid = total > 0 && parsed.every((p) => !p.problem);
   const paying = parsed.filter((p) => p.kobo > 0).length;
+  const dueNow = owing.reduce((sum, c) => sum + c.suggested_kobo, 0);
+  const owedAll = owing.reduce((sum, c) => sum + c.owed_kobo, 0);
   const pay = useMutation({
-    mutationFn: () =>
-      checkout(
-        parsed
-          .filter((p) => p.kobo > 0)
-          .map((p) => ({ student_id: p.child.student_id, amount_kobo: p.kobo, fees: picked[p.child.student_id] ?? [] })),
-      ),
+    mutationFn: (body: Schemas['FamilyCheckoutIn']) => checkout(body),
     onSuccess: (started) => window.location.assign(started.authorization_url),
   });
+  const payEach = () =>
+    pay.mutate({
+      items: parsed
+        .filter((p) => p.kobo > 0)
+        .map((p) => ({ student_id: p.child.student_id, amount_kobo: p.kobo, fees: picked[p.child.student_id] ?? [] })),
+    });
 
   if (data.children.length === 0) {
     return (
@@ -87,18 +109,31 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
     );
   }
 
-  const payNow = data.card_payments && owing.length > 0 && (
-    <>
-      <ErrorAlert error={pay.error} />
-      <button className="block" onClick={() => pay.mutate()} disabled={!valid || pay.isPending}>
-        {pay.isPending ? 'Opening…' : `Pay ${formatKobo(total)} now`}
-      </button>
-      <p className="hint">
-        For {paying} {paying === 1 ? 'child' : 'children'}. On the next page, pay by <strong>bank transfer</strong>, card or USSD. Each
-        child gets their own receipt.
-      </p>
-    </>
+  const onProviderPage = (
+    <p className="hint">
+      On the next page, pay by <strong>bank transfer</strong>, card or USSD. Each child gets their own receipt.
+    </p>
   );
+  const switches = (
+    <div className="row wrap small">
+      {mode !== 'all' && (
+        <button className="link" onClick={() => setMode('all')}>
+          Pay everything due
+        </button>
+      )}
+      {mode !== 'amount' && owing.length > 1 && (
+        <button className="link" onClick={() => setMode('amount')}>
+          Pay a different amount
+        </button>
+      )}
+      {mode !== 'each' && (
+        <button className="link" onClick={() => setMode('each')}>
+          {owing.length > 1 ? 'Choose the amount for each child' : 'Pay part, or for particular fees'}
+        </button>
+      )}
+    </div>
+  );
+  const payOnline = data.card_payments && owing.length > 0;
 
   return (
     <>
@@ -110,11 +145,38 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
           </p>
         </section>
       )}
+      {payOnline && mode === 'all' && (
+        <section className="card pay-all" aria-label="Pay for all your children">
+          <span className="muted">Due now for {owing.length === 1 ? owing[0]!.first_name : `all ${owing.length} children`}</span>
+          <strong className="pay-all-amount">{formatKobo(dueNow)}</strong>
+          <ErrorAlert error={pay.error} />
+          <button className="block" onClick={() => pay.mutate({ total_kobo: dueNow })} disabled={dueNow <= 0 || pay.isPending}>
+            {pay.isPending ? 'Opening…' : `Pay ${formatKobo(dueNow)}`}
+          </button>
+          {onProviderPage}
+          {switches}
+        </section>
+      )}
+      {payOnline && mode === 'amount' && (
+        <OneAmount
+          owedKobo={owedAll}
+          minKobo={Math.min(data.min_part_kobo, owedAll)}
+          owing={owing}
+          rule={RULE_WORDS[data.split_rule]}
+          preview={preview}
+          pending={pay.isPending}
+          error={pay.error}
+          onPay={(kobo) => pay.mutate({ total_kobo: kobo })}
+        >
+          {onProviderPage}
+          {switches}
+        </OneAmount>
+      )}
       {data.children.map((c) => (
         <ChildCard
           key={c.student_id}
           child={c}
-          payOnline={data.card_payments}
+          payOnline={payOnline && mode === 'each'}
           amount={amounts[c.student_id] ?? ''}
           problem={parsed.find((p) => p.child.student_id === c.student_id)?.problem}
           onAmount={(value) => setAmounts({ ...amounts, [c.student_id]: value })}
@@ -122,17 +184,100 @@ export function FamilyPayment({ data, checkout }: { data: Schemas['FamilyPageOut
           onPick={(names) => pick(c, names)}
         />
       ))}
-      {payNow && (
-        <section className="card" aria-label="Pay for all your children">
+      {payOnline && mode === 'each' && (
+        <section className="card" aria-label="Pay the amounts chosen">
           <div className="row between">
-            <span>Due now for {owing.length === 1 ? 'your child' : `all ${owing.length} children`}</span>
+            <span>
+              Total for {paying} {paying === 1 ? 'child' : 'children'}
+            </span>
             <strong>{formatKobo(total)}</strong>
           </div>
-          {owing.length > 1 && <p className="hint">Change any amount above to pay part now, or clear it to leave that child for later.</p>}
-          {payNow}
+          {owing.length > 1 && <p className="hint">Change any amount above, or clear it to leave that child for later.</p>}
+          <ErrorAlert error={pay.error} />
+          <button className="block" onClick={payEach} disabled={!valid || pay.isPending}>
+            {pay.isPending ? 'Opening…' : `Pay ${formatKobo(total)} now`}
+          </button>
+          {onProviderPage}
+          {switches}
         </section>
       )}
     </>
+  );
+}
+
+/** One amount for the whole family; before paying, the page shows how the school's rule will share it. */
+function OneAmount({
+  owedKobo,
+  minKobo,
+  owing,
+  rule,
+  preview,
+  pending,
+  error,
+  onPay,
+  children,
+}: {
+  owedKobo: number;
+  minKobo: number;
+  owing: Child[];
+  rule: string;
+  preview: Preview;
+  pending: boolean;
+  error: unknown;
+  onPay: (kobo: number) => void;
+  children: ReactNode;
+}) {
+  const [text, setText] = useState('');
+  const kobo = text.trim() === '' ? null : parseNairaToKobo(text);
+  const problem =
+    text.trim() === ''
+      ? undefined
+      : kobo === null
+        ? 'Not a valid amount'
+        : kobo > owedKobo
+          ? `Up to ${formatKobo(owedKobo)}`
+          : kobo < minKobo
+            ? `At least ${formatKobo(minKobo)}`
+            : undefined;
+  const ready = kobo !== null && !problem;
+  // Ask the school how it would share this amount, a moment after the parent stops typing
+  const [asked, setAsked] = useState<number | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setAsked(ready ? kobo : null), 400);
+    return () => clearTimeout(timer);
+  }, [kobo, ready]);
+  const shares = useQuery({
+    queryKey: ['family-split', asked],
+    enabled: asked !== null,
+    queryFn: () => preview(asked ?? 0),
+  });
+  const names = Object.fromEntries(owing.map((c) => [c.student_id, c.first_name]));
+  return (
+    <section className="card" aria-label="Pay a different amount">
+      <Field label="Amount for all the children (₦)" error={problem} hint={`The school shares it ${rule}.`}>
+        <input id="family-amount" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} placeholder="0" />
+      </Field>
+      {shares.data && ready && asked === kobo && (
+        <ul className="plain split-preview" aria-label="How it will be shared">
+          {shares.data.shares
+            .filter((s) => s.amount_kobo > 0)
+            .map((s) => (
+              <li key={s.student_id} className="row between">
+                <span>{names[s.student_id] ?? 'Child'}</span>
+                <span>
+                  {formatKobo(s.amount_kobo)}
+                  {s.clears && <span className="badge ok">Fully paid</span>}
+                </span>
+              </li>
+            ))}
+        </ul>
+      )}
+      <ErrorAlert error={error ?? shares.error} />
+      <button className="block" onClick={() => kobo !== null && onPay(kobo)} disabled={!ready || pending}>
+        {pending ? 'Opening…' : ready ? `Pay ${formatKobo(kobo)}` : 'Enter an amount'}
+      </button>
+      {children}
+    </section>
   );
 }
 

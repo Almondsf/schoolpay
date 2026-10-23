@@ -118,7 +118,69 @@ export function PaymentSettings() {
           )}
         </div>
       </div>
+      <FamilySplitRuleCard />
     </>
+  );
+}
+
+const SPLIT_RULES: { rule: Schemas['FamilySplitRule']; label: string; hint: string }[] = [
+  {
+    rule: 'clear_most',
+    label: 'Old balances first, then clear as many children as possible',
+    hint: 'Earlier terms first; then the child with the smallest balance this term, so fewer children are sent home.',
+  },
+  { rule: 'proportional', label: 'In proportion to what each child owes', hint: 'Every child gets a fair share; none may be fully paid.' },
+  { rule: 'eldest_first', label: 'Eldest child first', hint: 'By date of birth, or the highest class where no date is recorded.' },
+  { rule: 'youngest_first', label: 'Youngest child first', hint: 'By date of birth, or the lowest class where no date is recorded.' },
+];
+
+/** How one amount a parent pays for several children is shared. The proprietor chooses; the parent sees it before paying. */
+function FamilySplitRuleCard() {
+  const { can } = useAuth();
+  const queryClient = useQueryClient();
+  const current = useQuery({
+    queryKey: ['family-split-rule'],
+    queryFn: async () => unwrap(await api.GET('/api/v1/payment-settings/family-split-rule')),
+  });
+  const save = useMutation({
+    mutationFn: async (rule: Schemas['FamilySplitRule']) =>
+      unwrap(await api.PUT('/api/v1/payment-settings/family-split-rule', { body: { rule } })),
+    onSuccess: (data) => queryClient.setQueryData(['family-split-rule'], data),
+  });
+  const editable = can('payments.setup');
+  return (
+    <section className="card section page--narrow" aria-label="Family payments">
+      <h2>When a parent pays one amount for several children</h2>
+      <p className="small">
+        Parents can pay for all their children with one amount from their payment link. This is how it's shared between the children. Each
+        child still gets their own receipt.
+      </p>
+      {current.isPending ? (
+        <Loading />
+      ) : (
+        <fieldset disabled={!editable || save.isPending}>
+          <legend>Share it</legend>
+          {SPLIT_RULES.map((r) => (
+            <label key={r.rule} className="checkbox">
+              <input
+                type="radio"
+                name="family-split-rule"
+                value={r.rule}
+                checked={current.data?.rule === r.rule}
+                onChange={() => save.mutate(r.rule)}
+              />
+              <span>
+                {r.label}
+                <span className="hint">{r.hint}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <ErrorAlert error={current.error ?? save.error} />
+      {save.isSuccess && <Notice>Saved. Parents see the new rule straight away.</Notice>}
+      {!editable && <p className="hint">Only the proprietor can change this.</p>}
+    </section>
   );
 }
 
