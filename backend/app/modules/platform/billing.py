@@ -5,7 +5,6 @@ Once a term, a platform admin generates the subscription bills: one per active
 school for its current term. Each bill has:
 
 - the plan's set-up fee, on the school's first bill only;
-- the annual licence, on the school's first bill of each school year;
 - a third of the yearly per-pupil fee for each pupil enrolled that term.
 
 Generating again is safe: a school already billed for its term is skipped (and a
@@ -130,22 +129,20 @@ def draft_bills(session: Session) -> BillingRun:
             .group_by(Enrollment.school_id)
         ).all()
     )
-    # What each school has been billed before: which terms, whether the set-up fee, which years' licences
+    # What each school has been billed before: which terms, and whether the set-up fee
     history = session.execute(
         select(
             SubscriptionInvoice.school_id,
             SubscriptionInvoice.session_name,
             SubscriptionInvoice.term_number,
             func.bool_or(SubscriptionLine.kind == SubscriptionLineKind.SETUP),
-            func.bool_or(SubscriptionLine.kind == SubscriptionLineKind.LICENCE),
         )
         .outerjoin(SubscriptionLine, SubscriptionLine.invoice_id == SubscriptionInvoice.id)
         .where(SubscriptionInvoice.voided_at.is_(None))
         .group_by(SubscriptionInvoice.school_id, SubscriptionInvoice.session_name, SubscriptionInvoice.term_number)
     ).all()
-    billed_terms = {(s, name, n) for s, name, n, _, _ in history}
-    setup_paid = {s for s, _, _, setup, _ in history if setup}
-    licensed = {(s, name) for s, name, _, _, licence in history if licence}
+    billed_terms = {(s, name, n) for s, name, n, _ in history}
+    setup_paid = {s for s, _, _, setup in history if setup}
 
     for school_id, name, plan_id in schools:
         if school_id not in current:
@@ -161,10 +158,6 @@ def draft_bills(session: Session) -> BillingRun:
         lines: list[DraftLine] = []
         if school_id not in setup_paid and plan.setup_fee_kobo:
             lines.append(DraftLine(SubscriptionLineKind.SETUP, "Set-up fee (once)", 1, plan.setup_fee_kobo))
-        if (school_id, session_name) not in licensed and plan.annual_fee_kobo:
-            lines.append(
-                DraftLine(SubscriptionLineKind.LICENCE, f"Annual licence, {session_name}", 1, plan.annual_fee_kobo)
-            )
         if count and plan.per_pupil_year_kobo:
             lines.append(
                 DraftLine(

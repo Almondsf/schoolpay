@@ -108,7 +108,7 @@ What each kind of user needs from WardPay. Stories are marked ✅ when built.
 - ✅ Suspend a school (its staff are signed out at once) and reactivate it, with the reason recorded.
 - ✅ See platform-level activity (school changes, platform sign-ins, failed sign-ins for unknown emails).
 - ✅ See every school at a glance: active, waiting to confirm, suspended, new sign-ups, pupils, money parents paid through WardPay, and subscription income owed and overdue.
-- ✅ Set the prices (set-up fee, yearly licence, per pupil per year billed termly) and move a school to another plan.
+- ✅ Set the prices (set-up fee, and per pupil per year billed termly) and move a school to another plan.
 - ✅ Bill every school for the term in one click, after a preview; never bill a school twice for a term.
 - ✅ Record a school's bank transfer against its bill, void a bill made in error, and download any bill as PDF.
 - ✅ Look a school, staff member, payment, account number or receipt up when someone calls for help, without seeing children's details.

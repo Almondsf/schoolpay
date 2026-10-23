@@ -5590,12 +5590,6 @@
       },
       "PlatformPlanIn": {
         "properties": {
-          "annual_fee_kobo": {
-            "maximum": 1000000000000.0,
-            "minimum": 0.0,
-            "title": "Annual Fee Kobo",
-            "type": "integer"
-          },
           "description": {
             "default": "",
             "maxLength": 300,
@@ -5634,7 +5628,6 @@
         "required": [
           "name",
           "setup_fee_kobo",
-          "annual_fee_kobo",
           "per_pupil_year_kobo"
         ],
         "title": "PlatformPlanIn",
@@ -5642,10 +5635,6 @@
       },
       "PlatformPlanOut": {
         "properties": {
-          "annual_fee_kobo": {
-            "title": "Annual Fee Kobo",
-            "type": "integer"
-          },
           "description": {
             "title": "Description",
             "type": "string"
@@ -5689,7 +5678,6 @@
           "name",
           "description",
           "setup_fee_kobo",
-          "annual_fee_kobo",
           "per_pupil_year_kobo",
           "per_pupil_term_kobo",
           "is_default",
@@ -6021,10 +6009,6 @@
       },
       "PublicInfoOut": {
         "properties": {
-          "annual_fee_kobo": {
-            "title": "Annual Fee Kobo",
-            "type": "integer"
-          },
           "app_name": {
             "title": "App Name",
             "type": "string"
@@ -6051,7 +6035,6 @@
           "support_email",
           "signup_open",
           "setup_fee_kobo",
-          "annual_fee_kobo",
           "per_pupil_term_kobo"
         ],
         "title": "PublicInfoOut",

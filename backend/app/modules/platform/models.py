@@ -2,8 +2,9 @@
 The platform's own business: subscription plans and what schools pay for WardPay.
 
 The model is that of ParentPay in the UK (PLAN.md §3.4): the school pays, parents use it free.
-A plan has a one-off set-up fee, an annual licence, and a per-pupil fee per
-year that is billed a third each term for the pupils enrolled that term.
+A plan has a one-off set-up fee and a per-pupil fee per year that is billed a
+third each term for the pupils enrolled that term. There is no licence fee
+(owner, 2026-10-23).
 
 Subscription invoices follow the same rules as school fee invoices: amounts in
 kobo, lines are never edited (an invoice is voided and re-issued instead),
@@ -43,9 +44,7 @@ class Plan(UUIDPrimaryKey, Timestamped, Base):
 
     __tablename__ = "plans"
     __table_args__ = (
-        CheckConstraint(
-            "setup_fee_kobo >= 0 AND annual_fee_kobo >= 0 AND per_pupil_year_kobo >= 0", name="prices_not_negative"
-        ),
+        CheckConstraint("setup_fee_kobo >= 0 AND per_pupil_year_kobo >= 0", name="prices_not_negative"),
         # Exactly one default plan (for schools without one of their own)
         Index("uq_plans_one_default", "is_default", unique=True, postgresql_where=text("is_default")),
     )
@@ -53,7 +52,6 @@ class Plan(UUIDPrimaryKey, Timestamped, Base):
     name: Mapped[str] = mapped_column(String(80), unique=True)
     description: Mapped[str] = mapped_column(String(300), default="")
     setup_fee_kobo: Mapped[int] = mapped_column(BigInteger)
-    annual_fee_kobo: Mapped[int] = mapped_column(BigInteger)
     per_pupil_year_kobo: Mapped[int] = mapped_column(BigInteger)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -61,7 +59,7 @@ class Plan(UUIDPrimaryKey, Timestamped, Base):
 
 class SubscriptionLineKind(enum.StrEnum):
     SETUP = "setup"  # once, on a school's first bill
-    LICENCE = "licence"  # once per school year (academic session)
+    LICENCE = "licence"  # no longer billed (owner, 2026-10-23); kept so older bills still read
     PUPILS = "pupils"  # a third of the yearly per-pupil fee, for the pupils enrolled that term
     DISCOUNT = "discount"  # taken off by a platform admin (e.g. the set-up fee waived): the only negative line
 

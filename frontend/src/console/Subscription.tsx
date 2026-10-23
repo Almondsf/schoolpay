@@ -78,12 +78,6 @@ export function Subscription() {
           <dl className="details">
             <dt>Set-up fee</dt>
             <dd>{formatKobo(plan.setup_fee_kobo)}, once</dd>
-            {plan.annual_fee_kobo > 0 && (
-              <>
-                <dt>Licence</dt>
-                <dd>{formatKobo(plan.annual_fee_kobo)} per school year</dd>
-              </>
-            )}
             <dt>Per pupil</dt>
             <dd>
               {formatKobo(plan.per_pupil_term_kobo)} each term ({formatKobo(plan.per_pupil_year_kobo)} a year)

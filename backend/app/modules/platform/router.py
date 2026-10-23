@@ -97,7 +97,6 @@ class PlatformPlanOut(BaseModel):
     name: str
     description: str
     setup_fee_kobo: int
-    annual_fee_kobo: int
     per_pupil_year_kobo: int
     per_pupil_term_kobo: int
     is_default: bool
@@ -109,7 +108,6 @@ class PlatformPlanIn(BaseModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=80)]
     description: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
     setup_fee_kobo: Kobo
-    annual_fee_kobo: Kobo
     per_pupil_year_kobo: Kobo
     is_active: bool = True
     is_default: bool = False
@@ -228,7 +226,6 @@ class PublicInfoOut(BaseModel):
     support_email: str
     signup_open: bool
     setup_fee_kobo: int
-    annual_fee_kobo: int
     per_pupil_term_kobo: int
 
 
@@ -294,7 +291,6 @@ def _plan_out(usage: plans.PlanUsage) -> PlatformPlanOut:
         name=p.name,
         description=p.description,
         setup_fee_kobo=p.setup_fee_kobo,
-        annual_fee_kobo=p.annual_fee_kobo,
         per_pupil_year_kobo=p.per_pupil_year_kobo,
         per_pupil_term_kobo=billing.termly(p.per_pupil_year_kobo),
         is_default=p.is_default,
@@ -566,7 +562,6 @@ def public_info(db: Session = Depends(get_db)) -> PublicInfoOut:
         support_email=settings.support_email,
         signup_open=settings.signup_enabled,
         setup_fee_kobo=plan.setup_fee_kobo,
-        annual_fee_kobo=plan.annual_fee_kobo,
         per_pupil_term_kobo=billing.termly(plan.per_pupil_year_kobo),
     )
 

@@ -8,7 +8,7 @@ import { ErrorAlert, Field, Loading, Modal, PageHeader, fieldError } from '../..
 
 type Plan = Schemas['PlatformPlanOut'];
 
-/** What schools pay: set-up fee, yearly licence, and a fee per pupil per year billed a third each term. */
+/** What schools pay: a set-up fee, and a fee per pupil per year billed a third each term. No licence fee. */
 export function PlatformPlans() {
   const [editing, setEditing] = useState<Plan | 'new' | null>(null);
   const plans = useQuery({ queryKey: ['platform-plans'], queryFn: async () => unwrap(await api.GET('/api/v1/platform/plans')) });
@@ -30,7 +30,6 @@ export function PlatformPlans() {
               <tr>
                 <th>Plan</th>
                 <th className="num">Set-up (once)</th>
-                <th className="num">Licence (yearly)</th>
                 <th className="num">Per pupil, per term</th>
                 <th className="num">Schools</th>
                 <th aria-label="Actions" />
@@ -45,7 +44,6 @@ export function PlatformPlans() {
                     {p.description && <div className="muted small">{p.description}</div>}
                   </td>
                   <td className="num">{formatKobo(p.setup_fee_kobo)}</td>
-                  <td className="num">{formatKobo(p.annual_fee_kobo)}</td>
                   <td className="num">
                     {formatKobo(p.per_pupil_term_kobo)}
                     <div className="muted small">{formatKobo(p.per_pupil_year_kobo)} a year</div>
@@ -73,12 +71,11 @@ function EditPlan({ plan, onClose }: { plan: Plan | null; onClose: () => void })
     name: plan?.name ?? '',
     description: plan?.description ?? '',
     setup: plan ? koboToInput(plan.setup_fee_kobo) : '',
-    annual: plan ? koboToInput(plan.annual_fee_kobo) : '',
     perPupil: plan ? koboToInput(plan.per_pupil_year_kobo) : '',
     is_active: plan?.is_active ?? true,
     is_default: plan?.is_default ?? false,
   });
-  const prices = { setup: parseNairaToKobo(form.setup), annual: parseNairaToKobo(form.annual), perPupil: parseNairaToKobo(form.perPupil) };
+  const prices = { setup: parseNairaToKobo(form.setup), perPupil: parseNairaToKobo(form.perPupil) };
   const valid = Object.values(prices).every((v) => v !== null && v >= 0);
   const save = useMutation({
     mutationFn: async () => {
@@ -86,7 +83,6 @@ function EditPlan({ plan, onClose }: { plan: Plan | null; onClose: () => void })
         name: form.name,
         description: form.description,
         setup_fee_kobo: prices.setup ?? 0,
-        annual_fee_kobo: prices.annual ?? 0,
         per_pupil_year_kobo: prices.perPupil ?? 0,
         is_active: form.is_active,
         is_default: form.is_default,
@@ -122,9 +118,6 @@ function EditPlan({ plan, onClose }: { plan: Plan | null; onClose: () => void })
         </Field>
         <Field label="Set-up fee (₦, once)">
           <input value={form.setup} onChange={set('setup')} inputMode="decimal" required />
-        </Field>
-        <Field label="Licence (₦ per school year)">
-          <input value={form.annual} onChange={set('annual')} inputMode="decimal" required />
         </Field>
         <Field label="Per pupil (₦ per school year)" hint={termly !== null ? `Billed ${formatKobo(termly)} per pupil each term.` : undefined}>
           <input value={form.perPupil} onChange={set('perPupil')} inputMode="decimal" required />

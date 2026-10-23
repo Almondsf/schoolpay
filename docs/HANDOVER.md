@@ -93,8 +93,8 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
   with the payment link for now").
 - 2026-10-22 Platform admins may send a school's staff their invite / a reset link and reset their two-factor
   sign-in (for locked-out proprietors); not change their email or password.
-- 2026-10-22 Pricing: a set-up fee and a pupil fee each term; **no yearly licence** (set the plan's
-  licence to ₦0; billing then adds no licence line). The website explains the fees without figures.
+- 2026-10-22 Pricing: a set-up fee and a pupil fee each term; **no yearly licence**. 2026-10-23: the licence
+  is removed from the product entirely (plans, billing, screens). The website explains the fees without figures.
 - 2026-10-22 Home page redesigned (ideas from schoolpaynigeria.com and parentpaygroup.com): photos of
   Black pupils, product mock-ups, short copy, "Built for Nigerian schools" (not "private").
 - 2026-10-19 Product name "ParentPay" for now (trademark to be checked: it's a UK company's brand).

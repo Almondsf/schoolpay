@@ -23,7 +23,7 @@ from tests.factories import (
 )
 
 NAIRA = 100
-STANDARD = (50_000 * NAIRA, 100_000 * NAIRA, 1_500 * NAIRA)  # set-up, licence, per pupil per year
+STANDARD = (50_000 * NAIRA, 1_500 * NAIRA)  # set-up, per pupil per year (no licence: owner, 2026-10-23)
 
 
 def school_with_pupils(db, name, pupils, *, current_term=1):
@@ -75,18 +75,17 @@ def test_a_third_of_the_yearly_fee_per_term():
     assert termly(0) == 0
 
 
-async def test_first_bill_has_setup_licence_and_pupils(client, world):
+async def test_first_bill_has_the_setup_fee_and_pupils_and_no_licence(client, world):
     preview = await generate(client, world, dry_run=True)
     assert preview["dry_run"] and preview["already_billed"] == 0
     assert "Gamma School" in preview["no_current_term"]
     alpha = next(b for b in preview["bills"] if b["school_name"] == "Alpha College")
-    setup, licence, per_year = STANDARD
+    setup, per_year = STANDARD
     assert [(ln["kind"], ln["quantity"], ln["unit_kobo"]) for ln in alpha["lines"]] == [
         ("setup", 1, setup),
-        ("licence", 1, licence),
         ("pupils", 3, per_year // 3),
     ]
-    assert alpha["total_kobo"] == setup + licence + 3 * per_year // 3
+    assert alpha["total_kobo"] == setup + 3 * per_year // 3
     assert await invoices(client, world) == []  # a preview saves nothing
 
     done = await generate(client, world)
@@ -102,7 +101,7 @@ async def test_first_bill_has_setup_licence_and_pupils(client, world):
     assert sent and "invoice" in sent[-1].subject and "₦" in sent[-1].body
 
 
-async def test_next_term_only_bills_pupils_and_next_year_bills_the_licence_again(client, world, db):
+async def test_next_term_only_bills_pupils(client, world, db):
     await generate(client, world)
     alpha, terms = world["alpha"], world["alpha_terms"]
     with tenant_writer() as w:
@@ -122,7 +121,7 @@ async def test_a_schools_own_plan_is_used(client, world, db):
     created = await client.post(
         "/api/v1/platform/plans",
         headers=world["admin"],
-        json={"name": "Small school", "setup_fee_kobo": 0, "annual_fee_kobo": 0, "per_pupil_year_kobo": 300 * NAIRA},
+        json={"name": "Small school", "setup_fee_kobo": 0, "per_pupil_year_kobo": 300 * NAIRA},
     )
     assert created.status_code == 201, created.text
     plan = created.json()
@@ -194,7 +193,7 @@ async def test_void_lets_the_term_be_billed_again(client, world):
     )
     assert voided.json()["invoice"]["status"] == "void"
     rebilled = next(b for b in (await generate(client, world))["bills"] if b["school_name"] == "Alpha College")
-    assert [ln["kind"] for ln in rebilled["lines"]] == ["setup", "licence", "pupils"]  # nothing on the void one counts
+    assert [ln["kind"] for ln in rebilled["lines"]] == ["setup", "pupils"]  # nothing on the void one counts
 
 
 async def test_subscription_lines_and_payments_are_append_only(client, world, db):
@@ -212,7 +211,7 @@ async def test_school_sees_its_plan_bills_and_pdf_only(client, world):
     await generate(client, world)
     mine = (await client.get("/api/v1/subscription", headers=world["alpha_bursar"])).json()
     assert mine["plan"]["name"] == "Standard" and mine["pupils_this_term"] == 3
-    assert mine["next_term_estimate_kobo"] == 3 * STANDARD[2] // 3
+    assert mine["next_term_estimate_kobo"] == 3 * STANDARD[1] // 3
     [invoice] = mine["invoices"]
     assert invoice["school_name"] == "Alpha College" and invoice["status"] == "unpaid"
     pdf = await client.get(f"/api/v1/subscription/invoices/{invoice['id']}/pdf", headers=world["alpha_bursar"])
@@ -249,7 +248,7 @@ async def test_plans_one_default_and_audited(client, world, db):
     listed = (await client.get("/api/v1/platform/plans", headers=world["admin"])).json()
     standard = next(p for p in listed if p["name"] == "Standard")
     assert standard["is_default"] and standard["schools"] >= 3
-    body = {k: standard[k] for k in ("name", "setup_fee_kobo", "annual_fee_kobo", "per_pupil_year_kobo")}
+    body = {k: standard[k] for k in ("name", "setup_fee_kobo", "per_pupil_year_kobo")}
     off = await client.put(
         f"/api/v1/platform/plans/{standard['id']}", headers=world["admin"], json={**body, "is_default": False}
     )

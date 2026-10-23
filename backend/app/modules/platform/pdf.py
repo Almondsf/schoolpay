@@ -99,7 +99,7 @@ def render_invoice(
         Paragraph(how, styles["Normal"]),
         Spacer(1, 4 * mm),
         Paragraph(
-            "The set-up fee is charged once; the annual licence once per school year; the pupil charge each term "
+            "The set-up fee is charged once; the pupil charge each term "
             "is a third of the yearly fee per pupil, for the pupils enrolled that term. Parents pay nothing extra.",
             small,
         ),

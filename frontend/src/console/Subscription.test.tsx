@@ -15,7 +15,6 @@ const plan = {
   name: 'Standard',
   description: '',
   setup_fee_kobo: 5_000_000,
-  annual_fee_kobo: 0,
   per_pupil_year_kobo: 150_000,
   per_pupil_term_kobo: 50_000,
   is_default: true,
@@ -71,7 +70,7 @@ describe('subscription page', () => {
     setAccessToken(null);
   });
 
-  it('opens the card payment page for an unpaid bill, and hides the licence when there is none', async () => {
+  it('opens the card payment page for an unpaid bill, with no licence fee anywhere', async () => {
     const assign = vi.fn();
     vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign } as Location);
     const calls = renderPage('/console/subscription', ['reports.view', 'payments.record']);

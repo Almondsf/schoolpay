@@ -5131,8 +5131,6 @@ export interface components {
         };
         /** PlatformPlanIn */
         PlatformPlanIn: {
-            /** Annual Fee Kobo */
-            annual_fee_kobo: number;
             /**
              * Description
              * @default
@@ -5157,8 +5155,6 @@ export interface components {
         };
         /** PlatformPlanOut */
         PlatformPlanOut: {
-            /** Annual Fee Kobo */
-            annual_fee_kobo: number;
             /** Description */
             description: string;
             /**
@@ -5308,8 +5304,6 @@ export interface components {
         };
         /** PublicInfoOut */
         PublicInfoOut: {
-            /** Annual Fee Kobo */
-            annual_fee_kobo: number;
             /** App Name */
             app_name: string;
             /** Per Pupil Term Kobo */

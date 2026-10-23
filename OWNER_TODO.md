@@ -55,11 +55,10 @@ Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
       urgent announcements reach parents who turned off reminders. Talk to a few schools first. Ask
       Termii for their current rate card (generic and DND routes).
 
-- [ ] _(new)_ **Set the actual prices.** The model (2026-10-22): a **set-up fee** and a
-      **pupil fee each term**, no yearly licence, free for parents. In the platform console
-      (Plans), set the "Standard" plan's **licence to ₦0** (live site too: it's ₦100,000 there
-      now; with ₦0 no licence line is billed) and put in your real set-up and per-pupil
-      amounts. The website no longer shows figures, only what the two fees are.
+- [ ] _(new)_ **Set the actual prices.** The model: a **set-up fee** and a **pupil fee each
+      term**, free for parents. There is no licence fee any more (removed 2026-10-23, nothing to
+      set). In the platform console (Plans), put in your real set-up and per-pupil amounts.
+      The website shows no figures, only what the two fees are.
 - [ ] _(new)_ **Try paying a bill by card** (2026-10-22): sign in as a school (e.g. the demo
       school's proprietor), Subscription → **Pay by card**, and pay on Paystack's test page with
       their test card (4084 0840 8408 4081, any future date, CVV 408, PIN 0000, OTP 123456). The

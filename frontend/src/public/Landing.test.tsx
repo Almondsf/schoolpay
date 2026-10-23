@@ -10,7 +10,6 @@ const info = (signup_open: boolean) => ({
   support_email: 'help@example.com',
   signup_open,
   setup_fee_kobo: 5_000_000,
-  annual_fee_kobo: 10_000_000,
   per_pupil_term_kobo: 50_000,
 });
 

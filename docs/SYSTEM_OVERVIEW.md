@@ -821,9 +821,11 @@ Module: `app/modules/platform`. Console: the platform admin's **Overview**,
 dashboard; the public **/signup** page.
 
 **Pricing (the model of ParentPay in the UK, PLAN.md §3.4).** The school pays and parents use
-WardPay free. A `Plan` has a one-off **set-up fee**, an **annual licence**,
-and a **per-pupil fee per year**, billed a third each term for the pupils
-enrolled that term (`billing.termly()` rounds halves up to the kobo). One plan
+WardPay free. A `Plan` has a one-off **set-up fee** and a **per-pupil fee per
+year**, billed a third each term for the pupils
+enrolled that term (`billing.termly()` rounds halves up to the kobo). There is
+no licence fee (owner, 2026-10-23; the column was dropped, and the `licence` line
+kind stays only so bills issued before then still read). One plan
 is the default (partial unique index); a school can be moved to another
 (`schools.plan_id`). The migration seeds "Standard" with placeholder prices for
 the owner to set. The gateway percentage (`PLATFORM_FEE_BP`) still comes off
@@ -834,7 +836,6 @@ each parent payment through the split.
 school for its current term, in a fixed number of queries and one insert:
 
 - the set-up fee on the school's first bill only;
-- the licence on its first bill of each school year;
 - pupils × a third of the yearly fee.
 
 Schools already billed for their term are skipped. A partial unique index

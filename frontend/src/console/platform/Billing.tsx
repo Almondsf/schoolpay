@@ -28,7 +28,7 @@ export function PlatformBilling() {
     <>
       <PageHeader
         title="Subscription billing"
-        subtitle="Once a term, bill every active school: set-up fee on the first bill, the licence once a school year, and pupils enrolled this term."
+        subtitle="Once a term, bill every active school: the set-up fee on its first bill, and the pupils enrolled this term."
         actions={<button onClick={() => setGenerating(true)}>Bill this term</button>}
       />
       <div className="filters">
