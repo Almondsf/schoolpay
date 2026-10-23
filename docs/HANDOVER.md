@@ -87,6 +87,8 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
 
 - 2026-10-18 Pricing model: set-up fee + yearly licence + per pupil per term, free for parents (prices in
   the platform plan are defaults: ₦50,000 / ₦100,000 / ₦500).
+- 2026-10-23 Family account numbers: how a transfer is shared between children is a per-school setting
+  (default "old debts first, then clear as many children as possible"); see "Ideas waiting on the owner".
 - 2026-10-22 Platform admins may send a school's staff their invite / a reset link and reset their two-factor
   sign-in (for locked-out proprietors); not change their email or password.
 - 2026-10-22 Pricing: a set-up fee and a pupil fee each term; **no yearly licence** (set the plan's
@@ -139,12 +141,18 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
   questions** (in `OWNER_TODO.md`): shared or separate bank accounts per branch; can one bursar cover
   several branches; a group price. This changes who sees which school's data, so confirm before
   building.
-- **One virtual account per family** (alongside each child's own). Needs Paystack Dedicated NUBAN
-  approval first. A plain transfer says nothing about which child it's for, so it needs a split rule
-  (oldest debt first across the children with tuition first, in proportion to what each owes, or held
-  as family credit until shared out). That's a money rule for the owner and goes against the 19 Oct
-  decision that nothing is split automatically. Until then the family payment link covers paying for
-  all children at once.
+- **One virtual account per family** (alongside each child's own). Needs a provider that issues virtual
+  accounts (Paystack Dedicated NUBAN, or Fincra / Figo / Squad / Monnify: published caps ₦250 / ₦200 /
+  ₦1,000 / ₦500 vs Paystack ₦300). A plain transfer says nothing about which child it's for, so it's
+  split by a **rule each school chooses** (owner, 2026-10-23), a school setting:
+  - **old debts first, then clear as many children as possible** (the default): earlier terms oldest
+    first across the children, then this term smallest balance first, tuition first within a child;
+  - in proportion to what each child owes;
+  - eldest child first, or youngest first;
+  - hold it as family credit until the bursar shares it out.
+  In every case anything left over becomes family credit, the parent gets one text saying how it was
+  split, a child's name in the transfer narration overrides the rule, and the bursar can re-mark it.
+  The family payment link (parent chooses the amounts) is unchanged and needs no rule.
 
 1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).
    ~~SMS provider switch~~ (done 22 Oct: Termii or Africa's Talking, `notifications/providers.py`).
