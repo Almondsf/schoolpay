@@ -136,7 +136,10 @@ def session_pack_xlsx(school: str, pack: SessionPack) -> bytes:
             ["Spending recorded but not approved", naira(money.awaiting_approval_kobo)],
             ["", None],
             ["Cash in the drawer when the session began", naira(cash.opening_kobo)],
-            ["Cash taken (including cash awaiting approval)", naira(sum(d.received_kobo - d.reversed_kobo for d in cash.days))],
+            [
+                "Cash taken (including cash awaiting approval)",
+                naira(sum(d.received_kobo - d.reversed_kobo for d in cash.days)),
+            ],
             ["Cash banked", naira(sum(d.banked_kobo for d in cash.days))],
             ["Cash spent from the drawer", naira(sum(d.spent_kobo for d in cash.days))],
             [
