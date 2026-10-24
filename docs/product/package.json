@@ -1,9 +1,11 @@
 {
   "name": "wardpay-product-overview",
   "private": true,
-  "description": "Builds 'WardPay - what it does.docx' from overview.cjs",
+  "description": "Builds 'WardPay - what it does.docx' (overview.cjs) and 'WardPay - user guide.docx' (guide.cjs)",
   "scripts": {
-    "build": "node overview.cjs"
+    "build": "node overview.cjs && node guide.cjs",
+    "build:overview": "node overview.cjs",
+    "build:guide": "node guide.cjs"
   },
   "dependencies": {
     "docx": "9.12.0"

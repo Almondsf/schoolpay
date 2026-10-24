@@ -56,7 +56,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 
 Also made: a pitch deck for school proprietors (a claude.ai artifact, private to the owner:
 https://claude.ai/artifact/U8F5XpU55wtrACtihHp2oH; the dashboard figures and contact details are
-placeholders) and the Word overview `docs/product/WardPay - what it does.docx`.
+placeholders), the Word overview `docs/product/WardPay - what it does.docx` and the user guide `docs/product/WardPay - user guide.docx`.
 
 ## How the owner wants work done
 
@@ -70,8 +70,10 @@ These are standing rules from the owner. CLAUDE.md has the project rules; these 
   `SELECT … FOR UPDATE`. Services prove it with "fixed number of statements" tests (`QueryCounter`).
 - **Docs are part of every change**: `docs/SYSTEM_OVERVIEW.md`, `docs/USER_STORIES.md`, and
   `SECURITY.md` / `PRIVACY.md` / `DEPLOYMENT.md` / `.env.example` when relevant.
-- **Word overview**: when a feature ships, update `docs/product/overview.cjs` (rows, the dated CHANGES
-  line, UPDATED) and rebuild with `cd docs/product && npm run build`. If the owner has the .docx open
+- **Word documents** (two; owner wants both always current): when a feature ships or changes, update
+  `docs/product/overview.cjs` (rows, the dated CHANGES line, UPDATED) and `docs/product/guide.cjs` (the
+  user guide: the feature's who / what it's for / how to use it with the real button names, a CHANGES
+  line, UPDATED), then rebuild both with `cd docs/product && npm run build`. If the owner has the .docx open
   the build fails with EBUSY: ask them to close it. To look at the layout, export to PDF through Word
   (PowerShell `Word.Application`, SaveAs format 17) and stop any **windowless** WINWORD process
   afterwards (never one with a window: that's the owner's).
