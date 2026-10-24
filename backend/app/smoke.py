@@ -38,7 +38,7 @@ def _check(name: str, ok: bool, detail: str = "") -> Result:
 
 def site_answers(client: httpx.Client, site: str, api: str) -> Result:
     r = client.get(site + "/", timeout=FIRST_WAIT)
-    return _check("Web app answers", r.status_code == 200 and "<div id=\"root\"" in r.text, f"HTTP {r.status_code}")
+    return _check("Web app answers", r.status_code == 200 and '<div id="root"' in r.text, f"HTTP {r.status_code}")
 
 
 def site_headers(client: httpx.Client, site: str, api: str) -> Result:
