@@ -100,6 +100,7 @@ def _settings(**overrides):
         "email_backend": "console",
         "sms_backend": "console",
         "whatsapp_backend": "off",
+        "voice_backend": "console",
         "payment_gateways": "paystack",
         "paystack_secret_key": "sk_live_example",
         "celery_task_always_eager": False,
@@ -180,3 +181,8 @@ def test_development_routes_dont_exist_in_production(monkeypatch):
     assert {"/dev/fake-gateway", "/dev/sms"} <= prefixes()  # tests run in "test": the helpers are there
     monkeypatch.setattr(get_settings(), "environment", "production")
     assert not any(p.startswith("/dev") for p in prefixes())
+
+
+def test_production_refuses_the_in_memory_call_list():
+    with pytest.raises(ValueError, match="VOICE_BACKEND=memory"):
+        _settings(voice_backend="memory")
