@@ -80,6 +80,11 @@ def _session(session: Session, session_id: uuid.UUID | None, today: date) -> Aca
     return found
 
 
+def find_session(session: Session, session_id: uuid.UUID | None, today: date | None = None) -> AcademicSession:
+    """The school year a pack is for (404 if it isn't the school's). One query."""
+    return _session(session, session_id, today or lagos_today())
+
+
 def _terms(session: Session, academic: AcademicSession) -> list[TermRow]:
     """Each term's bills in one query."""
     lines = (

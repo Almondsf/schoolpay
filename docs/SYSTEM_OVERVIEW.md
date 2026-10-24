@@ -532,7 +532,7 @@ held" (pending too: the notes have left; rejected and voided don't), with its ow
 per-staff total and late-entry flag.
 
 **General journal for the accountant** (`accounting/journal.py`, `GET /accounting/journal`
-for the totals, `GET /accounting/journal/export?format=xlsx|csv`, `reports.view`, at most 400 days,
+for the totals, the file through a background export (below), `reports.view`, at most 400 days,
 rate limited and audited like other downloads). Everything WardPay records about the school's money as
 balanced double entries, each dated in Lagos time:
 
@@ -555,9 +555,19 @@ then 5000, 5010 ... one per spending category in the order they were made). A sc
 codes and names its accountant wants different (`JournalAccount`, one row per changed account;
 `GET /accounting/accounts`, `PUT /accounting/accounts/{key}` with `payments.approve`, codes unique,
 blank goes back to the default). The Excel file has three sheets (journal, account totals, chart);
-the CSV is flat, for accounting software. Seven queries whatever the period. Excel output costs
-about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
-background job later.
+the CSV is flat, for accounting software. Seven queries whatever the period.
+
+**Background exports** (`accounting/export_jobs.py`). Excel output costs about 1 s per 1,000 journal
+lines (openpyxl), and Netlify's `/api` proxy gives up on a request after about 30 seconds, so the journal
+and the end-of-session pack are built by the worker. `POST /accounting/exports` (`kind` journal with
+`start`, `end`, `format`, or session_pack with `session_id`; rate limited) checks what can fail fast
+(dates, the school year) and returns 202 with an `ExportFile` row (pending), enqueuing
+`accounting.build_export` through the outbox. The task builds the file and stores it in the row
+(`content`, deferred; ready or failed with a message, never stuck pending; running twice is harmless).
+The browser checks `GET /accounting/exports/{id}` every 1.5 s and downloads from
+`GET /accounting/exports/{id}/download` (no-store), which is what's audited. Only the person who asked
+can see or download it (it may carry parents' phone numbers); files are kept a day, then deleted by the
+daily retention job.
 
 **Unusual activity** (`reports/signals.py`, `GET /reports/unusual-activity?days=`, 1–180, default 30;
 `staff.manage`, so the proprietor only: it's about staff conduct). Where school money usually goes
@@ -613,7 +623,7 @@ Every recording path calls `periods.ensure_open`, which reads the school row `FO
 re-opening take it `FOR UPDATE`, so a close and a recording in flight never interleave.
 `GET /accounting/books` gives the date and the history. The screen is Reports → For your accountant.
 
-**End-of-session pack** (`accounting/session_pack.py`, `GET /accounting/session-pack?session_id=`,
+**End-of-session pack** (`accounting/session_pack.py`, a background export of kind `session_pack`,
 `reports.view`, default: the school year running today, else the latest that has started; for the
 current year it runs to today; rate limited and audited because the debtors sheet has parents'
 phone numbers). One Excel workbook: Summary (term bills, discounts, paid, still owed, owed in all,
@@ -1275,7 +1285,7 @@ production.
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
-| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv`; `GET /accounting/session-pack?session_id=`; `GET /accounting/books`, `POST /accounting/terms/{id}/close`, `POST /accounting/books/reopen` |
+| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `POST /accounting/exports`, `GET /accounting/exports/{id}`, `GET /accounting/exports/{id}/download`; `GET /accounting/books`, `POST /accounting/terms/{id}/close`, `POST /accounting/books/reopen` |
 | Settlements | `GET /settlements?start=&end=`; `POST /settlements/refresh` |
 | Write-offs | `POST /invoices/{id}/write-off`; `GET /write-offs?status=`; `POST /write-offs/{id}/approve`, `/reject` |
 | Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |

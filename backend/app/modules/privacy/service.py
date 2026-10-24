@@ -37,6 +37,7 @@ from app.core.db import SessionLocal
 from app.core.errors import Conflict
 from app.core.repo import get_or_404
 from app.core.tenancy import scope_platform_wide
+from app.modules.accounting import export_jobs
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import Acting, Actor, record
 from app.modules.fees.models import Invoice, InvoiceLine
@@ -341,5 +342,11 @@ def apply_retention(today: date | None = None) -> dict[str, int]:
                 actor=actor,
                 changes={**counts, "left_before": cutoff.isoformat()},
             )
+        downloads = export_jobs.prune(session)  # built downloads are kept for a day
         session.commit()
-    return {"message_texts_cleared": int(cleared), "pupils_erased": len(expired), "parents_erased": len(parents)}
+    return {
+        "message_texts_cleared": int(cleared),
+        "pupils_erased": len(expired),
+        "parents_erased": len(parents),
+        "downloads_deleted": downloads,
+    }

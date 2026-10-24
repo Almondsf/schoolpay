@@ -95,6 +95,7 @@ reach WardPay.
 
 ## Data subjects' rights
 - **Access:** parents download everything held about them and their children from the portal ("Download my data"); staff can export it for a parent who asks in person. Every export is recorded.
+- **Prepared downloads** (the journal, the end-of-session pack): built in the background, kept for one day, then deleted; only the person who asked can download them, and each download is recorded.
 - **Accountant's journal:** identifies pupils by admission number only (no names or parent details), so the school can hand it to an outside accountant.
 - **Erasure:** a school admin or proprietor can erase a parent (once none of their children is a current pupil) or a former pupil. Personal details and message texts are removed; bills and payments stay, anonymised, because schools must keep financial records for six years. **Issued receipts keep the name they were issued with**: they are append-only financial records, the same as a paper receipt book.
 - **Objection to messages:** parents turn off bill notices and reminders in the portal.

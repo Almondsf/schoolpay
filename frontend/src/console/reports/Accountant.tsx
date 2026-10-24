@@ -3,10 +3,11 @@ import { useState } from 'react';
 
 import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
-import { errorMessage, filenameFrom, saveBlob } from '../../lib/download';
+import { errorMessage } from '../../lib/download';
 import { formatDate, formatKobo, lagosToday } from '../../lib/format';
 import { Empty, ErrorAlert, Field, Loading, Modal } from '../../lib/ui';
 import { useSessions } from '../hooks';
+import { useBackgroundExport } from './useBackgroundExport';
 
 type Account = Schemas['JournalAccountOut'];
 type JournalFormat = 'xlsx' | 'csv';
@@ -24,16 +25,12 @@ export function Accountant() {
     queryFn: async () => unwrap(await api.GET('/api/v1/accounting/journal', { params: { query: period } })),
     enabled: Boolean(start && end),
   });
-  const download = useMutation({
-    mutationFn: async (format: JournalFormat) => {
-      const { data, error, response } = await api.GET('/api/v1/accounting/journal/export', {
-        params: { query: { ...period, format } },
-        parseAs: 'blob',
-      });
-      if (!response.ok || !data) throw new Error(errorMessage(error) ?? 'Could not download the journal.');
-      saveBlob(data as Blob, filenameFrom(response, `journal.${format}`));
-    },
-  });
+  const exporting = useBackgroundExport();
+  const download = {
+    mutate: (format: JournalFormat) => exporting.mutate({ kind: 'journal', ...period, format }),
+    isPending: exporting.isPending,
+    error: exporting.error,
+  };
   return (
     <>
       <p className="muted small">
@@ -274,16 +271,12 @@ function SessionPack() {
   const started = (sessions.data ?? []).filter((s) => s.start_date <= today);
   const [chosen, setChosen] = useState('');
   const sessionId = chosen || [...started].sort((a, b) => b.start_date.localeCompare(a.start_date))[0]?.id || '';
-  const download = useMutation({
-    mutationFn: async () => {
-      const { data, error, response } = await api.GET('/api/v1/accounting/session-pack', {
-        params: { query: { session_id: sessionId || undefined } },
-        parseAs: 'blob',
-      });
-      if (!response.ok || !data) throw new Error(errorMessage(error) ?? 'Could not download the pack.');
-      saveBlob(data as Blob, filenameFrom(response, 'end-of-session.xlsx'));
-    },
-  });
+  const exporting = useBackgroundExport();
+  const download = {
+    mutate: () => exporting.mutate({ kind: 'session_pack', session_id: sessionId || null }),
+    isPending: exporting.isPending,
+    error: exporting.error,
+  };
   if (started.length === 0) return null;
   return (
     <section className="card section" aria-label="End of session">

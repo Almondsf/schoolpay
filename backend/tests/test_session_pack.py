@@ -10,17 +10,17 @@ from app.modules.accounts.models import Role
 from tests.factories import QueryCounter, headers_for, make_school, make_user
 from tests.test_cashbook import take_cash
 from tests.test_expenses import spend
+from tests.test_exports import export
 from tests.test_payments import generate
 from tests.test_payments import world as world  # the fixture
 
-PACK = "/api/v1/accounting/session-pack"
+PACK = "/api/v1/accounting/exports"
 BILLED = 155_000  # naira: JSS 1 tuition + PTA in add_fees
 
 
 async def download(client, world, **params):
-    response = await client.get(PACK, headers=world["proprietor"], params=params)
-    assert response.status_code == 200, response.text
-    assert response.headers["cache-control"] == "no-store"
+    status, response = await export(client, world["proprietor"], kind="session_pack", **params)
+    assert status["status"] == "ready", status
     return response, load_workbook(BytesIO(response.content))
 
 
@@ -65,10 +65,11 @@ async def test_the_pack_closes_the_year(client, world):
 async def test_choosing_a_year_other_schools_and_fixed_queries(client, world, db, connection):
     stranger = headers_for(db, make_user(db, make_school(db, "Beta Academy"), Role.PROPRIETOR))
     db.commit()
-    assert (await client.get(PACK, headers=stranger)).status_code == 404  # no school year of its own
-    mine = await client.get(PACK, headers=stranger, params={"session_id": str(world["terms"][0].session_id)})
+    pack = {"kind": "session_pack"}
+    assert (await client.post(PACK, headers=stranger, json=pack)).status_code == 404  # no school year of its own
+    mine = await client.post(PACK, headers=stranger, json={**pack, "session_id": str(world["terms"][0].session_id)})
     assert mine.status_code == 404  # not Beta's
-    unknown = await client.get(PACK, headers=world["proprietor"], params={"session_id": str(uuid.uuid4())})
+    unknown = await client.post(PACK, headers=world["proprietor"], json={**pack, "session_id": str(uuid.uuid4())})
     assert unknown.status_code == 404
 
     await generate(client, world)

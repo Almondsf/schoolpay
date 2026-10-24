@@ -124,6 +124,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask for the journal or the end-of-session pack; it's built in the background */
+        post: operations["accounting_request_export"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/exports/{export_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether a requested download is ready */
+        get: operations["accounting_export_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/exports/{export_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a finished file (only by the person who asked for it) */
+        get: operations["accounting_download_export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/journal": {
         parameters: {
             query?: never;
@@ -133,40 +184,6 @@ export interface paths {
         };
         /** The journal's totals for a period */
         get: operations["accounting_journal_summary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounting/journal/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Download the general journal for the accountant (Excel or CSV) */
-        get: operations["accounting_export_journal"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounting/session-pack": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Download the end-of-session pack (Excel): summary, terms, money in and out, debtors, cash book, journal */
-        get: operations["accounting_export_session_pack"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4573,6 +4590,65 @@ export interface components {
          * @enum {string}
          */
         ExpenseStatus: "pending" | "approved" | "rejected" | "voided";
+        /** ExportIn */
+        ExportIn: {
+            /**
+             * End
+             * @description Journal: the last Lagos day, inclusive
+             */
+            end?: string | null;
+            /**
+             * Format
+             * @description Journal only; the pack is always Excel
+             * @default xlsx
+             * @enum {string}
+             */
+            format?: "xlsx" | "csv";
+            kind: components["schemas"]["ExportKind"];
+            /**
+             * Session Id
+             * @description Pack: the school year (default: the current one)
+             */
+            session_id?: string | null;
+            /**
+             * Start
+             * @description Journal: the first Lagos day
+             */
+            start?: string | null;
+        };
+        /**
+         * ExportKind
+         * @enum {string}
+         */
+        ExportKind: "journal" | "session_pack";
+        /** ExportOut */
+        ExportOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: string;
+            /** Filename */
+            filename: string;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["ExportKind"];
+            /** Size Bytes */
+            size_bytes: number;
+            status: components["schemas"]["ExportStatus"];
+        };
+        /**
+         * ExportStatus
+         * @enum {string}
+         */
+        ExportStatus: "pending" | "ready" | "failed";
         /**
          * FamilyCheckoutIn
          * @description Either one amount for the family (shared by the school's rule) or the amount per child.
@@ -8476,27 +8552,26 @@ export interface operations {
             };
         };
     };
-    accounting_journal_summary: {
+    accounting_request_export: {
         parameters: {
-            query?: {
-                /** @description Lagos date; default: the first of this month */
-                start?: string | null;
-                /** @description Lagos date, inclusive; default: today */
-                end?: string | null;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JournalSummaryOut"];
+                    "application/json": components["schemas"]["ExportOut"];
                 };
             };
             /** @description Bad Request */
@@ -8564,17 +8639,98 @@ export interface operations {
             };
         };
     };
-    accounting_export_journal: {
+    accounting_export_status: {
         parameters: {
-            query?: {
-                format?: "xlsx" | "csv";
-                /** @description Lagos date; default: the first of this month */
-                start?: string | null;
-                /** @description Lagos date, inclusive; default: today */
-                end?: string | null;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accounting_download_export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -8654,11 +8810,13 @@ export interface operations {
             };
         };
     };
-    accounting_export_session_pack: {
+    accounting_journal_summary: {
         parameters: {
             query?: {
-                /** @description Default: the school year running today */
-                session_id?: string | null;
+                /** @description Lagos date; default: the first of this month */
+                start?: string | null;
+                /** @description Lagos date, inclusive; default: today */
+                end?: string | null;
             };
             header?: never;
             path?: never;
@@ -8672,7 +8830,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                    "application/json": components["schemas"]["JournalSummaryOut"];
                 };
             };
             /** @description Bad Request */

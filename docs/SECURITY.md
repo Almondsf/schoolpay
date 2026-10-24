@@ -224,6 +224,8 @@ It is updated with every change that affects security.
   (`books.reopen`) can re-open, with a reason; closings and re-openings are append-only and audited.
 
 ## Reports and downloads
+- Background-built files (journal, end-of-session pack) can be fetched only by the staff member who asked
+  (anyone else gets 404), expire after a day and are deleted daily.
 - Reports need `reports.view` (proprietor, bursar and school admin, all on two-factor
   sign-in).
 - Every download is recorded in the activity log (who, which report,

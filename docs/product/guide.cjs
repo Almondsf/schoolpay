@@ -564,7 +564,10 @@ const SECTIONS = [
         name: 'The general journal',
         who: 'Staff who see reports',
         purpose: 'Everything the school’s money did in a period, as balanced double entries, ready for the accountant or accounting software. Pupils appear by admission number only.',
-        steps: ['Go to Reports → For your accountant, choose the dates, and press Download Excel (journal, account totals, chart of accounts) or Download CSV (for accounting software).'],
+        steps: [
+          'Go to Reports → For your accountant and choose the dates.',
+          'Press Download Excel (journal, account totals, chart of accounts) or Download CSV (for accounting software). The file is prepared first; for a long period at a big school this can take a minute. Keep the page open and it downloads by itself.',
+        ],
         notes: ['Card and online payments are shown at the full amount; the provider’s charges appear in Payments → Paid into the bank.'],
       },
       {
@@ -588,7 +591,11 @@ const SECTIONS = [
         name: 'End-of-session pack',
         who: 'Staff who see reports',
         purpose: 'One Excel file that closes the school year: a summary, each term’s bills, money in and spending, who still owes, the cash book by month and the whole year’s journal.',
-        steps: ['Under End-of-session pack, choose the school year and press Download the pack. For the current year it runs to today.'],
+        steps: [
+          'Under End-of-session pack, choose the school year and press Download the pack. For the current year it runs to today.',
+          'The pack is prepared first (the button says Preparing…) and downloads by itself when ready.',
+        ],
+        notes: ['A prepared file can only be downloaded by the person who asked for it, and is deleted after a day.'],
       },
     ],
   },
@@ -691,6 +698,7 @@ const SECTIONS = [
 ];
 
 const CHANGES = [
+  ['24 Oct 2026', 'The journal and the end-of-session pack are now prepared in the background, then download by themselves.'],
   ['24 Oct 2026', 'First edition: every feature, what it is for and how to use it.'],
 ];
 

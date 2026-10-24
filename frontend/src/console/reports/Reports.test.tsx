@@ -70,6 +70,16 @@ const overview = {
     { bucket: 'over_90', amount_kobo: 4_000_000, invoices: 1 },
   ],
 };
+const exportJob = (id: string, status: string, filename: string) => ({
+  id,
+  kind: filename.startsWith('journal') ? 'journal' : 'session_pack',
+  status,
+  filename: status === 'ready' ? filename : '',
+  size_bytes: 3,
+  error: '',
+  created_at: '2026-10-24T10:00:00Z',
+  finished_at: null,
+});
 const sessions = [
   {
     id: 's1',
@@ -331,10 +341,21 @@ describe('dashboard and reports', () => {
         }),
       'GET /api/v1/accounting/accounts': () => json([bank]),
       'PUT /api/v1/accounting/accounts/bank': async (request) => json({ ...bank, ...(await request.json()), name: 'GTBank current' }),
-      'GET /api/v1/accounting/session-pack': () =>
-        new Response('xlsx', { headers: { 'Content-Disposition': 'attachment; filename="end-of-session-2026-2027.xlsx"' } }),
-      'GET /api/v1/accounting/journal/export': () =>
+      // The journal is built in the background: pending first, ready when checked; the pack is ready at once
+      'POST /api/v1/accounting/exports': async (request) => {
+        const body = (await request.json()) as { kind: string };
+        return json(
+          body.kind === 'journal'
+            ? exportJob('x1', 'pending', 'journal-2026-10-01-to-2026-10-20.csv')
+            : exportJob('x2', 'ready', 'end-of-session-2026-2027.xlsx'),
+          202,
+        );
+      },
+      'GET /api/v1/accounting/exports/x1': () => json(exportJob('x1', 'ready', 'journal-2026-10-01-to-2026-10-20.csv')),
+      'GET /api/v1/accounting/exports/x1/download': () =>
         new Response('csv', { headers: { 'Content-Disposition': 'attachment; filename="journal-2026-10-01-to-2026-10-20.csv"' } }),
+      'GET /api/v1/accounting/exports/x2/download': () =>
+        new Response('xlsx', { headers: { 'Content-Disposition': 'attachment; filename="end-of-session-2026-2027.xlsx"' } }),
     });
     const saved: string[] = [];
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
@@ -349,12 +370,12 @@ describe('dashboard and reports', () => {
     expect(totals.getByText('₦50,000.00')).toBeInTheDocument();
     expect(screen.getByText(/1 cash deposit is left out/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
-    await vi.waitFor(() => expect(saved).toEqual(['journal-2026-10-01-to-2026-10-20.csv']));
+    await vi.waitFor(() => expect(saved).toEqual(['journal-2026-10-01-to-2026-10-20.csv']), { timeout: 4000 });
 
     await userEvent.click(screen.getByRole('button', { name: 'Download the pack' }));
     await vi.waitFor(() => expect(saved).toContain('end-of-session-2026-2027.xlsx'));
-    const pack = new URL(calls.find((c) => c.url.includes('/session-pack'))!.url);
-    expect(pack.searchParams.get('session_id')).toBe(sessions[0]!.id);
+    const asked = calls.filter((c) => c.method === 'POST' && c.url.endsWith('/accounting/exports'));
+    expect(await asked[1]!.json()).toEqual({ kind: 'session_pack', session_id: sessions[0]!.id });
 
     const name = await screen.findByLabelText('Name for Bank');
     await userEvent.clear(name);

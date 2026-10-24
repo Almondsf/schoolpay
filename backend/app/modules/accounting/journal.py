@@ -329,11 +329,15 @@ def _spending(session: Session, start: date, end: date) -> list[Entry]:
     return entries
 
 
-def journal(session: Session, start: date, end: date) -> Journal:
+def check_period(start: date, end: date) -> None:
     if end < start:
         raise DomainError("The end date is before the start date.", field="end")
     if (end - start).days >= MAX_DAYS:
         raise DomainError(f"Choose at most {MAX_DAYS} days at a time.", field="start")
+
+
+def journal(session: Session, start: date, end: date) -> Journal:
+    check_period(start, end)
     accounts = chart(session)
     banked, unchecked = _banking(session, start, end)
     entries = [

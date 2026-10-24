@@ -12,13 +12,11 @@ from app.core.errors import ERROR_RESPONSES
 from app.core.ratelimit import get_limiter
 from app.modules.accounts.deps import StaffContext, require
 from app.modules.accounts.permissions import Capability
-from app.modules.audit.models import AuditAction
-from app.modules.audit.service import record
 from app.modules.reports.exports import XLSX
 from app.modules.schools.models import School
 
-from . import exports, journal, periods, session_pack
-from .models import BookAction
+from . import export_jobs, exports, journal, periods
+from .models import BookAction, ExportKind, ExportStatus
 
 router = APIRouter(prefix="/accounting", tags=["accounting"], responses=ERROR_RESPONSES)
 VIEW = Depends(require(Capability.REPORTS_VIEW))
@@ -100,72 +98,58 @@ def journal_summary(
     )
 
 
+class ExportIn(BaseModel):
+    kind: ExportKind
+    start: date | None = Field(default=None, description="Journal: the first Lagos day")
+    end: date | None = Field(default=None, description="Journal: the last Lagos day, inclusive")
+    format: Literal["xlsx", "csv"] = Field(default="xlsx", description="Journal only; the pack is always Excel")
+    session_id: uuid.UUID | None = Field(default=None, description="Pack: the school year (default: the current one)")
+
+
+class ExportOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    kind: ExportKind
+    status: ExportStatus
+    filename: str
+    size_bytes: int
+    error: str
+    created_at: datetime
+    finished_at: datetime | None
+
+
+@router.post(
+    "/exports",
+    response_model=ExportOut,
+    status_code=202,
+    summary="Ask for the journal or the end-of-session pack; it's built in the background",
+)
+def request_export(body: ExportIn, ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> ExportOut:
+    get_limiter().hit("reports-export:school", EXPORT_RATE, str(ctx.school_id))
+    export = export_jobs.request(
+        db, ctx, body.kind, start=body.start, end=body.end, fmt=body.format, session_id=body.session_id
+    )
+    return ExportOut.model_validate(export_jobs.get(db, ctx, export.id))
+
+
+@router.get("/exports/{export_id}", response_model=ExportOut, summary="Whether a requested download is ready")
+def export_status(export_id: uuid.UUID, ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> ExportOut:
+    return ExportOut.model_validate(export_jobs.get(db, ctx, export_id))
+
+
 @router.get(
-    "/journal/export",
-    summary="Download the general journal for the accountant (Excel or CSV)",
+    "/exports/{export_id}/download",
+    summary="Download a finished file (only by the person who asked for it)",
     response_class=Response,
     responses={200: {"content": {XLSX: {}, exports.CSV: {}}}},
 )
-def export_journal(
-    format: Literal["xlsx", "csv"] = "xlsx",
-    dates: tuple[date, date] = Depends(period),
-    ctx: StaffContext = VIEW,
-    db: Session = Depends(get_db),
-) -> Response:
-    get_limiter().hit("reports-export:school", EXPORT_RATE, str(ctx.school_id))
-    j = journal.journal(db, *dates)
-    if format == "xlsx":
-        school = db.get(School, ctx.school_id)
-        content, media = exports.journal_xlsx(school.name if school else "", j), XLSX
-    else:
-        content, media = exports.journal_csv(j), exports.CSV
-    record(
-        db,
-        AuditAction.REPORT_EXPORTED,
-        school_id=ctx.school_id,
-        actor=ctx.actor,
-        meta=ctx.meta,
-        changes={"report": "journal", "format": format, "entries": len(j.entries), "from": j.start, "to": j.end},
-    )
-    db.commit()
-    name = f"journal-{j.start.isoformat()}-to-{j.end.isoformat()}.{format}"
+def download_export(export_id: uuid.UUID, ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> Response:
+    export = export_jobs.download(db, ctx, export_id)
     return Response(
-        content,
-        media_type=media,
-        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
-    )
-
-
-@router.get(
-    "/session-pack",
-    summary="Download the end-of-session pack (Excel): summary, terms, money in and out, debtors, cash book, journal",
-    response_class=Response,
-    responses={200: {"content": {XLSX: {}}}},
-)
-def export_session_pack(
-    session_id: uuid.UUID | None = Query(default=None, description="Default: the school year running today"),
-    ctx: StaffContext = VIEW,
-    db: Session = Depends(get_db),
-) -> Response:
-    get_limiter().hit("reports-export:school", EXPORT_RATE, str(ctx.school_id))
-    pack = session_pack.session_pack(db, session_id)
-    school = db.get(School, ctx.school_id)
-    content = exports.session_pack_xlsx(school.name if school else "", pack)
-    # It carries parents' names and phone numbers (the debtors sheet): who downloaded it is recorded
-    record(
-        db,
-        AuditAction.REPORT_EXPORTED,
-        school_id=ctx.school_id,
-        actor=ctx.actor,
-        meta=ctx.meta,
-        changes={"report": "session_pack", "session": pack.name, "entries": len(pack.journal.entries)},
-    )
-    db.commit()
-    name = f"end-of-session-{pack.name.replace('/', '-')}.xlsx"
-    return Response(
-        content,
-        media_type=XLSX,
-        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
+        export.content or b"",
+        media_type=export.content_type,
+        headers={"Content-Disposition": f'attachment; filename="{export.filename}"', "Cache-Control": "no-store"},
     )
 
 

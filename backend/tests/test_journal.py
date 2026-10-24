@@ -12,6 +12,7 @@ from app.modules.accounts.models import Role
 from tests.factories import QueryCounter, headers_for, make_school, make_user
 from tests.test_cashbook import bank, take_cash
 from tests.test_expenses import spend
+from tests.test_exports import export
 from tests.test_payments import NAIRA, generate
 from tests.test_payments import world as world  # the fixture
 
@@ -98,15 +99,14 @@ async def test_the_school_names_its_own_accounts_and_downloads_the_journal(clien
     assert (await client.put(f"{url}/nothing", headers=world["bursar"], json={"code": "9"})).status_code == 404
 
     params = {"start": today.isoformat(), "end": today.isoformat()}
-    csv_file = await client.get(f"{JOURNAL}/export", headers=world["proprietor"], params={**params, "format": "csv"})
-    assert csv_file.status_code == 200 and csv_file.headers["cache-control"] == "no-store"
+    _, csv_file = await export(client, world["proprietor"], kind="journal", **params, format="csv")
     rows = list(csv.DictReader(StringIO(csv_file.content.decode("utf-8-sig"))))
     bank_row = next(r for r in rows if r["Account"] == "GTBank current")
     assert bank_row["Account code"] == "1200" and bank_row["Debit (NGN)"] == "100000.00"
     assert all(world["student"].first_name not in r["Description"] for r in rows)  # admission numbers, no names
     assert sum(float(r["Debit (NGN)"] or 0) for r in rows) == sum(float(r["Credit (NGN)"] or 0) for r in rows)
 
-    xlsx = await client.get(f"{JOURNAL}/export", headers=world["proprietor"], params=params)
+    _, xlsx = await export(client, world["proprietor"], kind="journal", **params)
     book = load_workbook(BytesIO(xlsx.content))
     assert book.sheetnames == ["Journal", "Account totals", "Chart of accounts"]
 
