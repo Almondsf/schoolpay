@@ -63,6 +63,7 @@ async def test_each_kind_shows_with_who_recorded_it(client, world, db):
     assert found["reversals"]["serious"] is True and len(found["reversals"]["items"]) == 3
     assert "reversed 3 or more" in found["reversals"]["why"]
     assert found["reversals"]["items"][0]["who"]  # the bursar's name
+    assert all(i["amount_kobo"] < 0 for i in found["reversals"]["items"])  # money taken back
     assert found["backdated_cash"]["items"][0]["amount_kobo"] == 4_000 * NAIRA
     reduction = found["bill_reductions"]
     assert reduction["serious"] is True and reduction["items"][0]["amount_kobo"] == -60_000 * NAIRA

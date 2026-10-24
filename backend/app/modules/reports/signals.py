@@ -210,7 +210,7 @@ def signals(session: Session, school_id: uuid.UUID, days: int = 30, today: date 
             + (f" {', '.join(many)} reversed {REVERSALS_BY_ONE} or more." if many else ""),
             serious=bool(many),
             items=[
-                Item(d, note or "No reason given", -int(amount), name(by), f"/console/students/{student}")
+                Item(d, note or "No reason given", int(amount), name(by), f"/console/students/{student}")
                 for d, amount, note, by, student in reversals
             ],
         ),
