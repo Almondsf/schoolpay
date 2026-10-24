@@ -146,6 +146,15 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
   questions** (in `OWNER_TODO.md`): shared or separate bank accounts per branch; can one bursar cover
   several branches; a group price. This changes who sees which school's data, so confirm before
   building.
+- **Giving a school all its records** (for leaving WardPay or a wind-down; on hold, owner 2026-10-24:
+  "leave it till later"). Discussed: the owner first wanted a platform button sending each school (or all)
+  one password-protected file by email. Recommended instead, and agreed as the shape when it's built: a
+  proprietor-only "Download all our records" (one Excel file with everything, MFA sign-in, audited, nothing
+  emailed), with closed schools keeping read-only sign-in for about 90 days; the owner emails proprietors
+  to download. Emailing everything was set aside: it puts every parent's phone in a mailbox the school
+  controls (and the school can change that address), and big files exceed attachment limits. If an
+  emailed file is ever wanted: one encrypted .xlsx (msoffcrypto-tool, AES), built per school by an outbox
+  job, password by SMS to the school's phone. Ties in with the open "close a school" decision.
 - **One virtual account per family** (on hold, owner 2026-10-23; the split rule below is built and used by
   the family payment link, so family numbers would reuse it). Needs a provider that issues virtual
   accounts (Paystack Dedicated NUBAN, or Fincra / Figo / Squad / Monnify: published caps ₦250 / ₦200 /
