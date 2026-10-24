@@ -4,7 +4,34 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-24 (Paystack payouts check)
+Last updated: 2026-10-24 (one real payment, end to end)
+
+## _(new)_ One real payment, end to end (2026-10-24)
+
+The automatic check of the live site passes (13 of 13: `python -m app.smoke https://wardpay.netlify.app`,
+read-only, run it after each deploy). What it can't do is pay. Do this once, in this order, and note
+anything that doesn't happen as described:
+
+- [ ] **Paystack webhook address.** Paystack dashboard → Settings → API Keys & Webhooks → Webhook URL:
+      `https://wardpay.netlify.app/api/v1/webhooks/paystack` (for whichever mode, test or live, the
+      site's `PAYSTACK_SECRET_KEY` is in). Save.
+- [ ] **Open the site first** (the free plan sleeps; a sleeping site answers Paystack late, though
+      Paystack retries).
+- [ ] **A pupil to pay for.** Sign in as the proprietor. Use a test pupil in a test school (or the demo
+      school), with **your own phone number** as the parent, and a bill on it.
+- [ ] **Pay by card.** Pupil's page → Payments → **Card payment link** → ₦100 (or a small amount) →
+      **Create link**. Open the link on your phone and pay. In test mode use Paystack's test card
+      4084 0840 8408 4081, any future expiry, CVV 408, PIN 0000, OTP 123456.
+- [ ] **What you should see, within a minute:**
+      1. the payment page says it went through;
+      2. Payments → Received shows it, with a receipt number, and the bill's balance went down;
+      3. a receipt message on your phone (WhatsApp or text, if those are set up; else nothing yet);
+      4. the receipt PDF opens, and its QR code opens the check page showing "valid".
+- [ ] **The family link.** On the same pupil, **Payment link** → **Copy link**, open it on your phone,
+      and pay a small amount: the same four things should happen.
+- [ ] **The next morning** (live mode only: test mode never pays out): Payments → **Paid into the
+      bank** → **Check now**, and compare with the Paystack dashboard (see the next section).
+- [ ] **Tell me** what happened at each step, especially anything late or missing.
 
 ## _(new)_ Check the first real Paystack payout (2026-10-24)
 

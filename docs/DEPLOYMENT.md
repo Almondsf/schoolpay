@@ -172,6 +172,20 @@ than sent late. Bill notices and reminders are never sent between
 `QUIET_HOURS_START` and `QUIET_HOURS_END` (20:00–07:00 Lagos); they wait for
 the morning. Beat must be running for automatic reminders.
 
+## Checking a deploy
+
+After every deploy, run the read-only smoke check from a developer machine (it changes nothing):
+
+```bash
+cd backend && .venv/Scripts/python -m app.smoke https://wardpay.netlify.app
+```
+
+It checks the web app and API answer (waiting up to two minutes for a sleeping free-plan service), the
+database and Redis are reachable, the `/api` proxy works, the website prices load, security headers and
+the HTTPS redirect are in place, API docs and development-only routes are off, staff pages need sign-in,
+forged Paystack webhooks and made-up receipt codes are refused. Add `--api https://<render-host>` to
+check the API directly. It exits 1 if anything failed.
+
 ## Background workers
 
 Run exactly one `beat` and as many `worker`s as needed. Beat hands stuck outbox
