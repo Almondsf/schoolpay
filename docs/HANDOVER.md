@@ -158,7 +158,8 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
   The family payment link (parent chooses the amounts) is unchanged and needs no rule.
 
 0. **Bookkeeping roadmap** (owner, 2026-10-24: "make the school ledger really great"), in order:
-   ~~cash book and banking~~ (done 24 Oct: `payments/cashbook.py`); expenses and income & expenditure;
+   ~~cash book and banking~~ (done 24 Oct: `payments/cashbook.py`); ~~expenses and income & expenditure~~ (done
+   24 Oct: `expenses/`; receipt photos not stored yet, no file storage on the free plan);
    collection curve and cash forecast on the dashboard; accountant export (journal) and end-of-session
    pack; then write-offs, closing a term, Paystack settlement reconciliation, unusual-activity signals.
 1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).

@@ -6,6 +6,7 @@ def load_all_models() -> None:
     from app.core import outbox, sequences  # noqa: F401
     from app.modules.accounts import models as accounts  # noqa: F401
     from app.modules.audit import models as audit  # noqa: F401
+    from app.modules.expenses import models as expenses  # noqa: F401
     from app.modules.fees import models as fees  # noqa: F401
     from app.modules.notifications import models as notifications  # noqa: F401
     from app.modules.parents import models as parents  # noqa: F401

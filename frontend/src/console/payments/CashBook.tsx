@@ -61,7 +61,7 @@ export function CashBook() {
               label="Should be in the drawer now"
               value={formatKobo(book.data.held_now_kobo)}
               icon={<Banknote size={18} />}
-              note="Cash taken, less cash banked"
+              note="Cash taken, less cash banked and spent"
             />
             <Stat
               label="Banked, not yet checked"
@@ -88,8 +88,8 @@ export function CashBook() {
                 {book.data.late.map((e, i) => (
                   <li key={i} className="list-item row between">
                     <span>
-                      {e.kind === 'cash' ? 'Cash taken' : 'Banking'} for {formatDate(e.day)}, recorded {formatDateTime(e.recorded_at)} by{' '}
-                      {e.recorded_by}
+                      {e.kind === 'cash' ? 'Cash taken' : e.kind === 'expense' ? 'Cash spent' : 'Banking'} for {formatDate(e.day)}, recorded{' '}
+                      {formatDateTime(e.recorded_at)} by {e.recorded_by}
                     </span>
                     <strong>{formatKobo(e.amount_kobo)}</strong>
                   </li>
@@ -118,6 +118,7 @@ export function CashBook() {
                     <th className="num">Cash taken</th>
                     <th className="num">Reversed</th>
                     <th className="num">Banked</th>
+                    <th className="num">Spent</th>
                     <th className="num">Should be held</th>
                     <th className="num">Counted</th>
                   </tr>
@@ -125,7 +126,7 @@ export function CashBook() {
                 <tbody>
                   <tr className="muted">
                     <td>Brought forward</td>
-                    <td colSpan={3} />
+                    <td colSpan={4} />
                     <td className="num">{formatKobo(book.data.opening_kobo)}</td>
                     <td />
                   </tr>
@@ -138,6 +139,7 @@ export function CashBook() {
                       </td>
                       <td className="num">{d.reversed_kobo ? formatKobo(d.reversed_kobo) : '—'}</td>
                       <td className="num">{d.banked_kobo ? formatKobo(d.banked_kobo) : '—'}</td>
+                      <td className="num">{d.spent_kobo ? formatKobo(d.spent_kobo) : '—'}</td>
                       <td className="num">
                         <strong>{formatKobo(d.held_kobo)}</strong>
                       </td>
@@ -172,6 +174,7 @@ export function CashBook() {
                     <th>Staff</th>
                     <th className="num">Cash taken</th>
                     <th className="num">Banked</th>
+                    <th className="num">Spent</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,6 +185,7 @@ export function CashBook() {
                         {formatKobo(s.received_kobo)} <span className="muted small">({s.payments})</span>
                       </td>
                       <td className="num">{formatKobo(s.banked_kobo)}</td>
+                      <td className="num">{formatKobo(s.spent_kobo)}</td>
                     </tr>
                   ))}
                 </tbody>

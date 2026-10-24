@@ -516,6 +516,24 @@ fixed number of queries. Banking entries can't be deleted (trigger). Audited:
 `payments.cash_banked`, `payments.cash_banking_confirmed`, `payments.cash_banking_rejected`,
 `payments.cash_day_closed`.
 
+**Expenses** (`app/modules/expenses/`, console: Expenses). What the school spends, by
+category. Every school starts with default categories (salaries and wages, diesel and
+fuel, electricity, repairs, teaching materials, food and kitchen, transport, rent,
+taxes and levies, bank charges, other; made on first look) and can add, rename and
+retire its own (`/expense-categories`, `payments.approve`). An expense (amount, date,
+who was paid, what for, paid from cash / bank / card, reference) is recorded by one
+person (`POST /expenses`, `payments.record`) and approved or rejected by another
+(`payments.approve`, maker-checker by service and constraint). An approved one that was
+wrong is **voided** with a reason: it stops counting but stays on record; nothing is
+deleted (trigger). Spending paid **from the drawer** comes off the cash book's "should be
+held" (pending too: the notes have left; rejected and voided don't), with its own column,
+per-staff total and late-entry flag.
+
+**Income and expenditure** (`GET /reports/income-expenditure?start=&end=`,
+`reports.view`, up to about a session): money received by how it came in (payments net of
+reversals) against approved spending by category, the surplus or deficit, spending still
+awaiting approval, and bills issued in the period for comparison. Four queries.
+
 **Family payment links** (`family_links.py` for the link, `family.py` for the
 page and checkout). One link per parent (`FamilyPayLink`: one live link per
 guardian by a partial unique index), made the first time a bill notice or
@@ -1162,6 +1180,7 @@ production.
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
+| Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |
 | Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
 | Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |

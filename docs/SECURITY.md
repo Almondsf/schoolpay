@@ -118,6 +118,9 @@ It is updated with every change that affects security.
   reference of our own format, is rate limited, and reads the outcome from the gateway.
 - Cash, teller and POS payments need **maker-checker** approval: the approver
   must be a different person (service rule and database constraint).
+- **Expenses:** recorded by one person and approved by another (constraint), never deleted
+  (trigger; a mistake is voided with a reason), and cash spent comes off what should be in the
+  drawer. Audited (`expenses.recorded`, `.approved`, `.rejected`, `.voided`).
 - **Cash book:** banking recorded by one person is checked against the bank statement by
   another (constraint), banking entries can't be deleted and day closes can't be changed
   (triggers), and cash recorded for a closed day afterwards is flagged. Every step is audited.

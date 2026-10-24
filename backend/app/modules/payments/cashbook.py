@@ -3,7 +3,8 @@ The cash book: cash taken at the school, cash taken to the bank, and what should
 
 - **Cash in** is every cash payment as recorded (approved, or still waiting for its second person:
   either way the notes are in the drawer), less cash payments reversed, by the day it was received.
-- **Cash out** is banking (`CashDeposit`): one person records a trip to the bank with its teller
+- **Cash out** is spending paid from the drawer (expenses, `paid_from = cash`, unless rejected or
+  voided) and banking (`CashDeposit`): one person records a trip to the bank with its teller
   number, a second confirms it against the bank statement. A rejected one didn't happen, so the cash
   still counts as held; one still unchecked is shown apart, as "banked, not yet checked".
 - **Closing a day** (`CashDayClose`): someone counts the drawer and enters the figure; the system's
@@ -28,6 +29,7 @@ from app.modules.accounts.deps import StaffContext
 from app.modules.accounts.models import User
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
+from app.modules.expenses.models import Expense, ExpenseStatus, PaidFrom
 
 from .models import (
     CashDayClose,
@@ -51,6 +53,7 @@ class CashDay:
     payments: int = 0
     reversed_kobo: int = 0  # cash payments reversed that day (a positive number)
     banked_kobo: int = 0  # deposits recorded for that day (confirmed or not yet checked)
+    spent_kobo: int = 0  # expenses paid from the drawer that day
     held_kobo: int = 0  # what should be in the drawer at the end of the day
     counted_kobo: int | None = None  # the count, if the day was closed
     difference_kobo: int | None = None  # counted - expected at close
@@ -63,11 +66,12 @@ class StaffCash:
     received_kobo: int
     payments: int
     banked_kobo: int
+    spent_kobo: int
 
 
 @dataclass(frozen=True)
 class LateEntry:
-    kind: str  # "cash" | "banking"
+    kind: str  # "cash" | "banking" | "expense"
     day: date
     amount_kobo: int
     recorded_at: datetime
@@ -123,13 +127,29 @@ def _banked(session: Session, until: date | None = None) -> tuple[int, int]:
     return int(row[0]), int(row[1])
 
 
+def _spent(session: Session, until: date | None = None) -> int:
+    """Expenses paid from the drawer up to `until` (pending ones too: the notes have left). One query."""
+    return int(
+        session.scalar(
+            select(func.coalesce(func.sum(Expense.amount_kobo), 0)).where(
+                *_cash_spending(), *([Expense.spent_on <= until] if until else [])
+            )
+        )
+        or 0
+    )
+
+
+def _cash_spending() -> tuple[ColumnElement[bool], ...]:
+    return (Expense.paid_from == PaidFrom.CASH, Expense.status.in_([ExpenseStatus.PENDING, ExpenseStatus.APPROVED]))
+
+
 def held(session: Session, until: date | None = None) -> int:
     """Cash that should be in the drawer at the end of `until` (or right now)."""
-    return _cash_in(session, until) - _banked(session, until)[0]
+    return _cash_in(session, until) - _banked(session, until)[0] - _spent(session, until)
 
 
 def cash_book(session: Session, start: date, end: date) -> CashBook:
-    """The cash book for [start, end]. The session is scoped to the school. Eight queries."""
+    """The cash book for [start, end]. The session is scoped to the school. A fixed number of queries."""
     if end < start:
         raise DomainError("The end date is before the start date.", field="end")
     if (end - start).days >= MAX_DAYS:
@@ -167,13 +187,19 @@ def cash_book(session: Session, start: date, end: date) -> CashBook:
         .group_by(CashDeposit.banked_on)
     ):
         at(d).banked_kobo = int(amount)
+    for d, amount in session.execute(
+        select(Expense.spent_on, func.sum(Expense.amount_kobo))
+        .where(*_cash_spending(), Expense.spent_on.between(start, end))
+        .group_by(Expense.spent_on)
+    ):
+        at(d).spent_kobo = int(amount)
     closes = {c.day: c for c in session.scalars(select(CashDayClose).where(CashDayClose.day.between(start, end)))}
     for d in closes:
         at(d)
     running = book.opening_kobo
     for d in sorted(days):
         day = days[d]
-        running += day.received_kobo - day.reversed_kobo - day.banked_kobo
+        running += day.received_kobo - day.reversed_kobo - day.banked_kobo - day.spent_kobo
         day.held_kobo = running
         close = closes.get(d)
         if close is not None:
@@ -204,16 +230,27 @@ def cash_book(session: Session, start: date, end: date) -> CashBook:
             .group_by(CashDeposit.recorded_by, names)
         )
     }
+    spent_by = {
+        uid: (name, int(amount))
+        for uid, name, amount in session.execute(
+            select(Expense.recorded_by, names, func.sum(Expense.amount_kobo))
+            .join(User, User.id == Expense.recorded_by)
+            .where(*_cash_spending(), Expense.spent_on.between(start, end))
+            .group_by(Expense.recorded_by, names)
+        )
+    }
+    everyone = {uid: entry[0] for source in (taken, banked_by, spent_by) for uid, entry in source.items()}
     book.staff = sorted(
         (
             StaffCash(
                 uid,
-                (taken.get(uid) or banked_by[uid])[0],
+                name,
                 taken.get(uid, ("", 0, 0))[1],
                 taken.get(uid, ("", 0, 0))[2],
                 banked_by.get(uid, ("", 0))[1],
+                spent_by.get(uid, ("", 0))[1],
             )
-            for uid in {*taken, *banked_by}
+            for uid, name in everyone.items()
         ),
         key=lambda s: (-s.received_kobo, s.name),
     )
@@ -246,15 +283,22 @@ def cash_book(session: Session, start: date, end: date) -> CashBook:
         .join(User, User.id == CashDeposit.recorded_by)
         .where(CashDeposit.status != CashDepositStatus.REJECTED, CashDeposit.banked_on.between(start, end))
     )
+    late_spending = (
+        select(Expense.spent_on, Expense.amount_kobo, Expense.created_at, names)
+        .join(all_closes, and_(all_closes.c.day == Expense.spent_on, Expense.created_at > all_closes.c.closed_at))
+        .join(User, User.id == Expense.recorded_by)
+        .where(*_cash_spending(), Expense.spent_on.between(start, end))
+    )
     book.late = sorted(
         [LateEntry("cash", d, int(a), at_, n) for d, a, at_, n in session.execute(late_cash)]
-        + [LateEntry("banking", d, int(a), at_, n) for d, a, at_, n in session.execute(late_banking)],
+        + [LateEntry("banking", d, int(a), at_, n) for d, a, at_, n in session.execute(late_banking)]
+        + [LateEntry("expense", d, int(a), at_, n) for d, a, at_, n in session.execute(late_spending)],
         key=lambda e: e.recorded_at,
         reverse=True,
     )
 
     cash_now, (banked_now, unchecked) = _cash_in(session), _banked(session)
-    book.held_now_kobo, book.unchecked_banking_kobo = cash_now - banked_now, unchecked
+    book.held_now_kobo, book.unchecked_banking_kobo = cash_now - banked_now - _spent(session), unchecked
     book.last_closed = session.scalar(select(func.max(CashDayClose.day)))
     return book
 

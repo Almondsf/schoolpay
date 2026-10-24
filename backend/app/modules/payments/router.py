@@ -593,6 +593,7 @@ class CashDayOut(BaseModel):
     payments: int
     reversed_kobo: int
     banked_kobo: int
+    spent_kobo: int = Field(description="Expenses paid from the drawer that day")
     held_kobo: int = Field(description="What should be in the drawer at the end of the day")
     counted_kobo: int | None = Field(description="The drawer count, if the day was closed")
     difference_kobo: int | None = Field(description="Counted minus expected at close (negative: cash short)")
@@ -606,12 +607,13 @@ class StaffCashOut(BaseModel):
     received_kobo: int
     payments: int
     banked_kobo: int
+    spent_kobo: int
 
 
 class LateEntryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    kind: Literal["cash", "banking"]
+    kind: Literal["cash", "banking", "expense"]
     day: date
     amount_kobo: int
     recorded_at: datetime
