@@ -566,7 +566,7 @@ const SECTIONS = [
         purpose: 'Everything the school’s money did in a period, as balanced double entries, ready for the accountant or accounting software. Pupils appear by admission number only.',
         steps: [
           'Go to Reports → For your accountant and choose the dates.',
-          'Press Download Excel (journal, account totals, chart of accounts) or Download CSV (for accounting software). The file is prepared first; for a long period at a big school this can take a minute. Keep the page open and it downloads by itself.',
+          'Press Download Excel (journal, account totals, chart of accounts) or Download CSV (for accounting software). The file is prepared first (the button says Preparing…); for a long period at a big school this can take a minute. Keep the page open and it downloads by itself.',
         ],
         notes: ['Card and online payments are shown at the full amount; the provider’s charges appear in Payments → Paid into the bank.'],
       },

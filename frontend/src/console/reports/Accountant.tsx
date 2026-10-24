@@ -30,6 +30,8 @@ export function Accountant() {
     mutate: (format: JournalFormat) => exporting.mutate({ kind: 'journal', ...period, format }),
     isPending: exporting.isPending,
     error: exporting.error,
+    // The button that was pressed says so while its file is prepared
+    preparing: exporting.isPending ? exporting.variables?.format : undefined,
   };
   return (
     <>
@@ -68,10 +70,10 @@ export function Accountant() {
             </div>
             <div className="row">
               <button className="secondary small" onClick={() => download.mutate('xlsx')} disabled={download.isPending}>
-                Download Excel
+                {download.preparing === 'xlsx' ? 'Preparing…' : 'Download Excel'}
               </button>
               <button className="secondary small" onClick={() => download.mutate('csv')} disabled={download.isPending}>
-                Download CSV
+                {download.preparing === 'csv' ? 'Preparing…' : 'Download CSV'}
               </button>
             </div>
           </div>

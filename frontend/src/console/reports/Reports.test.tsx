@@ -370,6 +370,8 @@ describe('dashboard and reports', () => {
     expect(totals.getByText('₦50,000.00')).toBeInTheDocument();
     expect(screen.getByText(/1 cash deposit is left out/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+    expect(await screen.findByRole('button', { name: 'Preparing…' })).toBeDisabled(); // the CSV button, while it's built
+    expect(screen.getByRole('button', { name: 'Download Excel' })).toBeDisabled();
     await vi.waitFor(() => expect(saved).toEqual(['journal-2026-10-01-to-2026-10-20.csv']), { timeout: 4000 });
 
     await userEvent.click(screen.getByRole('button', { name: 'Download the pack' }));
