@@ -949,6 +949,10 @@ tr.retired td {
   color: var(--primary-strong);
 }
 
+.danger-text {
+  color: var(--danger);
+}
+
 .problems {
   max-height: 240px;
   overflow-y: auto;

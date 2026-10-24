@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Building2,
   CalendarDays,
   ChartColumn,
@@ -40,6 +41,7 @@ import { Reports } from './reports/Reports';
 import { Dashboard } from './Dashboard';
 import { FeeSetup } from './fees/FeeSetup';
 import { GetStarted } from './GetStarted';
+import { CashBook } from './payments/CashBook';
 import { Payments } from './payments/Payments';
 import { PaymentSettings } from './payments/PaymentSettings';
 import { PlatformBilling } from './platform/Billing';
@@ -72,6 +74,7 @@ const SCHOOL_NAV: NavItem[] = [
   { to: '/console/students', label: 'Students', icon: Users, capability: 'students.view' },
   { to: '/console/billing', label: 'Billing', icon: FileText, capability: 'fees.view' },
   { to: '/console/payments', label: 'Payments', icon: Wallet, capability: 'payments.view' },
+  { to: '/console/cash-book', label: 'Cash book', icon: Banknote, capability: 'payments.view' },
   { to: '/console/reports', label: 'Reports', icon: ChartColumn, capability: 'reports.view' },
   { to: '/console/messages', label: 'Messages', icon: MessageSquare, capability: 'messaging.manage' },
   { to: '/console/fees', label: 'Fees', icon: Tags, capability: 'fees.view', setup: true },
@@ -121,6 +124,7 @@ export function ConsoleApp() {
           <Route path="billing" element={<Guard capability="fees.view"><Billing /></Guard>} />
           <Route path="invoices/:invoiceId" element={<Guard capability="fees.view"><InvoiceDetail /></Guard>} />
           <Route path="payments" element={<Guard capability="payments.view"><Payments /></Guard>} />
+          <Route path="cash-book" element={<Guard capability="payments.view"><CashBook /></Guard>} />
           <Route path="reports" element={<Guard capability="reports.view"><Reports /></Guard>} />
           <Route path="messages" element={<Guard capability="messaging.manage"><Messages /></Guard>} />
           <Route path="payment-settings" element={<Guard capability="payments.view"><PaymentSettings /></Guard>} />

@@ -118,6 +118,9 @@ It is updated with every change that affects security.
   reference of our own format, is rate limited, and reads the outcome from the gateway.
 - Cash, teller and POS payments need **maker-checker** approval: the approver
   must be a different person (service rule and database constraint).
+- **Cash book:** banking recorded by one person is checked against the bank statement by
+  another (constraint), banking entries can't be deleted and day closes can't be changed
+  (triggers), and cash recorded for a closed day afterwards is flagged. Every step is audited.
 - Payments and allocations are append-only. Reversals are new negative entries,
   and only bursars and proprietors can make them. Database triggers stop a
   payment being over-allocated or an invoice overpaid.

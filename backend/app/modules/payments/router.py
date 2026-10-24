@@ -24,10 +24,11 @@ from app.modules.receipts.service import receipts_for_payments
 from app.modules.schools.models import FamilySplitRule, School
 from app.modules.students.models import Student
 
-from . import accounts, checkout, earmarks, manual, paycards, providers, service, webhooks
+from . import accounts, cashbook, checkout, earmarks, manual, paycards, providers, service, webhooks
 from .allocation import credit_by_student
 from .gateways import FakeGateway, GatewayCode, InvalidSignature, enabled_gateways
 from .models import (
+    CashDepositStatus,
     IntentStatus,
     ManualPayment,
     ManualPaymentStatus,
@@ -579,6 +580,172 @@ def verify_checkout(body: VerifyIn, meta: RequestMeta = Depends(request_meta)) -
     if intent is None:
         raise NotFound("Payment not found.")
     return VerifyOut(reference=intent.reference, status=intent.status, amount_kobo=intent.amount_kobo)
+
+
+# --- Cash book ----------------------------------------------------------------------------------------
+
+
+class CashDayOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    day: date
+    received_kobo: int
+    payments: int
+    reversed_kobo: int
+    banked_kobo: int
+    held_kobo: int = Field(description="What should be in the drawer at the end of the day")
+    counted_kobo: int | None = Field(description="The drawer count, if the day was closed")
+    difference_kobo: int | None = Field(description="Counted minus expected at close (negative: cash short)")
+
+
+class StaffCashOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: uuid.UUID
+    name: str
+    received_kobo: int
+    payments: int
+    banked_kobo: int
+
+
+class LateEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: Literal["cash", "banking"]
+    day: date
+    amount_kobo: int
+    recorded_at: datetime
+    recorded_by: str
+
+
+class CashBookOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    start: date
+    end: date
+    opening_kobo: int
+    days: list[CashDayOut]
+    staff: list[StaffCashOut]
+    late: list[LateEntryOut] = Field(description="Cash or banking recorded for a closed day after it was closed")
+    held_now_kobo: int = Field(description="Cash that should be in the drawer now")
+    unchecked_banking_kobo: int = Field(description="Banked, not yet confirmed against the bank statement")
+    last_closed: date | None
+
+
+class CashDepositIn(BaseModel):
+    amount_kobo: Kobo
+    banked_on: date
+    bank_reference: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] = ""
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class CashDepositOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    amount_kobo: int
+    banked_on: date
+    bank_reference: str
+    note: str
+    status: CashDepositStatus
+    recorded_by: uuid.UUID
+    decided_by: uuid.UUID | None
+    rejection_reason: str
+    created_at: datetime
+
+
+class CashDecisionIn(BaseModel):
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class CashCloseIn(BaseModel):
+    day: date
+    counted_kobo: Annotated[int, Field(ge=0, le=MAX_AMOUNT_KOBO)]
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class CashCloseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    day: date
+    expected_kobo: int
+    counted_kobo: int
+    note: str
+    closed_at: datetime
+
+
+@router.get("/cash-book", response_model=CashBookOut, summary="Cash taken, cash banked, and what should be held")
+def get_cash_book(
+    start: date | None = None, end: date | None = None, ctx: StaffContext = VIEW, db: Session = Depends(get_db)
+) -> CashBookOut:
+    default_start, default_end = cashbook.today_range()
+    return CashBookOut.model_validate(cashbook.cash_book(db, start or default_start, end or default_end))
+
+
+@router.get("/cash-deposits", response_model=list[CashDepositOut], summary="Cash taken to the bank, newest first")
+def list_cash_deposits(
+    status_: CashDepositStatus | None = Query(default=None, alias="status"),
+    ctx: StaffContext = VIEW,
+    db: Session = Depends(get_db),
+) -> list[CashDepositOut]:
+    return [CashDepositOut.model_validate(d) for d in cashbook.deposits(db, status=status_)]
+
+
+@router.post(
+    "/cash-deposits",
+    response_model=CashDepositOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record cash taken to the bank (a second person checks it against the statement)",
+)
+def record_cash_deposit(
+    body: CashDepositIn, ctx: StaffContext = RECORD, db: Session = Depends(get_db)
+) -> CashDepositOut:
+    return CashDepositOut.model_validate(
+        cashbook.record_deposit(
+            db,
+            ctx,
+            amount_kobo=body.amount_kobo,
+            banked_on=body.banked_on,
+            bank_reference=body.bank_reference,
+            note=body.note,
+        )
+    )
+
+
+@router.post(
+    "/cash-deposits/{deposit_id}/confirm",
+    response_model=CashDepositOut,
+    summary="Confirm banking against the bank statement (not by the person who recorded it)",
+)
+def confirm_cash_deposit(
+    deposit_id: uuid.UUID, ctx: StaffContext = APPROVE, db: Session = Depends(get_db)
+) -> CashDepositOut:
+    return CashDepositOut.model_validate(cashbook.decide_deposit(db, ctx, deposit_id, confirm=True))
+
+
+@router.post(
+    "/cash-deposits/{deposit_id}/reject",
+    response_model=CashDepositOut,
+    summary="Reject banking that doesn't match the bank statement (the cash counts as still held)",
+)
+def reject_cash_deposit(
+    deposit_id: uuid.UUID, body: CashDecisionIn, ctx: StaffContext = APPROVE, db: Session = Depends(get_db)
+) -> CashDepositOut:
+    return CashDepositOut.model_validate(
+        cashbook.decide_deposit(db, ctx, deposit_id, confirm=False, reason=body.reason)
+    )
+
+
+@router.post(
+    "/cash-book/close",
+    response_model=CashCloseOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Close a cash day: the drawer count beside what was expected",
+)
+def close_cash_day(body: CashCloseIn, ctx: StaffContext = APPROVE, db: Session = Depends(get_db)) -> CashCloseOut:
+    return CashCloseOut.model_validate(
+        cashbook.close_day(db, ctx, day=body.day, counted_kobo=body.counted_kobo, note=body.note)
+    )
 
 
 # --- Webhooks --------------------------------------------------------------------------------------

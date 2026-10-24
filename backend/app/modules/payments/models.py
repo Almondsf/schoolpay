@@ -376,3 +376,56 @@ class PaymentEarmark(TenantMixin, UUIDPrimaryKey, Base):
     description: Mapped[str] = mapped_column(String(200), default="")  # a one-off charge without a fee item
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CashDepositStatus(enum.StrEnum):
+    PENDING = "pending"  # recorded; a second person still has to check it against the bank statement
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"  # didn't match the bank: the cash counts as still held
+
+
+class CashDeposit(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    Cash taken from the school's drawer to the bank (the cash book's money out). Recorded by one
+    person, confirmed or rejected by another against the bank statement. Never deleted (trigger).
+    """
+
+    __tablename__ = "cash_deposits"
+    __table_args__ = (
+        CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        CheckConstraint("(status = 'pending') = (decided_by IS NULL)", name="decided_unless_pending"),
+        CheckConstraint("decided_by IS NULL OR decided_by <> recorded_by", name="maker_checker"),
+        Index("ix_cash_deposits_school_day", "school_id", "banked_on"),
+    )
+
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)
+    banked_on: Mapped[date] = mapped_column(Date)
+    bank_reference: Mapped[str] = mapped_column(String(100), default="")  # teller or deposit slip number
+    note: Mapped[str] = mapped_column(String(300), default="")
+    status: Mapped[CashDepositStatus] = mapped_column(
+        enum_type(CashDepositStatus, "cash_deposit_status"), default=CashDepositStatus.PENDING
+    )
+    recorded_by: Mapped[uuid.UUID] = mapped_column()
+    decided_by: Mapped[uuid.UUID | None] = mapped_column()
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str] = mapped_column(String(300), default="")
+
+
+class CashDayClose(TenantMixin, UUIDPrimaryKey, Base):
+    """
+    The end of a cash day: the cash the system expected in the drawer and what was counted. One per
+    school per day, never changed (trigger). Cash recorded for a closed day afterwards is flagged.
+    """
+
+    __tablename__ = "cash_day_closes"
+    __table_args__ = (
+        UniqueConstraint("school_id", "day"),
+        CheckConstraint("counted_kobo >= 0", name="counted_not_negative"),
+    )
+
+    day: Mapped[date] = mapped_column(Date)
+    expected_kobo: Mapped[int] = mapped_column(BigInteger)
+    counted_kobo: Mapped[int] = mapped_column(BigInteger)
+    note: Mapped[str] = mapped_column(String(300), default="")
+    closed_by: Mapped[uuid.UUID] = mapped_column()
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

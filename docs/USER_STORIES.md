@@ -3,6 +3,7 @@
 What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ See cash taken and banked day by day and per staff member, any day the count came up short, and cash recorded for a day after it was closed.
 - ✅ Choose how one amount a parent pays for several children is shared: old balances first then clear as many children as possible, in proportion, eldest first or youngest first.
 - ✅ Sign my school up online, confirm my email, and get a checklist of what to set up next.
 - ✅ See our plan, what a term costs at our pupil numbers, where to pay, and our WardPay bills (PDF).
@@ -18,6 +19,7 @@ What each kind of user needs from WardPay. Stories are marked ✅ when built.
 - ✅ Download the debtors list and money received as Excel or PDF to share with the board.
 
 ## Bursar
+- ✅ See how much cash should be in the drawer, record cash taken to the bank with its teller number, and close each day with a count; a second person checks banking against the bank statement.
 - ✅ When taking cash or a teller, note which fees it’s for, so it goes to those fees (even if older debts are owed).
 - ✅ Add a fee to a class in the fee grid after the bills have gone out, and it goes onto every pupil’s bill in that class as soon as it’s saved (exempt pupils and optional fees left out).
 - ✅ See each pupil’s fees for the term one by one (charged, paid, left) on the pupil’s page, plus earlier debts.

@@ -493,6 +493,29 @@ customer, so a student without a parent email gets a routing address
 (`student-<id>@<school>.wardpay.ng`). Each student's number is shown on
 their page and, later, in the parent portal.
 
+**The cash book** (`cashbook.py`, console: Cash book). It tracks the notes in the
+school's drawer:
+
+- **cash in:** every cash `ManualPayment` (approved, or still waiting for its second
+  person: the notes are in the drawer either way; rejected ones don't count), less cash
+  payments reversed, by the day received;
+- **cash out:** banking (`CashDeposit`): one person records cash taken to the bank with
+  its teller number (`POST /cash-deposits`, `payments.record`); a different person checks
+  it against the bank statement (`/confirm` or `/reject` with a reason,
+  `payments.approve`; maker-checker by service and constraint). A rejected one didn't
+  happen, so the cash counts as still held; unchecked ones are shown apart;
+- **day close** (`CashDayClose`, `POST /cash-book/close`, `payments.approve`): the
+  drawer count beside what the system expected, once per day, never changed (trigger);
+  the difference shows as short or over. Cash or banking recorded for a closed day after
+  it was closed is listed as a **late entry**.
+
+`GET /cash-book?start=&end=` (up to a year) gives the opening balance, each day (taken,
+reversed, banked, should be held, counted, difference), cash taken and banked per staff
+member, late entries, what should be held now and the banking not yet checked, in a
+fixed number of queries. Banking entries can't be deleted (trigger). Audited:
+`payments.cash_banked`, `payments.cash_banking_confirmed`, `payments.cash_banking_rejected`,
+`payments.cash_day_closed`.
+
 **Family payment links** (`family_links.py` for the link, `family.py` for the
 page and checkout). One link per parent (`FamilyPayLink`: one live link per
 guardian by a partial unique index), made the first time a bill notice or
@@ -1139,6 +1162,7 @@ production.
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
+| Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |
 | Parent sign-in | `POST /parent/auth/request-code`, `/parent/auth/verify`, `/parent/auth/choose-school`, `/parent/auth/refresh`, `/parent/auth/logout` |
 | Parent portal | `GET /parent/home`; `GET /parent/children/{id}`; `GET /parent/invoices/{id}`; `POST /parent/children/{id}/pay`; `GET /parent/receipts/{id}/pdf` |
