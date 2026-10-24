@@ -559,6 +559,17 @@ the CSV is flat, for accounting software. Seven queries whatever the period. Exc
 about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
 background job later.
 
+**Unusual activity** (`reports/signals.py`, `GET /reports/unusual-activity?days=`, 1–180, default 30;
+`staff.manage`, so the proprietor only: it's about staff conduct). Where school money usually goes
+missing, each item with the date, what happened, who recorded it and a console link where there is one:
+payments reversed (serious when one person reversed 3 or more); cash, banking or spending recorded for a
+day after its drawer count, and short counts (both from the cash book); manual payments entered 3 or more
+days after the money was received; bill reductions (biggest first; serious at ₦50,000 or more) and voids
+(from the audit log); approved write-offs (marking the proprietor's own); banking rejected by the second
+person; spending with the same payee and amount within 7 days. Kinds with nothing are left out. A fixed
+number of queries (staff names in one `IN` lookup, limited to the school). The proprietor's dashboard
+shows a line when anything is serious; the screen is Reports → Unusual activity.
+
 **Writing off debt** (`fees/writeoffs.py`). Anyone with `payments.approve` asks
 (`POST /invoices/{id}/write-off`, amount up to what's owed, reason); only the proprietor
 (`debts.write_off`) approves or rejects (`POST /write-offs/{id}/approve|reject`), so two staff together
@@ -1277,7 +1288,7 @@ production.
 | Subscription and sign-up | `GET /subscription`, `GET /subscription/invoices/{id}/pdf`, `POST /subscription/invoices/{id}/checkout`, `POST /subscription/checkouts/verify`; `GET /school/onboarding`; `POST /public/signup` (public, rate limited) |
 | Privacy | `GET /guardians/{id}/export`; `POST /guardians/{id}/erase`, `POST /students/{id}/erase`; parents: `GET /parent/my-data` |
 | Public website | `GET /public/info` (name, contact, the default plan's prices) |
-| Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/insights`; `GET /reports/debtors/export`, `/reports/collections/export`, `/reports/fee-status/export` (`format=xlsx|pdf`) |
+| Reports | `GET /reports/overview`; `GET /reports/debtors`; `GET /reports/collections`; `GET /reports/insights`; `GET /reports/unusual-activity`; `GET /reports/debtors/export`, `/reports/collections/export`, `/reports/fee-status/export` (`format=xlsx|pdf`) |
 | Receipts | `GET /payments/{id}/receipt`; `GET /receipts/{id}/pdf`; `GET /public/receipts/{code}` (public) |
 | Webhooks | `POST /webhooks/paystack`, `/webhooks/flutterwave` (`/webhooks/fake` when enabled; not in the API docs) |
 | Development | `POST /dev/fake-gateway/transfers` (simulate a parent's transfer; fake gateway only); `GET /dev/sms/latest?to=` (read the last text; `SMS_BACKEND=memory` only; the parent sign-in page's "Fill in the code" button uses it, shown only in the Vite dev server via `import.meta.env.DEV` and absent from production builds). Neither exists in production. |

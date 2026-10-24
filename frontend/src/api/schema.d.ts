@@ -2434,6 +2434,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/unusual-activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Things worth a look: reversals, late cash, short counts, reduced bills, write-offs (proprietor) */
+        get: operations["reports_unusual_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/school": {
         parameters: {
             query?: never;
@@ -6840,6 +6857,61 @@ export interface components {
             name?: string | null;
             /** Phone */
             phone?: string | null;
+        };
+        /** SignalItemOut */
+        SignalItemOut: {
+            /** Amount Kobo */
+            amount_kobo: number | null;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /**
+             * Link
+             * @description A console path to look at, or empty
+             */
+            link: string;
+            /** What */
+            what: string;
+            /**
+             * Who
+             * @description Who recorded it, when known
+             */
+            who: string;
+        };
+        /** SignalOut */
+        SignalOut: {
+            /** Items */
+            items: components["schemas"]["SignalItemOut"][];
+            /** Key */
+            key: string;
+            /** Serious */
+            serious: boolean;
+            /** Title */
+            title: string;
+            /** Why */
+            why: string;
+        };
+        /** SignalsOut */
+        SignalsOut: {
+            /** Count */
+            count: number;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Signals
+             * @description Only the kinds with something to look at
+             */
+            signals: components["schemas"]["SignalOut"][];
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /** SignedIn */
         SignedIn: {
@@ -21194,6 +21266,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeeBreakdownOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_unusual_activity: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalsOut"];
                 };
             };
             /** @description Bad Request */

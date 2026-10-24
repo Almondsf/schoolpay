@@ -427,4 +427,63 @@ describe('dashboard and reports', () => {
     await vi.waitFor(() => expect(calls.some((c) => c.url.endsWith('/books/reopen'))).toBe(true));
     expect(await calls.find((c) => c.url.endsWith('/books/reopen'))!.json()).toEqual({ reason: 'Late teller' });
   });
+
+  it('shows the proprietor unusual activity, flagged on the dashboard too', async () => {
+    const proprietor = me({ role: 'proprietor', capabilities: [...bursar.capabilities, 'staff.manage'] });
+    const unusual = {
+      start: '2026-09-25',
+      end: '2026-10-24',
+      count: 2,
+      signals: [
+        {
+          key: 'reversals',
+          title: 'Payments reversed',
+          why: 'A reversal undoes a receipt. Musa Bello reversed 3 or more.',
+          serious: true,
+          items: [{ day: '2026-10-22', what: 'Teller bounced', amount_kobo: -100_000, who: 'Musa Bello', link: '/console/students/s1' }],
+        },
+        {
+          key: 'duplicate_spending',
+          title: 'Spending that looks entered twice',
+          why: 'The same payee and amount within 7 days.',
+          serious: false,
+          items: [
+            {
+              day: '2026-10-20',
+              what: 'Total filling station, also on 18 Oct',
+              amount_kobo: 750_000,
+              who: 'Ada Obi',
+              link: '/console/expenses',
+            },
+          ],
+        },
+      ],
+    };
+    mockApi({
+      'POST /api/v1/auth/refresh': () => json(signedIn(proprietor)),
+      'GET /api/v1/academic-sessions': () => json(sessions),
+      'GET /api/v1/reports/overview': () => json(overview),
+      'GET /api/v1/reports/unusual-activity': () => json(unusual),
+      'GET /api/v1/reports/debtors': () => json({ items: [], total: 0, limit: 50, offset: 0, total_owed_kobo: 0 }),
+    });
+    renderConsole('/console');
+    expect(await screen.findByText(/Worth a look: payments reversed/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('link', { name: 'See unusual activity →' }));
+    const reversals = within(await screen.findByRole('region', { name: 'Payments reversed' }));
+    expect(reversals.getByText('Look at this')).toBeInTheDocument();
+    expect(reversals.getByRole('link', { name: 'Teller bounced' })).toHaveAttribute('href', '/console/students/s1');
+    expect(reversals.getByText('Musa Bello')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Spending that looks entered twice' })).getByText('Ada Obi')).toBeInTheDocument();
+  });
+
+  it('hides unusual activity from staff who are not the proprietor', async () => {
+    mockApi({
+      ...session,
+      'GET /api/v1/reports/debtors': () => json({ items: [], total: 0, limit: 50, offset: 0, total_owed_kobo: 0 }),
+      'GET /api/v1/academic-sessions': () => json(sessions),
+    });
+    renderConsole('/console/reports');
+    expect(await screen.findByRole('tab', { name: 'For your accountant' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Unusual activity' })).not.toBeInTheDocument();
+  });
 });

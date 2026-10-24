@@ -6,9 +6,10 @@ import { Link } from 'react-router-dom';
 import { api, unwrap, type Schemas } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { formatDate, formatKobo } from '../lib/format';
-import { Empty, ErrorAlert, Loading, PageHeader, Stat, Tabs } from '../lib/ui';
+import { Empty, ErrorAlert, Loading, Notice, PageHeader, Stat, Tabs } from '../lib/ui';
 import { GettingStarted } from './GettingStarted';
 import { useSessions } from './hooks';
+import { useUnusualActivity } from './reports/Unusual';
 
 type Overview = Schemas['OverviewOut'];
 type Roll = Schemas['RollSummaryOut'];
@@ -97,6 +98,7 @@ function MoneyDashboard({ first, schoolName }: { first: string; schoolName: stri
         }
       />
       <GettingStarted />
+      {can('staff.manage') && <UnusualNote />}
       {overview.isPending ? (
         <Loading />
       ) : overview.isError ? (
@@ -105,6 +107,21 @@ function MoneyDashboard({ first, schoolName }: { first: string; schoolName: stri
         <Figures data={overview.data} pupils={can('students.view') ? <SchoolAtAGlance withTerm={false} /> : null} />
       )}
     </>
+  );
+}
+
+/** For the proprietor: a line when there's something in Unusual activity worth a look. */
+function UnusualNote() {
+  const found = useUnusualActivity(30);
+  if (!found.data || found.data.count === 0) return null;
+  const serious = found.data.signals.filter((s) => s.serious);
+  return (
+    <Notice>
+      {serious.length > 0
+        ? `Worth a look: ${serious.map((s) => s.title.toLowerCase()).join(', ')}.`
+        : 'Some activity this month is worth a glance.'}{' '}
+      <Link to="/console/reports?tab=unusual">See unusual activity →</Link>
+    </Notice>
   );
 }
 

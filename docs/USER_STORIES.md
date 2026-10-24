@@ -3,6 +3,7 @@
 What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ See unusual activity (reversals, cash recorded late or after the day was closed, short drawer counts, bills cut or voided, write-offs, rejected banking, spending entered twice) with who recorded it, and a note on the dashboard when something needs a look.
 - ✅ Approve or reject staff requests to write off debt the school won't collect; my own write-offs apply at once.
 - ✅ See what Paystack paid into the bank against what parents paid, the charges in between, payments not paid out after a few days, and payouts WardPay can't match.
 - ✅ Close a term once its figures are reported, so nothing can be backdated into it; re-open it only with a reason.

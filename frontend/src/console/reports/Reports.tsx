@@ -1,21 +1,27 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { api, unwrap, type Schemas } from '../../api/client';
+import { useAuth } from '../../auth/AuthContext';
 import { errorMessage, filenameFrom, saveBlob } from '../../lib/download';
 import { formatDate, formatKobo, lagosToday, parseNairaToKobo } from '../../lib/format';
 import { Empty, ErrorAlert, Loading, PageHeader, Pager } from '../../lib/ui';
 import { METHOD_LABELS } from '../Dashboard';
 import { useClassLevels, useSessions } from '../hooks';
 import { Accountant } from './Accountant';
+import { Unusual } from './Unusual';
 
 type Sort = Schemas['DebtorSort'];
 type Format = 'xlsx' | 'pdf';
 const PAGE = 50;
 
 export function Reports() {
-  const [tab, setTab] = useState<'debtors' | 'collections' | 'fees' | 'accountant'>('debtors');
+  const { can } = useAuth();
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<'debtors' | 'collections' | 'fees' | 'accountant' | 'unusual'>(
+    params.get('tab') === 'unusual' ? 'unusual' : 'debtors',
+  );
   return (
     <>
       <PageHeader title="Reports" subtitle="Who owes, money received, and each pupil’s fees. Download any of them for Excel or to print." />
@@ -47,8 +53,28 @@ export function Reports() {
         >
           For your accountant
         </button>
+        {can('staff.manage') && (
+          <button
+            role="tab"
+            aria-selected={tab === 'unusual'}
+            className={tab === 'unusual' ? 'tab active' : 'tab'}
+            onClick={() => setTab('unusual')}
+          >
+            Unusual activity
+          </button>
+        )}
       </div>
-      {tab === 'debtors' ? <Debtors /> : tab === 'collections' ? <Collections /> : tab === 'fees' ? <FeeStatus /> : <Accountant />}
+      {tab === 'debtors' ? (
+        <Debtors />
+      ) : tab === 'collections' ? (
+        <Collections />
+      ) : tab === 'fees' ? (
+        <FeeStatus />
+      ) : tab === 'accountant' ? (
+        <Accountant />
+      ) : (
+        <Unusual />
+      )}
     </>
   );
 }

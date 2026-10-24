@@ -20,7 +20,7 @@ from app.modules.payments.models import PaymentMethod
 from app.modules.schools.models import ClassLevel, School
 from app.modules.students.models import Student, StudentStatus
 
-from . import exports, fee_status, insights, service
+from . import exports, fee_status, insights, service, signals
 from .service import AgingBucket, DebtorFilters, DebtorSort
 
 router = APIRouter(prefix="/reports", tags=["reports"], responses=ERROR_RESPONSES)
@@ -347,3 +347,45 @@ def student_fee_breakdown(
 ) -> FeeBreakdownOut:
     get_or_404(db, Student, student_id, label="Student")
     return breakdown_out(fee_status.fee_breakdowns(db, [student_id], term_id)[student_id])
+
+
+class SignalItemOut(BaseModel):
+    day: date
+    what: str
+    amount_kobo: int | None
+    who: str = Field(description="Who recorded it, when known")
+    link: str = Field(description="A console path to look at, or empty")
+
+
+class SignalOut(BaseModel):
+    key: str
+    title: str
+    why: str
+    serious: bool
+    items: list[SignalItemOut]
+
+
+class SignalsOut(BaseModel):
+    start: date
+    end: date
+    count: int
+    signals: list[SignalOut] = Field(description="Only the kinds with something to look at")
+
+
+@router.get(
+    "/unusual-activity",
+    response_model=SignalsOut,
+    summary="Things worth a look: reversals, late cash, short counts, reduced bills, write-offs (proprietor)",
+)
+def unusual_activity(
+    days: int = Query(default=30, ge=1, le=signals.MAX_DAYS),
+    ctx: StaffContext = Depends(require(Capability.STAFF_MANAGE)),
+    db: Session = Depends(get_db),
+) -> SignalsOut:
+    found = signals.signals(db, ctx.school_id, days)
+    return SignalsOut(
+        start=found.start,
+        end=found.end,
+        count=found.count,
+        signals=[SignalOut.model_validate(s, from_attributes=True) for s in found.signals],
+    )

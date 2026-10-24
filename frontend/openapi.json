@@ -8227,6 +8227,119 @@
         "title": "SchoolUpdateIn",
         "type": "object"
       },
+      "SignalItemOut": {
+        "properties": {
+          "amount_kobo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Kobo"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "link": {
+            "description": "A console path to look at, or empty",
+            "title": "Link",
+            "type": "string"
+          },
+          "what": {
+            "title": "What",
+            "type": "string"
+          },
+          "who": {
+            "description": "Who recorded it, when known",
+            "title": "Who",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "what",
+          "amount_kobo",
+          "who",
+          "link"
+        ],
+        "title": "SignalItemOut",
+        "type": "object"
+      },
+      "SignalOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SignalItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "serious": {
+            "title": "Serious",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "why": {
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "why",
+          "serious",
+          "items"
+        ],
+        "title": "SignalOut",
+        "type": "object"
+      },
+      "SignalsOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "signals": {
+            "description": "Only the kinds with something to look at",
+            "items": {
+              "$ref": "#/components/schemas/SignalOut"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "count",
+          "signals"
+        ],
+        "title": "SignalsOut",
+        "type": "object"
+      },
       "SignedIn": {
         "properties": {
           "access_token": {
@@ -28083,6 +28196,116 @@
           }
         ],
         "summary": "A pupil's fees for a term one by one (charged, paid, left), plus earlier debts",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/unusual-activity": {
+      "get": {
+        "operationId": "reports_unusual_activity",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Things worth a look: reversals, late cash, short counts, reduced bills, write-offs (proprietor)",
         "tags": [
           "reports"
         ]
