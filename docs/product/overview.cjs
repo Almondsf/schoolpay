@@ -31,6 +31,8 @@ const AREAS = [
     rows: [
       ['A live dashboard: billed, collected and still owed for the term, per class, with a progress bar each',
         'Know where the money stands without asking the bursar or waiting for month-end'],
+      ['Write off debt the school won’t collect: staff can ask, only you approve',
+        'Bad debts leave the books cleanly, and nobody can quietly clear a debt they took cash for'],
       ['See what Paystack paid into your bank each day, the charges taken, and any payment it hasn’t paid out',
         'Know the money parents paid actually reached the bank, without reading statements line by line'],
       ['Close a term once its figures are reported: nothing can be backdated into it, and only you can re-open it, with a reason',
@@ -196,6 +198,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['24 Oct 2026', 'Writing off debt the school won’t collect: staff ask, only the proprietor approves'],
   ['24 Oct 2026', 'Paid into the bank: Paystack payouts matched to payments, with charges and anything missing'],
   ['24 Oct 2026', 'Closing a term: nothing can be backdated into reported figures; only the proprietor re-opens'],
   ['24 Oct 2026', 'End-of-session pack: the whole school year in one Excel file'],

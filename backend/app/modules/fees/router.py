@@ -15,8 +15,8 @@ from app.modules.accounts.permissions import Capability
 from app.modules.schools.models import Term
 from app.modules.students.models import Student
 
-from . import charges, invoicing, plans, setup_service
-from .models import DiscountKind, DiscountRule, FeeCategory, Invoice, InvoiceKind, LineKind
+from . import charges, invoicing, plans, setup_service, writeoffs
+from .models import DiscountKind, DiscountRule, FeeCategory, Invoice, InvoiceKind, LineKind, WriteOffStatus
 
 router = APIRouter(tags=["fees"], responses=ERROR_RESPONSES)
 FEES_VIEW = Depends(require(Capability.FEES_VIEW))
@@ -848,3 +848,101 @@ def student_account(student_id: uuid.UUID, ctx: StaffContext = FEES_VIEW, db: Se
         outstanding_kobo=summary.outstanding_kobo,
         invoices=[_summary(*row) for row in rows],
     )
+
+
+# --- Writing off debt ------------------------------------------------------------------------------
+
+
+class WriteOffIn(BaseModel):
+    amount_kobo: Annotated[int, Field(gt=0, le=setup_service.MAX_AMOUNT_KOBO)]
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
+class WriteOffOut(BaseModel):
+    id: uuid.UUID
+    invoice_id: uuid.UUID
+    invoice_number: int
+    student_id: uuid.UUID
+    student_name: str
+    admission_number: str
+    amount_kobo: int
+    reason: str
+    status: WriteOffStatus
+    requested_by: uuid.UUID
+    decided_by: uuid.UUID | None
+    rejection_reason: str
+    created_at: datetime
+
+
+class RejectIn(BaseModel):
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
+def _write_off_out(row: writeoffs.WriteOffRow) -> WriteOffOut:
+    w = row.write_off
+    return WriteOffOut(
+        id=w.id,
+        invoice_id=w.invoice_id,
+        invoice_number=row.invoice_number,
+        student_id=row.student_id,
+        student_name=row.student_name,
+        admission_number=row.admission_number,
+        amount_kobo=w.amount_kobo,
+        reason=w.reason,
+        status=w.status,
+        requested_by=w.requested_by,
+        decided_by=w.decided_by,
+        rejection_reason=w.rejection_reason,
+        created_at=w.created_at,
+    )
+
+
+def _one(db: Session, write_off_id: uuid.UUID) -> WriteOffOut:
+    [row] = writeoffs.listing(db, write_off_id=write_off_id)
+    return _write_off_out(row)
+
+
+@router.post(
+    "/invoices/{invoice_id}/write-off",
+    response_model=WriteOffOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ask to write off debt on a bill (the proprietor approves; the proprietor's own applies at once)",
+)
+def request_write_off(
+    invoice_id: uuid.UUID,
+    body: WriteOffIn,
+    ctx: StaffContext = Depends(require(Capability.PAYMENTS_APPROVE)),
+    db: Session = Depends(get_db),
+) -> WriteOffOut:
+    write_off = writeoffs.request(db, ctx, invoice_id, amount_kobo=body.amount_kobo, reason=body.reason)
+    return _one(db, write_off.id)
+
+
+@router.get("/write-offs", response_model=list[WriteOffOut], summary="Write-offs, newest first")
+def list_write_offs(
+    write_off_status: WriteOffStatus | None = Query(default=None, alias="status"),
+    ctx: StaffContext = Depends(require(Capability.PAYMENTS_VIEW)),
+    db: Session = Depends(get_db),
+) -> list[WriteOffOut]:
+    return [_write_off_out(r) for r in writeoffs.listing(db, status=write_off_status)]
+
+
+@router.post("/write-offs/{write_off_id}/approve", response_model=WriteOffOut, summary="Approve a write-off")
+def approve_write_off(
+    write_off_id: uuid.UUID,
+    ctx: StaffContext = Depends(require(Capability.DEBTS_WRITE_OFF)),
+    db: Session = Depends(get_db),
+) -> WriteOffOut:
+    writeoffs.approve(db, ctx, write_off_id)
+    return _one(db, write_off_id)
+
+
+@router.post("/write-offs/{write_off_id}/reject", response_model=WriteOffOut, summary="Reject a write-off")
+def reject_write_off(
+    write_off_id: uuid.UUID,
+    body: RejectIn,
+    ctx: StaffContext = Depends(require(Capability.DEBTS_WRITE_OFF)),
+    db: Session = Depends(get_db),
+) -> WriteOffOut:
+    writeoffs.reject(db, ctx, write_off_id, body.reason)
+    return _one(db, write_off_id)

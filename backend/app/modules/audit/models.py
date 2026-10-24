@@ -114,6 +114,9 @@ class AuditAction(enum.StrEnum):
     REPORT_EXPORTED = "reports.exported"
     BOOKS_CLOSED = "accounting.books_closed"
     BOOKS_REOPENED = "accounting.books_reopened"
+    WRITE_OFF_REQUESTED = "fees.write_off_requested"
+    WRITE_OFF_APPROVED = "fees.write_off_approved"
+    WRITE_OFF_REJECTED = "fees.write_off_rejected"
 
 
 class _AuditColumns(UUIDPrimaryKey):

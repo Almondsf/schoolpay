@@ -176,6 +176,7 @@ check capabilities, never role names:
 | reports.view, messaging.manage | ✓ | ✓ | ✓ |
 | payments.setup (where money settles) | ✓ | | |
 | books.reopen (re-open a closed term) | ✓ | | |
+| debts.write_off (approve a write-off) | ✓ | | |
 
 School admins can do everything a bursar can as well as school setup (owner's decision,
 2026-10-20), so like proprietors and bursars they must use two-factor sign-in. Only the
@@ -557,6 +558,17 @@ blank goes back to the default). The Excel file has three sheets (journal, accou
 the CSV is flat, for accounting software. Seven queries whatever the period. Excel output costs
 about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
 background job later.
+
+**Writing off debt** (`fees/writeoffs.py`). Anyone with `payments.approve` asks
+(`POST /invoices/{id}/write-off`, amount up to what's owed, reason); only the proprietor
+(`debts.write_off`) approves or rejects (`POST /write-offs/{id}/approve|reject`), so two staff together
+can't clear a debt (owner's rule, 2026-10-24). A proprietor's own request applies at once. Approval
+re-checks the balance under the bill's lock (`write_off_too_much` if money arrived since) and adds a
+`write_off` line (negative, by constraint; the bill-line endpoint refuses that kind), so balances,
+reminders, reports and the journal (Dr *Bad debts written off*, 4990; Cr receivable) follow. One open
+request per bill (partial unique index); a bill on a payment plan must have the plan cancelled first;
+requests are never deleted (trigger). `GET /write-offs?status=` lists them; pending ones show in
+Payments → Awaiting approval. The end-of-session pack has a "written off" column.
 
 **Paid into the bank (settlement reconciliation)** (`payments/settlements.py`). Every morning at 08:20
 Lagos (`payments.sync_all_settlements`, one `payments.sync_settlements` outbox task per active school on
@@ -1254,6 +1266,7 @@ production.
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
 | Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv`; `GET /accounting/session-pack?session_id=`; `GET /accounting/books`, `POST /accounting/terms/{id}/close`, `POST /accounting/books/reopen` |
 | Settlements | `GET /settlements?start=&end=`; `POST /settlements/refresh` |
+| Write-offs | `POST /invoices/{id}/write-off`; `GET /write-offs?status=`; `POST /write-offs/{id}/approve`, `/reject` |
 | Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |
 | Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |

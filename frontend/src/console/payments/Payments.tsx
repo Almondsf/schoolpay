@@ -12,6 +12,7 @@ import { ReceiptLink } from './ReceiptLink';
 import { StudentPicker, type PickedStudent } from './StudentPicker';
 import { FeePicker, leftOn } from '../../lib/FeeBreakdown';
 import { Payouts } from './Payouts';
+import { WriteOffsWaiting } from './WriteOffs';
 
 type Payment = Schemas['PaymentOut'];
 type Manual = Schemas['ManualOut'];
@@ -52,7 +53,16 @@ export function Payments() {
         value={tab}
         onChange={setTab}
       />
-      {tab === 'received' ? <Received /> : tab === 'pending' ? <Pending /> : <Payouts />}
+      {tab === 'received' ? (
+        <Received />
+      ) : tab === 'pending' ? (
+        <>
+          <WriteOffsWaiting />
+          <Pending />
+        </>
+      ) : (
+        <Payouts />
+      )}
       {recording && <RecordManual onClose={() => setRecording(false)} onDone={() => setTab('pending')} />}
     </>
   );

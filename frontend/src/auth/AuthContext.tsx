@@ -7,7 +7,7 @@ export type Capability =
   | 'school.view' | 'school.manage' | 'staff.view' | 'staff.manage' | 'audit.view'
   | 'students.view' | 'students.manage' | 'fees.view' | 'fees.manage' | 'invoices.issue'
   | 'payments.view' | 'payments.record' | 'payments.approve' | 'payments.reverse' | 'payments.setup'
-  | 'reports.view' | 'books.reopen' | 'messaging.manage' | 'platform.manage';
+  | 'reports.view' | 'books.reopen' | 'debts.write_off' | 'messaging.manage' | 'platform.manage';
 
 interface AuthState {
   user: Me | null;

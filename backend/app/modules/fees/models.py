@@ -187,6 +187,7 @@ class LineKind(enum.StrEnum):
     FEE = "fee"  # positive
     DISCOUNT = "discount"  # negative
     ADJUSTMENT = "adjustment"  # a later correction, either sign
+    WRITE_OFF = "write_off"  # negative: a debt the school won't collect (fees/writeoffs.py, approved)
 
 
 class InvoiceLine(TenantMixin, UUIDPrimaryKey, Base):
@@ -195,6 +196,8 @@ class InvoiceLine(TenantMixin, UUIDPrimaryKey, Base):
         CheckConstraint("kind <> 'fee' OR amount_kobo > 0", name="fee_positive"),
         CheckConstraint("kind <> 'discount' OR amount_kobo < 0", name="discount_negative"),
         CheckConstraint("kind <> 'adjustment' OR amount_kobo <> 0", name="adjustment_nonzero"),
+        # Compared as text: the enum value is added in the same migration
+        CheckConstraint("kind::text <> 'write_off' OR amount_kobo < 0", name="write_off_negative"),
         UniqueConstraint("invoice_id", "position"),
     )
 
@@ -255,3 +258,38 @@ class PlanInstalment(TenantMixin, UUIDPrimaryKey, Base):
     number: Mapped[int] = mapped_column(Integer)
     due_date: Mapped[date] = mapped_column(Date)
     amount_kobo: Mapped[int] = mapped_column(BigInteger)
+
+
+class WriteOffStatus(enum.StrEnum):
+    PENDING = "pending"  # waiting for the proprietor
+    APPROVED = "approved"  # the debt is cleared: a write_off line is on the bill
+    REJECTED = "rejected"
+
+
+class WriteOff(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    A request to stop chasing (part of) a bill the school won't collect. Only the proprietor approves;
+    approval adds a write_off line, so the bill's balance and the ledger follow. Never deleted (trigger).
+    """
+
+    __tablename__ = "write_offs"
+    __table_args__ = (
+        CheckConstraint("amount_kobo > 0", name="amount_positive"),
+        CheckConstraint("length(reason) >= 3", name="has_reason"),
+        CheckConstraint("(status = 'pending') = (decided_by IS NULL)", name="decided_unless_pending"),
+        CheckConstraint("(status = 'approved') = (line_id IS NOT NULL)", name="approved_has_line"),
+        # One open request per bill
+        Index("uq_write_offs_one_pending", "invoice_id", unique=True, postgresql_where=text("status = 'pending'")),
+    )
+
+    invoice_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("invoices.id", ondelete="RESTRICT"), index=True)
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)
+    reason: Mapped[str] = mapped_column(String(300))
+    status: Mapped[WriteOffStatus] = mapped_column(
+        enum_type(WriteOffStatus, "write_off_status"), default=WriteOffStatus.PENDING
+    )
+    requested_by: Mapped[uuid.UUID] = mapped_column()
+    decided_by: Mapped[uuid.UUID | None] = mapped_column()
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str] = mapped_column(String(300), default="")
+    line_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("invoice_lines.id", ondelete="RESTRICT"))

@@ -209,6 +209,11 @@ It is updated with every change that affects security.
 - How a family's one amount is shared between children is the school's money rule: only the proprietor (`payments.setup`) changes it, every change is audited, and the parent sees the split before paying. A share never exceeds what a child owes.
 - Card payment of a subscription bill: only staff with `payments.record`, only their own school's bill (scoped session), rate limited; the money settles to the platform's own balance (no school subaccount); the result comes from the gateway's verify call, never the browser; a card payment is unique on its gateway reference and a payment that doesn't fit the bill is parked for review, never forced onto it.
 
+## Writing off debt
+- Anyone handling money can ask; only the proprietor (`debts.write_off`) approves, so a bursar and a school
+  admin together can't clear a debt they took cash for. Requests, approvals and rejections are audited;
+  requests are never deleted, and the write-off itself is an append-only bill line.
+
 ## Closing the books
 - A closed term can't take anything dated in it (payments by hand, spending, banking, drawer counts, bills,
   voids, its dates), enforced in the services under a row lock on the school. Only the proprietor

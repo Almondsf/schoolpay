@@ -10,6 +10,13 @@ import { BackLink, ErrorAlert, Field, Loading, Modal, PageHeader, StatusBadge, f
 
 type Invoice = Schemas['InvoiceOut'];
 
+const LINE_KINDS: Record<Schemas['LineKind'], string> = {
+  fee: 'charge',
+  discount: 'discount',
+  adjustment: 'correction',
+  write_off: 'written off',
+};
+
 export function InvoiceDetail() {
   const { invoiceId = '' } = useParams();
   const { can } = useAuth();
@@ -18,7 +25,7 @@ export function InvoiceDetail() {
     queryKey: ['invoice', invoiceId],
     queryFn: async () => unwrap(await api.GET('/api/v1/invoices/{invoice_id}', { params: { path: { invoice_id: invoiceId } } })),
   });
-  const [dialog, setDialog] = useState<'charge' | 'adjust' | 'void' | 'plan' | 'cancel-plan' | null>(null);
+  const [dialog, setDialog] = useState<'charge' | 'adjust' | 'void' | 'plan' | 'cancel-plan' | 'write-off' | null>(null);
 
   if (invoice.isPending) return <Loading />;
   if (invoice.isError) return <ErrorAlert error={invoice.error} />;
@@ -38,18 +45,27 @@ export function InvoiceDetail() {
           </>
         }
         actions={
-          issue &&
-          live && (
+          live &&
+          (issue || can('payments.approve')) && (
             <>
-              <button className="secondary" onClick={() => setDialog('charge')}>
-                Add charge
-              </button>
-              <button className="secondary" onClick={() => setDialog('adjust')}>
-                Correct amount
-              </button>
-              {i.paid_kobo === 0 && (
-                <button className="secondary" onClick={() => setDialog('void')}>
-                  Void
+              {issue && (
+                <>
+                  <button className="secondary" onClick={() => setDialog('charge')}>
+                    Add charge
+                  </button>
+                  <button className="secondary" onClick={() => setDialog('adjust')}>
+                    Correct amount
+                  </button>
+                  {i.paid_kobo === 0 && (
+                    <button className="secondary" onClick={() => setDialog('void')}>
+                      Void
+                    </button>
+                  )}
+                </>
+              )}
+              {can('payments.approve') && i.balance_kobo > 0 && !i.plan && (
+                <button className="secondary" onClick={() => setDialog('write-off')}>
+                  Write off
                 </button>
               )}
             </>
@@ -71,7 +87,7 @@ export function InvoiceDetail() {
               <tr key={line.id}>
                 <td>
                   {line.description}
-                  {line.kind !== 'fee' && <span className="muted small"> ({line.kind})</span>}
+                  {line.kind !== 'fee' && <span className="muted small"> ({LINE_KINDS[line.kind]})</span>}
                   {line.reason && <div className="muted small">{line.reason}</div>}
                 </td>
                 <td className="muted small">{formatDateTime(line.created_at)}</td>
@@ -127,6 +143,7 @@ export function InvoiceDetail() {
         </section>
       )}
       {dialog === 'void' && <VoidInvoice invoice={i} onClose={() => setDialog(null)} />}
+      {dialog === 'write-off' && <WriteOff invoice={i} approves={can('debts.write_off')} onClose={() => setDialog(null)} />}
       {dialog === 'plan' && <NewPlan invoice={i} onClose={() => setDialog(null)} />}
       {dialog === 'cancel-plan' && <CancelPlan invoice={i} onClose={() => setDialog(null)} />}
       {(dialog === 'charge' || dialog === 'adjust') && <AddLine invoice={i} kind={dialog === 'charge' ? 'fee' : 'adjustment'} onClose={() => setDialog(null)} />}
@@ -228,6 +245,63 @@ function VoidInvoice({ invoice, onClose }: { invoice: Invoice; onClose: () => vo
           </button>
           <button type="submit" className="danger" disabled={save.isPending}>
             Void invoice
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** Stop chasing debt the school won't collect. The proprietor approves (theirs applies at once). */
+function WriteOff({ invoice, approves, onClose }: { invoice: Invoice; approves: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [amount, setAmount] = useState(String(invoice.balance_kobo / 100));
+  const [reason, setReason] = useState('');
+  const kobo = parseNairaToKobo(amount);
+  const save = useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST('/api/v1/invoices/{invoice_id}/write-off', {
+          params: { path: { invoice_id: invoice.id } },
+          body: { amount_kobo: kobo ?? 0, reason },
+        }),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', invoice.id] });
+      void queryClient.invalidateQueries({ queryKey: ['account', invoice.student.id] });
+      void queryClient.invalidateQueries({ queryKey: ['write-offs'] });
+      onClose();
+    },
+  });
+  return (
+    <Modal title={`Write off debt on invoice #${invoice.number}`} onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          save.mutate();
+        }}
+      >
+        <p>
+          For money the school won’t collect, such as a family that left owing. The bill stays on record with a “written off” line.{' '}
+          {approves ? 'As the proprietor, yours takes effect now.' : 'The proprietor approves it before anything changes.'}
+        </p>
+        <ErrorAlert error={save.error} />
+        <Field
+          label="Amount (₦)"
+          hint={`Up to ${formatKobo(invoice.balance_kobo)}, what’s still owed`}
+          error={fieldError(save.error, 'amount_kobo')}
+        >
+          <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+        </Field>
+        <Field label="Why" error={fieldError(save.error, 'reason')}>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} required minLength={3} maxLength={300} />
+        </Field>
+        <div className="row end">
+          <button type="button" className="secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="danger" disabled={!kobo || reason.trim().length < 3 || save.isPending}>
+            {approves ? 'Write off' : 'Ask the proprietor'}
           </button>
         </div>
       </form>

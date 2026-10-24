@@ -510,6 +510,8 @@ def add_line(
     """
     if kind == LineKind.DISCOUNT:
         raise DomainError("Use an adjustment to reduce an invoice.", field="kind")
+    if kind == LineKind.WRITE_OFF:
+        raise DomainError("Ask for a write-off instead: the proprietor approves those.", field="kind")
     if kind == LineKind.FEE and amount_kobo <= 0:
         raise DomainError("A charge must be more than ₦0.", field="amount_kobo")
     if amount_kobo == 0 or abs(amount_kobo) > MAX_AMOUNT_KOBO:

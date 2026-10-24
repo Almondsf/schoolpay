@@ -35,6 +35,7 @@ class TermRow:
     bills: int
     charged_kobo: int  # fees and adjustments
     discounts_kobo: int  # a positive number
+    written_off_kobo: int  # approved write-offs, a positive number
     paid_kobo: int  # paid against these bills, whenever it was paid
     owed_kobo: int  # still owed on these bills
     pupils_owing: int
@@ -84,9 +85,14 @@ def _terms(session: Session, academic: AcademicSession) -> list[TermRow]:
     lines = (
         select(
             InvoiceLine.invoice_id,
-            func.sum(case((InvoiceLine.kind == LineKind.DISCOUNT, 0), else_=InvoiceLine.amount_kobo)).label("charged"),
+            func.sum(
+                case((InvoiceLine.kind.in_((LineKind.DISCOUNT, LineKind.WRITE_OFF)), 0), else_=InvoiceLine.amount_kobo)
+            ).label("charged"),
             func.sum(case((InvoiceLine.kind == LineKind.DISCOUNT, -InvoiceLine.amount_kobo), else_=0)).label(
                 "discounts"
+            ),
+            func.sum(case((InvoiceLine.kind == LineKind.WRITE_OFF, -InvoiceLine.amount_kobo), else_=0)).label(
+                "written_off"
             ),
             func.sum(InvoiceLine.amount_kobo).label("total"),
         )
@@ -102,6 +108,7 @@ def _terms(session: Session, academic: AcademicSession) -> list[TermRow]:
             func.count(Invoice.id),
             func.coalesce(func.sum(lines.c.charged), 0),
             func.coalesce(func.sum(lines.c.discounts), 0),
+            func.coalesce(func.sum(lines.c.written_off), 0),
             func.coalesce(func.sum(paid_col), 0),
             func.coalesce(func.sum(owed), 0),
             func.count(func.distinct(case((owed > 0, Invoice.student_id)))),
@@ -118,8 +125,8 @@ def _terms(session: Session, academic: AcademicSession) -> list[TermRow]:
         .order_by(Term.number)
     ).all()
     return [
-        TermRow(f"{TERM_NAMES[n - 1]} term", int(b), int(c), int(d), int(p), int(o), int(w))
-        for n, b, c, d, p, o, w in rows
+        TermRow(f"{TERM_NAMES[n - 1]} term", int(b), int(c), int(d), int(x), int(p), int(o), int(w))
+        for n, b, c, d, x, p, o, w in rows
     ]
 
 

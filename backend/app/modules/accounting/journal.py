@@ -6,6 +6,7 @@ Entries (each dated in Lagos time):
 - **Bill issued** (or a later line on it): Dr fees receivable, Cr income by fee type. Discounts are
   Dr discounts / Cr receivable; adjustments go to "bill adjustments"; an opening-balance bill (what a
   pupil owed before the school joined) credits opening balances, not income.
+- **Debt written off** (approved by the proprietor): Dr bad debts, Cr receivable.
 - **Bill voided**: the bill's lines reversed on the day it was voided.
 - **Payment received**: Dr cash (cash payments) or bank (everything else: transfers, card, teller,
   POS), Cr receivable for what went on bills that day, Cr parents' credit for the rest.
@@ -65,6 +66,7 @@ DEFAULT_ACCOUNTS: dict[str, tuple[str, str, str]] = {
     "fee:other": ("4090", "Other fees", "Income"),
     "discounts": ("4900", "Discounts and scholarships", "Income"),
     "adjustments": ("4950", "Bill adjustments", "Income"),
+    "bad_debts": ("4990", "Bad debts written off", "Expense"),
 }
 EXPENSE_CODE_START = 5000
 EXPENSE_CODE_STEP = 10
@@ -170,6 +172,8 @@ def _income_account(kind: LineKind, invoice_kind: InvoiceKind, category: FeeCate
         return "discounts"
     if kind == LineKind.ADJUSTMENT:
         return "adjustments"
+    if kind == LineKind.WRITE_OFF:
+        return "bad_debts"
     return f"fee:{category or FeeCategory.OTHER}"
 
 

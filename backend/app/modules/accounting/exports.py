@@ -126,6 +126,7 @@ def session_pack_xlsx(school: str, pack: SessionPack) -> bytes:
         rows=[
             ["Term bills, after discounts", naira(sum(t.billed_kobo for t in pack.terms))],
             ["Discounts and scholarships given", naira(sum(t.discounts_kobo for t in pack.terms))],
+            ["Written off (approved by the proprietor)", naira(sum(t.written_off_kobo for t in pack.terms))],
             ["Paid against the term bills", naira(sum(t.paid_kobo for t in pack.terms))],
             ["Still owed on the term bills", naira(owed)],
             ["Owed in all, as of today (every bill, every year)", naira(sum(d.owed_kobo for d in pack.debtors))],
@@ -160,6 +161,7 @@ def session_pack_xlsx(school: str, pack: SessionPack) -> bytes:
             ("Charged (NGN)", 16),
             ("Discounts (NGN)", 16),
             ("Billed (NGN)", 16),
+            ("Written off (NGN)", 17),
             ("Paid (NGN)", 16),
             ("Still owed (NGN)", 16),
             ("Pupils owing", 13),
@@ -171,19 +173,20 @@ def session_pack_xlsx(school: str, pack: SessionPack) -> bytes:
                 naira(t.charged_kobo),
                 naira(t.discounts_kobo),
                 naira(t.billed_kobo),
+                naira(t.written_off_kobo),
                 naira(t.paid_kobo),
                 naira(t.owed_kobo),
                 t.pupils_owing,
             ]
             for t in pack.terms
         ],
-        money_columns={3, 4, 5, 6, 7},
+        money_columns={3, 4, 5, 6, 7, 8},
         total=[
             "Total",
             sum(t.bills for t in pack.terms),
             *(
                 naira(sum(getattr(t, f) for t in pack.terms))
-                for f in ("charged_kobo", "discounts_kobo", "billed_kobo", "paid_kobo", "owed_kobo")
+                for f in ("charged_kobo", "discounts_kobo", "billed_kobo", "written_off_kobo", "paid_kobo", "owed_kobo")
             ),
             "",
         ],

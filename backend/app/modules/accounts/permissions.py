@@ -28,6 +28,8 @@ class Capability(enum.StrEnum):
     REPORTS_VIEW = "reports.view"
     # Re-opening a closed term: the proprietor only (proprietors hold every school capability)
     BOOKS_REOPEN = "books.reopen"
+    # Approving a write-off of debt: the proprietor only (owner's rule, 2026-10-24)
+    DEBTS_WRITE_OFF = "debts.write_off"
     MESSAGING_MANAGE = "messaging.manage"
     PLATFORM_MANAGE = "platform.manage"
 
