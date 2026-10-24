@@ -529,6 +529,34 @@ deleted (trigger). Spending paid **from the drawer** comes off the cash book's "
 held" (pending too: the notes have left; rejected and voided don't), with its own column,
 per-staff total and late-entry flag.
 
+**General journal for the accountant** (`accounting/journal.py`, `GET /accounting/journal`
+for the totals, `GET /accounting/journal/export?format=xlsx|csv`, `reports.view`, at most 400 days,
+rate limited and audited like other downloads). Everything WardPay records about the school's money as
+balanced double entries, each dated in Lagos time:
+
+| What happened | Debit | Credit |
+|---|---|---|
+| Bill issued, or a line added later | Fees receivable | Income by fee type (tuition, levies, services, materials, other); discounts debit *Discounts and scholarships*; adjustments go to *Bill adjustments*; an opening-balance bill credits *Opening balances* |
+| Bill voided | (its lines reversed on the day it was voided) | |
+| Payment received | Cash (cash payments) or Bank (everything else) | Receivable for what went on bills the day it was recorded; *Fees paid in advance* for the rest |
+| Payment reversed | (the same, signs turned) | |
+| Credit applied on a later day (a new bill uses money paid ahead) | Fees paid in advance | Receivable |
+| Cash banked, once a second person has checked it | Bank | Cash |
+| Spending approved (voided: reversed on the day it was voided) | The spending category | Cash or Bank (card counts as bank) |
+
+"That day" and "later" compare the Lagos days things were recorded, not exact timestamps.
+Card and online payments are gross: the provider's fee comes off before money reaches the bank.
+Banking not yet checked is left out (and counted). Pupils appear by admission number only.
+
+The **chart of accounts** is WardPay's default (`DEFAULT_ACCOUNTS`: 1000 cash ... 4950 adjustments,
+then 5000, 5010 ... one per spending category in the order they were made). A school stores only the
+codes and names its accountant wants different (`JournalAccount`, one row per changed account;
+`GET /accounting/accounts`, `PUT /accounting/accounts/{key}` with `payments.approve`, codes unique,
+blank goes back to the default). The Excel file has three sheets (journal, account totals, chart);
+the CSV is flat, for accounting software. Seven queries whatever the period. Excel output costs
+about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
+background job later.
+
 **Income and expenditure** (`GET /reports/income-expenditure?start=&end=`,
 `reports.view`, up to about a session): money received by how it came in (payments net of
 reversals) against approved spending by category, the surplus or deficit, spending still
@@ -1181,6 +1209,7 @@ production.
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
+| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv` |
 | Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |
 | Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |

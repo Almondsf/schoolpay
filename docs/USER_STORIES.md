@@ -3,6 +3,7 @@
 What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ Give the accountant a general journal for any period (Excel or CSV): bills, payments, banking and approved spending as balanced double entries, using the account codes the accountant already uses.
 - ✅ See how this term's collections compare with last term at the same point ("day 21: 54%; last term 61%"), and what falls due in the next 30, 60 and 90 days against money in and spending at the recent pace.
 - ✅ See money in against money out for any period (by payment method and by spending category), with the surplus or deficit, and void spending recorded by mistake.
 - ✅ See cash taken and banked day by day and per staff member, any day the count came up short, and cash recorded for a day after it was closed.

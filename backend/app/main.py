@@ -21,6 +21,7 @@ from app.core.http import BodyLimitMiddleware, SecurityHeadersMiddleware
 from app.core.logging import configure_logging
 from app.core.monitoring import init_monitoring
 from app.models import load_all_models
+from app.modules.accounting.router import router as accounting_router
 from app.modules.accounts.router import auth_router, staff_router
 from app.modules.audit.router import audit_router, platform_audit_router
 from app.modules.expenses.router import router as expenses_router
@@ -66,6 +67,7 @@ def build_api_router() -> APIRouter:
         fees_router,
         payments_router,
         expenses_router,
+        accounting_router,
         receipts_router,
         parent_auth_router,
         parent_router,

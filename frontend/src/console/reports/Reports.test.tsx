@@ -310,4 +310,48 @@ describe('dashboard and reports', () => {
     expect(exported.searchParams.get('class_level_id')).toBe('l3');
     expect(exported.searchParams.get('term_id')).toBeNull(); // the current term
   });
+
+  it('gives the accountant the journal and lets the bursar use their own account codes', async () => {
+    const bank = { key: 'bank', code: '1010', name: 'Bank', type: 'Asset', default_code: '1010', default_name: 'Bank' };
+    const calls = mockApi({
+      'POST /api/v1/auth/refresh': () => json(signedIn(me({ role: 'bursar', capabilities: [...bursar.capabilities, 'payments.approve'] }))),
+      'GET /api/v1/academic-sessions': () => json(sessions),
+      'GET /api/v1/reports/debtors': () => json({ items: [], total: 0, limit: 50, offset: 0, total_owed_kobo: 0 }),
+      'GET /api/v1/accounting/journal': () =>
+        json({
+          start: '2026-10-01',
+          end: '2026-10-20',
+          entries: 12,
+          debit_kobo: 5_000_000,
+          credit_kobo: 5_000_000,
+          totals: [{ account: bank, debit_kobo: 5_000_000, credit_kobo: 0 }],
+          unchecked_deposits: 1,
+        }),
+      'GET /api/v1/accounting/accounts': () => json([bank]),
+      'PUT /api/v1/accounting/accounts/bank': async (request) => json({ ...bank, ...(await request.json()), name: 'GTBank current' }),
+      'GET /api/v1/accounting/journal/export': () =>
+        new Response('csv', { headers: { 'Content-Disposition': 'attachment; filename="journal-2026-10-01-to-2026-10-20.csv"' } }),
+    });
+    const saved: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    renderConsole('/console/reports');
+    await userEvent.click(await screen.findByRole('tab', { name: 'For your accountant' }));
+    const totals = within(await screen.findByRole('region', { name: 'Account totals' }));
+    expect(totals.getByText('₦50,000.00')).toBeInTheDocument();
+    expect(screen.getByText(/1 cash deposit is left out/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+    await vi.waitFor(() => expect(saved).toEqual(['journal-2026-10-01-to-2026-10-20.csv']));
+
+    const name = await screen.findByLabelText('Name for Bank');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'GTBank current');
+    await userEvent.click(within(screen.getByRole('region', { name: 'Chart of accounts' })).getByRole('button', { name: 'Save' }));
+    await vi.waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true));
+    expect(await calls.find((c) => c.method === 'PUT')!.json()).toEqual({ code: '', name: 'GTBank current' }); // code left at the default
+  });
 });

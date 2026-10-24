@@ -8,13 +8,14 @@ import { formatDate, formatKobo, lagosToday, parseNairaToKobo } from '../../lib/
 import { Empty, ErrorAlert, Loading, PageHeader, Pager } from '../../lib/ui';
 import { METHOD_LABELS } from '../Dashboard';
 import { useClassLevels, useSessions } from '../hooks';
+import { Accountant } from './Accountant';
 
 type Sort = Schemas['DebtorSort'];
 type Format = 'xlsx' | 'pdf';
 const PAGE = 50;
 
 export function Reports() {
-  const [tab, setTab] = useState<'debtors' | 'collections' | 'fees'>('debtors');
+  const [tab, setTab] = useState<'debtors' | 'collections' | 'fees' | 'accountant'>('debtors');
   return (
     <>
       <PageHeader title="Reports" subtitle="Who owes, money received, and each pupil’s fees. Download any of them for Excel or to print." />
@@ -38,8 +39,16 @@ export function Reports() {
         <button role="tab" aria-selected={tab === 'fees'} className={tab === 'fees' ? 'tab active' : 'tab'} onClick={() => setTab('fees')}>
           Fee status by pupil
         </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'accountant'}
+          className={tab === 'accountant' ? 'tab active' : 'tab'}
+          onClick={() => setTab('accountant')}
+        >
+          For your accountant
+        </button>
       </div>
-      {tab === 'debtors' ? <Debtors /> : tab === 'collections' ? <Collections /> : <FeeStatus />}
+      {tab === 'debtors' ? <Debtors /> : tab === 'collections' ? <Collections /> : tab === 'fees' ? <FeeStatus /> : <Accountant />}
     </>
   );
 }
