@@ -2469,6 +2469,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the payment provider paid into the bank, matched to payments */
+        get: operations["payments_get_settlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settlements/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the payment provider for the latest payouts now */
+        post: operations["payments_refresh_settlements"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff": {
         parameters: {
             query?: never;
@@ -5969,6 +6003,40 @@ export interface components {
             /** Gateways */
             gateways: components["schemas"]["GatewayCode"][];
         };
+        /** PayoutOut */
+        PayoutOut: {
+            /**
+             * Charges Kobo
+             * @description Taken off before the bank: the provider's fees and any split
+             */
+            charges_kobo: number;
+            /**
+             * Gross Kobo
+             * @description What parents paid in the transactions it covers
+             */
+            gross_kobo: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Matched
+             * @description Transactions matched to a WardPay payment
+             */
+            matched: number;
+            /**
+             * Paid Out Kobo
+             * @description What reached the school's bank
+             */
+            paid_out_kobo: number;
+            /** Settled On */
+            settled_on: string | null;
+            /** Status */
+            status: string;
+            /** Transactions */
+            transactions: number;
+        };
         /** PlatformOverviewOut */
         PlatformOverviewOut: {
             /** Payments This Month */
@@ -6288,6 +6356,49 @@ export interface components {
             student_id: string;
             /** Verification Url */
             verification_url: string;
+        };
+        /** ReconciliationOut */
+        ReconciliationOut: {
+            /** Charges Kobo */
+            charges_kobo: number;
+            /**
+             * Checked At
+             * @description When WardPay last asked the provider
+             */
+            checked_at: string | null;
+            /**
+             * Connected
+             * @description The school is on a provider that reports its payouts
+             */
+            connected: boolean;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Gross Kobo */
+            gross_kobo: number;
+            /** Paid Out Kobo */
+            paid_out_kobo: number;
+            /** Payouts */
+            payouts: components["schemas"]["PayoutOut"][];
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Unknown
+             * @description Paid out, but WardPay has no payment with that reference
+             */
+            unknown: components["schemas"]["UnknownItemOut"][];
+            /**
+             * Unsettled
+             * @description Payments not paid out a few days after they arrived
+             */
+            unsettled: components["schemas"]["UnsettledOut"][];
+            /** Unsettled Kobo */
+            unsettled_kobo: number;
         };
         /** RecoveryCodes */
         RecoveryCodes: {
@@ -7338,6 +7449,15 @@ export interface components {
             /** Subscription Received Kobo */
             subscription_received_kobo: number;
         };
+        /** UnknownItemOut */
+        UnknownItemOut: {
+            /** Amount Kobo */
+            amount_kobo: number;
+            /** Reference */
+            reference: string;
+            /** Settled On */
+            settled_on: string | null;
+        };
         /** UnplacedOut */
         UnplacedOut: {
             /** Admission Number */
@@ -7351,6 +7471,28 @@ export interface components {
              * Format: uuid
              */
             student_id: string;
+        };
+        /** UnsettledOut */
+        UnsettledOut: {
+            /** Admission Number */
+            admission_number: string;
+            /** Amount Kobo */
+            amount_kobo: number;
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * Payment Id
+             * Format: uuid
+             */
+            payment_id: string;
+            /** Receipt Number */
+            receipt_number: number | null;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Reference */
+            reference: string;
         };
         /** VerifyIn */
         VerifyIn: {
@@ -21171,6 +21313,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RollSummaryOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    payments_get_settlements: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    payments_refresh_settlements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */

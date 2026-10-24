@@ -611,6 +611,11 @@ table.lines {
   font-size: 0.85rem;
 }
 
+.warn-text {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 input,
 select,
 textarea {

@@ -558,6 +558,21 @@ the CSV is flat, for accounting software. Seven queries whatever the period. Exc
 about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
 background job later.
 
+**Paid into the bank (settlement reconciliation)** (`payments/settlements.py`). Every morning at 08:20
+Lagos (`payments.sync_all_settlements`, one `payments.sync_settlements` outbox task per active school on
+Paystack) and on request (`POST /settlements/refresh`, `payments.approve`, 6 an hour), WardPay asks the
+gateway for the school subaccount's payouts (the first time 60 days back, then from a week before the
+latest it has) and the transactions in each (`GET /settlement`, `GET /settlement/{id}/transactions`).
+Payouts are upserted into `GatewaySettlement` (the gateway's record is the source: a pending payout
+becomes paid), their transactions replace the payout's `SettlementItem` rows, and each is matched to a
+`Payment` by gateway reference (one `IN` query). `GET /settlements?start=&end=` (`reports.view`, four
+queries) shows per payout what parents paid, the charges taken before the bank (gateway fees and any
+split), what reached the bank and how many transactions matched; payments received more than three
+days ago that no payout has covered; and paid-out transactions WardPay has no payment for. Paystack's
+field names (`total_processed`, `total_fees`, `effective_amount`) are from its documentation (test mode
+has no payouts); check against the first live payout (`OWNER_TODO.md`). The screen is Payments →
+Paid into the bank.
+
 **Closing the books** (`accounting/periods.py`). `School.books_closed_through` is a date: nothing
 dated on or before it can be recorded. Closing a term (`POST /accounting/terms/{id}/close`,
 `payments.approve`) sets it to the term's last day; the term must have ended and nothing in it may
@@ -1238,6 +1253,7 @@ production.
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
 | Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv`; `GET /accounting/session-pack?session_id=`; `GET /accounting/books`, `POST /accounting/terms/{id}/close`, `POST /accounting/books/reopen` |
+| Settlements | `GET /settlements?start=&end=`; `POST /settlements/refresh` |
 | Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |
 | Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |

@@ -17,7 +17,7 @@ import hmac
 import json
 import secrets
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, ClassVar
 
 from .base import (
@@ -30,6 +30,8 @@ from .base import (
     InvalidSignature,
     IssuedVirtualAccount,
     ResolvedAccount,
+    SettledTransaction,
+    Settlement,
     Subaccount,
     TransactionStatus,
     Verification,
@@ -55,6 +57,8 @@ class _Transaction:
 class _State:
     transactions: dict[str, _Transaction] = field(default_factory=dict)
     accounts: dict[str, CustomerDetails] = field(default_factory=dict)
+    # subaccount code -> payouts, each with the transactions it covered
+    settlements: dict[str, list[tuple[Settlement, list[SettledTransaction]]]] = field(default_factory=dict)
     # Set to make the next calls fail like an outage
     unavailable: bool = False
 
@@ -159,7 +163,46 @@ class FakeGateway:
             payload=event,
         )
 
+    def list_settlements(self, *, subaccount_code: str, since: date) -> list[Settlement]:
+        self._check()
+        return [
+            s
+            for s, _ in self.state.settlements.get(subaccount_code, [])
+            if s.settled_on is None or s.settled_on >= since
+        ]
+
+    def settlement_transactions(self, settlement_id: str) -> list[SettledTransaction]:
+        self._check()
+        for payouts in self.state.settlements.values():
+            for s, items in payouts:
+                if s.id == settlement_id:
+                    return items
+        return []
+
     # --- Simulating the outside world ------------------------------------------------------------
+
+    def settle(
+        self,
+        subaccount_code: str,
+        references: list[str],
+        *,
+        on: date,
+        fee_bp: int = 150,
+        extra: list[SettledTransaction] | None = None,
+        status: str = "success",
+    ) -> Settlement:
+        """Pay out these transactions to the subaccount, less `fee_bp` (1.5%), plus any `extra` unknown ones."""
+        items = [
+            SettledTransaction(
+                r, self.state.transactions[r].amount_kobo, self.state.transactions[r].amount_kobo * fee_bp // 10_000
+            )
+            for r in references
+        ] + list(extra or [])
+        gross = sum(i.amount_kobo for i in items)
+        fees = sum(i.fees_kobo for i in items)
+        settlement = Settlement(f"FAKE_SET_{secrets.token_hex(4).upper()}", status, on, gross, fees, gross - fees)
+        self.state.settlements.setdefault(subaccount_code, []).append((settlement, items))
+        return settlement
 
     def _signed(self, event: dict[str, Any]) -> tuple[dict[str, str], bytes]:
         body = json.dumps(event).encode()

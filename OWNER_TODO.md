@@ -4,7 +4,14 @@ Things only you (Oluwafemi) can do: decisions, accounts, paperwork and people.
 The build carries on without them, but each blocks something real. Kept up to
 date as the build goes on; newest additions are marked _(new)_.
 
-Last updated: 2026-10-22 (live site on Render + Netlify; Termii account opened)
+Last updated: 2026-10-24 (Paystack payouts check)
+
+## _(new)_ Check the first real Paystack payout (2026-10-24)
+
+- [ ] When the first school receives a real payout, open Payments → **Paid into the bank** and compare
+      it with that day's settlement on the Paystack dashboard: "Parents paid", "Charges" and "Into the
+      bank" should match. Test mode has no payouts, so the field names came from Paystack's
+      documentation; tell me if any figure differs and I'll adjust `paystack.list_settlements`.
 
 ## _(new)_ The live site (2026-10-22)
 

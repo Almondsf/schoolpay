@@ -15,7 +15,7 @@ from app.modules.notifications import service as notifications
 from app.modules.notifications.sms import SmsError
 from app.modules.parents import tasks as parents_tasks
 from app.modules.payments import accounts as payment_accounts
-from app.modules.payments import webhooks
+from app.modules.payments import settlements, webhooks
 from app.modules.platform import signup as platform_signup
 from app.modules.platform import tasks as platform_tasks
 from app.modules.privacy import service as privacy
@@ -114,3 +114,13 @@ def prune_pending_schools() -> int:
 @celery_app.task(name="privacy.apply_retention")
 def apply_retention() -> dict[str, int]:
     return privacy.apply_retention()
+
+
+@celery_app.task(name=settlements.SYNC_TASK)
+def sync_settlements(school_id: str) -> int:
+    return settlements.sync_school(uuid.UUID(school_id)).settlements
+
+
+@celery_app.task(name="payments.sync_all_settlements")
+def sync_all_settlements() -> int:
+    return settlements.sync_all()

@@ -122,4 +122,56 @@ describe('payments', () => {
     expect(await screen.findByText(/link is incomplete/)).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
+
+  it('shows what Paystack paid into the bank and what is missing', async () => {
+    const payout = {
+      id: 'p1',
+      settled_on: '2026-10-20',
+      status: 'success',
+      gross_kobo: 6_500_000,
+      charges_kobo: 90_000,
+      paid_out_kobo: 6_410_000,
+      transactions: 2,
+      matched: 1,
+    };
+    const calls = mockApi({
+      ...base,
+      'POST /api/v1/auth/refresh': () => json(signedIn({ ...bursar, capabilities: [...bursar.capabilities, 'reports.view'] })),
+      'GET /api/v1/manual-payments': () => json({ items: [], total: 0, limit: 50, offset: 0 }),
+      'GET /api/v1/settlements': () =>
+        json({
+          start: '2026-09-25',
+          end: '2026-10-24',
+          connected: true,
+          checked_at: '2026-10-24T07:20:00Z',
+          gross_kobo: 6_500_000,
+          charges_kobo: 90_000,
+          paid_out_kobo: 6_410_000,
+          payouts: [payout],
+          unsettled: [
+            {
+              payment_id: 'pay2',
+              received_at: '2026-10-18T09:00:00Z',
+              receipt_number: 41,
+              admission_number: 'A1',
+              method: 'virtual_account',
+              amount_kobo: 4_000_000,
+              reference: 'PSK_REF_2',
+            },
+          ],
+          unsettled_kobo: 4_000_000,
+          unknown: [{ settled_on: '2026-10-20', reference: 'NOT_OURS_1', amount_kobo: 500_000 }],
+        }),
+      'POST /api/v1/settlements/refresh': () => json({ status: 'queued' }, 202),
+    });
+    renderAt('/console/payments');
+    await userEvent.click(await screen.findByRole('tab', { name: 'Paid into the bank' }));
+    const payouts = within(await screen.findByRole('region', { name: 'Payouts' }));
+    expect(payouts.getByText('₦64,100.00')).toBeInTheDocument();
+    expect(payouts.getByText('1 of 2')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Not paid out yet' })).getByText('PSK_REF_2')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Paid out but not in WardPay' })).getByText('NOT_OURS_1')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Check now' }));
+    await vi.waitFor(() => expect(calls.some((c) => c.url.endsWith('/settlements/refresh'))).toBe(true));
+  });
 });

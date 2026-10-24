@@ -6507,6 +6507,67 @@
         "title": "PaymentSettingsOut",
         "type": "object"
       },
+      "PayoutOut": {
+        "properties": {
+          "charges_kobo": {
+            "description": "Taken off before the bank: the provider's fees and any split",
+            "title": "Charges Kobo",
+            "type": "integer"
+          },
+          "gross_kobo": {
+            "description": "What parents paid in the transactions it covers",
+            "title": "Gross Kobo",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matched": {
+            "description": "Transactions matched to a WardPay payment",
+            "title": "Matched",
+            "type": "integer"
+          },
+          "paid_out_kobo": {
+            "description": "What reached the school's bank",
+            "title": "Paid Out Kobo",
+            "type": "integer"
+          },
+          "settled_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled On"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "transactions": {
+            "title": "Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "settled_on",
+          "status",
+          "gross_kobo",
+          "charges_kobo",
+          "paid_out_kobo",
+          "transactions",
+          "matched"
+        ],
+        "title": "PayoutOut",
+        "type": "object"
+      },
       "PlatformOverviewOut": {
         "properties": {
           "payments_this_month": {
@@ -7232,6 +7293,92 @@
           "verification_url"
         ],
         "title": "ReceiptOut",
+        "type": "object"
+      },
+      "ReconciliationOut": {
+        "properties": {
+          "charges_kobo": {
+            "title": "Charges Kobo",
+            "type": "integer"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When WardPay last asked the provider",
+            "title": "Checked At"
+          },
+          "connected": {
+            "description": "The school is on a provider that reports its payouts",
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "gross_kobo": {
+            "title": "Gross Kobo",
+            "type": "integer"
+          },
+          "paid_out_kobo": {
+            "title": "Paid Out Kobo",
+            "type": "integer"
+          },
+          "payouts": {
+            "items": {
+              "$ref": "#/components/schemas/PayoutOut"
+            },
+            "title": "Payouts",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "unknown": {
+            "description": "Paid out, but WardPay has no payment with that reference",
+            "items": {
+              "$ref": "#/components/schemas/UnknownItemOut"
+            },
+            "title": "Unknown",
+            "type": "array"
+          },
+          "unsettled": {
+            "description": "Payments not paid out a few days after they arrived",
+            "items": {
+              "$ref": "#/components/schemas/UnsettledOut"
+            },
+            "title": "Unsettled",
+            "type": "array"
+          },
+          "unsettled_kobo": {
+            "title": "Unsettled Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "connected",
+          "checked_at",
+          "gross_kobo",
+          "charges_kobo",
+          "paid_out_kobo",
+          "payouts",
+          "unsettled",
+          "unsettled_kobo",
+          "unknown"
+        ],
+        "title": "ReconciliationOut",
         "type": "object"
       },
       "RecoveryCodes": {
@@ -9719,6 +9866,37 @@
         "title": "TrendMonthOut",
         "type": "object"
       },
+      "UnknownItemOut": {
+        "properties": {
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "settled_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled On"
+          }
+        },
+        "required": [
+          "settled_on",
+          "reference",
+          "amount_kobo"
+        ],
+        "title": "UnknownItemOut",
+        "type": "object"
+      },
       "UnplacedOut": {
         "properties": {
           "admission_number": {
@@ -9746,6 +9924,57 @@
           "reason"
         ],
         "title": "UnplacedOut",
+        "type": "object"
+      },
+      "UnsettledOut": {
+        "properties": {
+          "admission_number": {
+            "title": "Admission Number",
+            "type": "string"
+          },
+          "amount_kobo": {
+            "title": "Amount Kobo",
+            "type": "integer"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "payment_id": {
+            "format": "uuid",
+            "title": "Payment Id",
+            "type": "string"
+          },
+          "receipt_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Number"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_id",
+          "received_at",
+          "receipt_number",
+          "admission_number",
+          "method",
+          "amount_kobo",
+          "reference"
+        ],
+        "title": "UnsettledOut",
         "type": "object"
       },
       "VerifyIn": {
@@ -28002,6 +28231,238 @@
         "summary": "The school's pupils at a glance (no money)",
         "tags": [
           "students"
+        ]
+      }
+    },
+    "/api/v1/settlements": {
+      "get": {
+        "operationId": "payments_get_settlements",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "What the payment provider paid into the bank, matched to payments",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/settlements/refresh": {
+      "post": {
+        "operationId": "payments_refresh_settlements",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Payments Refresh Settlements",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask the payment provider for the latest payouts now",
+        "tags": [
+          "payments"
         ]
       }
     },

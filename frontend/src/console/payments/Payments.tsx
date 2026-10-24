@@ -11,6 +11,7 @@ import { Empty, ErrorAlert, Field, Loading, Menu, Modal, Notice, PageHeader, Pag
 import { ReceiptLink } from './ReceiptLink';
 import { StudentPicker, type PickedStudent } from './StudentPicker';
 import { FeePicker, leftOn } from '../../lib/FeeBreakdown';
+import { Payouts } from './Payouts';
 
 type Payment = Schemas['PaymentOut'];
 type Manual = Schemas['ManualOut'];
@@ -19,7 +20,7 @@ const MANUAL_METHODS = ['cash', 'teller', 'pos', 'bank_transfer'] as const;
 
 export function Payments() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<'received' | 'pending'>('received');
+  const [tab, setTab] = useState<'received' | 'pending' | 'payouts'>('received');
   const [recording, setRecording] = useState(false);
   // The same query as the approvals tab, so its count costs nothing extra
   const waiting = useQuery({
@@ -46,11 +47,12 @@ export function Payments() {
               </>
             ),
           },
+          ...(can('reports.view') ? [{ key: 'payouts' as const, label: 'Paid into the bank' }] : []),
         ]}
         value={tab}
         onChange={setTab}
       />
-      {tab === 'received' ? <Received /> : <Pending />}
+      {tab === 'received' ? <Received /> : tab === 'pending' ? <Pending /> : <Payouts />}
       {recording && <RecordManual onClose={() => setRecording(false)} onDone={() => setTab('pending')} />}
     </>
   );

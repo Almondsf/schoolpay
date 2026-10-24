@@ -14,7 +14,7 @@ Rules for callers:
 
 import enum
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
 from app.core.errors import DomainError, ServiceUnavailable
@@ -104,6 +104,33 @@ class Verification:
     receiver_account_number: str | None = None
     paid_at: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Settlement:
+    """One payout from the gateway into the school's bank account."""
+
+    id: str
+    status: str  # "success" once paid out; "pending" / "processing" before that
+    settled_on: date | None
+    gross_kobo: int  # what parents paid in the transactions it covers
+    charges_kobo: int  # what came off before it reached the bank (gateway fees and any split share)
+    paid_out_kobo: int  # what the bank received
+
+
+@dataclass(frozen=True)
+class SettledTransaction:
+    reference: str  # the gateway's transaction reference (Payment.gateway_reference)
+    amount_kobo: int
+    fees_kobo: int
+
+
+class SettlementSource(Protocol):
+    """Gateways that can say what they paid out, and which transactions each payout covered."""
+
+    def list_settlements(self, *, subaccount_code: str, since: date) -> list[Settlement]: ...
+
+    def settlement_transactions(self, settlement_id: str) -> list[SettledTransaction]: ...
 
 
 def parse_paid_at(value: str | None) -> datetime:

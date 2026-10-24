@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import outbox
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.errors import ERROR_RESPONSES, DomainError, NotFound
@@ -24,7 +25,7 @@ from app.modules.receipts.service import receipts_for_payments
 from app.modules.schools.models import FamilySplitRule, School
 from app.modules.students.models import Student
 
-from . import accounts, cashbook, checkout, earmarks, manual, paycards, providers, service, webhooks
+from . import accounts, cashbook, checkout, earmarks, manual, paycards, providers, service, settlements, webhooks
 from .allocation import credit_by_student
 from .gateways import FakeGateway, GatewayCode, InvalidSignature, enabled_gateways
 from .models import (
@@ -799,3 +800,93 @@ def simulate_transfer(body: SimulateTransferIn, db: Session = Depends(get_db)) -
     headers, payload = FakeGateway.shared().simulate_transfer(body.account_number, body.amount_kobo)
     webhooks.receive(db, GatewayCode.FAKE, headers, payload)
     return {"status": "sent"}
+
+
+# --- What the gateway paid out ----------------------------------------------------------------------
+
+
+class PayoutOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    settled_on: date | None
+    status: str
+    gross_kobo: int = Field(description="What parents paid in the transactions it covers")
+    charges_kobo: int = Field(description="Taken off before the bank: the provider's fees and any split")
+    paid_out_kobo: int = Field(description="What reached the school's bank")
+    transactions: int
+    matched: int = Field(description="Transactions matched to a WardPay payment")
+
+
+class UnsettledOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    payment_id: uuid.UUID
+    received_at: datetime
+    receipt_number: int | None
+    admission_number: str
+    method: PaymentMethod
+    amount_kobo: int
+    reference: str
+
+
+class UnknownItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    settled_on: date | None
+    reference: str
+    amount_kobo: int
+
+
+class ReconciliationOut(BaseModel):
+    start: date
+    end: date
+    connected: bool = Field(description="The school is on a provider that reports its payouts")
+    checked_at: datetime | None = Field(description="When WardPay last asked the provider")
+    gross_kobo: int
+    charges_kobo: int
+    paid_out_kobo: int
+    payouts: list[PayoutOut]
+    unsettled: list[UnsettledOut] = Field(description="Payments not paid out a few days after they arrived")
+    unsettled_kobo: int
+    unknown: list[UnknownItemOut] = Field(description="Paid out, but WardPay has no payment with that reference")
+
+
+@router.get(
+    "/settlements",
+    response_model=ReconciliationOut,
+    summary="What the payment provider paid into the bank, matched to payments",
+)
+def get_settlements(
+    start: date | None = None,
+    end: date | None = None,
+    ctx: StaffContext = Depends(require(Capability.REPORTS_VIEW)),
+    db: Session = Depends(get_db),
+) -> ReconciliationOut:
+    default_start, default_end = cashbook.today_range(30)
+    report = settlements.reconciliation(db, start or default_start, end or default_end)
+    return ReconciliationOut(
+        start=report.start,
+        end=report.end,
+        connected=report.connected,
+        checked_at=report.checked_at,
+        gross_kobo=report.gross_kobo,
+        charges_kobo=report.charges_kobo,
+        paid_out_kobo=report.paid_out_kobo,
+        payouts=[PayoutOut.model_validate(p) for p in report.payouts],
+        unsettled=[UnsettledOut.model_validate(u) for u in report.unsettled],
+        unsettled_kobo=report.unsettled_kobo,
+        unknown=[UnknownItemOut.model_validate(u) for u in report.unknown],
+    )
+
+
+@router.post(
+    "/settlements/refresh",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Ask the payment provider for the latest payouts now",
+)
+def refresh_settlements(ctx: StaffContext = APPROVE, db: Session = Depends(get_db)) -> dict[str, str]:
+    get_limiter().hit("settlements-refresh:school", "6/hour", str(ctx.school_id))
+    outbox.enqueue(db, settlements.SYNC_TASK, {"school_id": str(ctx.school_id)})
+    db.commit()
+    return {"status": "queued"}

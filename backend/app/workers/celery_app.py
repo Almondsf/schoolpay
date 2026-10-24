@@ -52,6 +52,8 @@ celery_app.conf.update(
         "prune-pending-schools": {"task": "platform.prune_pending_schools", "schedule": crontab(minute=15, hour=3)},
         # NDPA retention: old message texts cleared, long-departed pupils and their parents anonymised
         "apply-retention": {"task": "privacy.apply_retention", "schedule": crontab(minute=45, hour=3)},
+        # What Paystack paid into each school's bank, matched to payments (payouts land overnight)
+        "sync-settlements": {"task": "payments.sync_all_settlements", "schedule": crontab(minute=20, hour=8)},
     },
 )
 

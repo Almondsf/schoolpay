@@ -70,6 +70,8 @@ class SchoolPaymentAccount(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
     account_name: Mapped[str] = mapped_column(String(150))
     platform_fee_bp: Mapped[int] = mapped_column(SmallInteger)
     set_up_by: Mapped[uuid.UUID | None] = mapped_column()
+    # When WardPay last asked the gateway what it paid out (payments/settlements.py)
+    settlements_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class VirtualAccountStatus(enum.StrEnum):
@@ -429,3 +431,41 @@ class CashDayClose(TenantMixin, UUIDPrimaryKey, Base):
     note: Mapped[str] = mapped_column(String(300), default="")
     closed_by: Mapped[uuid.UUID] = mapped_column()
     closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GatewaySettlement(TenantMixin, UUIDPrimaryKey, Timestamped, Base):
+    """
+    A payout from the gateway into the school's bank account, as the gateway reports it. Refreshed by
+    payments/settlements.py: the gateway's record is the source, so these rows follow it.
+    """
+
+    __tablename__ = "gateway_settlements"
+    __table_args__ = (
+        UniqueConstraint("school_id", "gateway", "settlement_id"),
+        CheckConstraint("gross_kobo >= 0 AND paid_out_kobo >= 0", name="amounts_not_negative"),
+        Index("ix_gateway_settlements_school_day", "school_id", "settled_on"),
+    )
+
+    gateway: Mapped[GatewayCode] = mapped_column(GATEWAY_ENUM)
+    settlement_id: Mapped[str] = mapped_column(String(64))  # the gateway's id
+    status: Mapped[str] = mapped_column(String(20))
+    settled_on: Mapped[date | None] = mapped_column(Date)
+    gross_kobo: Mapped[int] = mapped_column(BigInteger)  # what parents paid
+    charges_kobo: Mapped[int] = mapped_column(BigInteger)  # taken off before the bank
+    paid_out_kobo: Mapped[int] = mapped_column(BigInteger)  # what reached the bank
+
+
+class SettlementItem(TenantMixin, UUIDPrimaryKey, Base):
+    """A transaction a payout covered, matched to WardPay's payment by the gateway reference when known."""
+
+    __tablename__ = "settlement_items"
+    __table_args__ = (
+        UniqueConstraint("settlement_id", "reference"),
+        Index("ix_settlement_items_payment", "payment_id"),
+    )
+
+    settlement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("gateway_settlements.id", ondelete="CASCADE"))
+    reference: Mapped[str] = mapped_column(String(100))
+    amount_kobo: Mapped[int] = mapped_column(BigInteger)
+    fees_kobo: Mapped[int] = mapped_column(BigInteger)
+    payment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("payments.id", ondelete="RESTRICT"))

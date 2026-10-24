@@ -12,6 +12,7 @@ Paystack (https://paystack.com/docs/api/). Amounts are already in kobo.
 import hashlib
 import hmac
 import json
+from datetime import date
 from typing import Any
 
 import httpx
@@ -29,6 +30,8 @@ from .base import (
     InvalidSignature,
     IssuedVirtualAccount,
     ResolvedAccount,
+    SettledTransaction,
+    Settlement,
     Subaccount,
     TransactionStatus,
     Verification,
@@ -37,6 +40,7 @@ from .base import (
 )
 
 API = "https://api.paystack.co"
+MAX_PAGES = 20
 # Anything else ("abandoned", "ongoing", "pending", "processing", "queued") is still pending. Paystack calls a
 # checkout "abandoned" until the customer pays, and they can still pay on the same page later: treating
 # it as failed would close the checkout and the real payment would then be ignored.
@@ -55,6 +59,9 @@ class PaystackGateway:
         self.secret_key = secret_key if secret_key is not None else get_settings().paystack_secret_key
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
+        return self._call(method, path, **kwargs).get("data")
+
+    def _call(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self.secret_key}"}
         try:
             with outbound_client("paystack", base_url=API, headers=headers) as client:
@@ -69,7 +76,52 @@ class PaystackGateway:
             raise GatewayError("Paystack is having problems. Please try again shortly.")
         if response.status_code >= 400 or body.get("status") is False:
             raise GatewayRejected(f"Paystack: {body.get('message') or f'HTTP {response.status_code}'}")
-        return body.get("data")
+        return body if isinstance(body, dict) else {}
+
+    def _pages(self, path: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+        """Every row of a paged list (at most MAX_PAGES pages of 100)."""
+        rows: list[dict[str, Any]] = []
+        for page in range(1, MAX_PAGES + 1):
+            body = self._call("GET", path, params={**params, "perPage": 100, "page": page})
+            rows.extend(r for r in body.get("data") or [] if isinstance(r, dict))
+            if page >= int((body.get("meta") or {}).get("pageCount") or 1):
+                break
+        return rows
+
+    def list_settlements(self, *, subaccount_code: str, since: date) -> list[Settlement]:
+        """
+        Payouts to the school's subaccount. Paystack's fields: `total_processed` (what parents paid),
+        `total_fees`, `effective_amount` (what reached the bank, after any deductions).
+        """
+        rows = self._pages("/settlement", {"subaccount": subaccount_code, "from": since.isoformat()})
+        settlements = []
+        for row in rows:
+            paid_out = int(row.get("effective_amount") or row.get("total_amount") or 0)
+            fees = int(row.get("total_fees") or 0)
+            gross = int(row.get("total_processed") or 0) or paid_out + fees
+            settled = str(row.get("settlement_date") or row.get("settled_at") or "")[:10]
+            settlements.append(
+                Settlement(
+                    id=str(row.get("id")),
+                    status=str(row.get("status") or ""),
+                    settled_on=date.fromisoformat(settled) if settled else None,
+                    gross_kobo=gross,
+                    charges_kobo=gross - paid_out,
+                    paid_out_kobo=paid_out,
+                )
+            )
+        return settlements
+
+    def settlement_transactions(self, settlement_id: str) -> list[SettledTransaction]:
+        return [
+            SettledTransaction(
+                reference=str(row.get("reference") or ""),
+                amount_kobo=int(row.get("amount") or 0),
+                fees_kobo=int(row.get("fees") or 0),
+            )
+            for row in self._pages(f"/settlement/{settlement_id}/transactions", {})
+            if row.get("reference")
+        ]
 
     def list_banks(self) -> list[Bank]:
         data = self._request("GET", "/bank", params={"country": "nigeria", "perPage": 200})

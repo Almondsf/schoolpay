@@ -175,7 +175,9 @@ the morning. Beat must be running for automatic reminders.
 ## Background workers
 
 Run exactly one `beat` and as many `worker`s as needed. Beat hands stuck outbox
-rows to the queue every 30 seconds. If Redis is unavailable, emails and other
+rows to the queue every 30 seconds. It also starts the daily jobs (Lagos time): pending
+sign-ups pruned 03:15, NDPA retention 03:45, Paystack payouts fetched and matched
+08:20 (`payments.sync_all_settlements`), plus hourly reminders. If Redis is unavailable, emails and other
 tasks wait in the `outbox_tasks` table and go out when it's back. Rows that fail
 8 times are marked `failed` and logged at ERROR. After fixing the cause, requeue them:
 
