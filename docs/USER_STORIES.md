@@ -3,6 +3,7 @@
 What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ Close a term once its figures are reported, so nothing can be backdated into it; re-open it only with a reason.
 - ✅ Close the school year with one download: a summary, each term's bills, money in and spending, who still owes, the cash book by month and the year's journal.
 - ✅ Give the accountant a general journal for any period (Excel or CSV): bills, payments, banking and approved spending as balanced double entries, using the account codes the accountant already uses.
 - ✅ See how this term's collections compare with last term at the same point ("day 21: 54%; last term 61%"), and what falls due in the next 30, 60 and 90 days against money in and spending at the recent pace.

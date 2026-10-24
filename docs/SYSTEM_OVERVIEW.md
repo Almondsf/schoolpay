@@ -175,6 +175,7 @@ check capabilities, never role names:
 | payments.approve, payments.reverse | ✓ | ✓ | ✓ |
 | reports.view, messaging.manage | ✓ | ✓ | ✓ |
 | payments.setup (where money settles) | ✓ | | |
+| books.reopen (re-open a closed term) | ✓ | | |
 
 School admins can do everything a bursar can as well as school setup (owner's decision,
 2026-10-20), so like proprietors and bursars they must use two-factor sign-in. Only the
@@ -556,6 +557,23 @@ blank goes back to the default). The Excel file has three sheets (journal, accou
 the CSV is flat, for accounting software. Seven queries whatever the period. Excel output costs
 about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
 background job later.
+
+**Closing the books** (`accounting/periods.py`). `School.books_closed_through` is a date: nothing
+dated on or before it can be recorded. Closing a term (`POST /accounting/terms/{id}/close`,
+`payments.approve`) sets it to the term's last day; the term must have ended and nothing in it may
+still await a second person (cash/teller entries, spending, banking: refused with `books_waiting` and
+the counts). The term's figures at that moment (billed, collected, outstanding, bills, pupils owing,
+credit) are kept on the `BookClosing` row (append-only, trigger) and in the audit log. Afterwards these
+are refused with `books_closed`: manual payments (recording and approving, by `received_on`), spending
+(recording and deciding, by `spent_on`), banking (recording and checking, by `banked_on`), drawer counts
+(by day), billing the closed term again, voiding its bills (or a one-off bill issued on or before the
+date), and changing a closed term's dates or moving an open one into the closed period. Corrections
+carry today's date and stay allowed: bill adjustments, voiding spending, reversing payments. Gateway
+payments are never refused (the money has arrived). Re-opening (`POST /accounting/books/reopen`,
+`books.reopen`: proprietors only, reason required) moves the date back to the end of the term before.
+Every recording path calls `periods.ensure_open`, which reads the school row `FOR SHARE`; closing and
+re-opening take it `FOR UPDATE`, so a close and a recording in flight never interleave.
+`GET /accounting/books` gives the date and the history. The screen is Reports → For your accountant.
 
 **End-of-session pack** (`accounting/session_pack.py`, `GET /accounting/session-pack?session_id=`,
 `reports.view`, default: the school year running today, else the latest that has started; for the
@@ -1219,7 +1237,7 @@ production.
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
-| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv`; `GET /accounting/session-pack?session_id=` |
+| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv`; `GET /accounting/session-pack?session_id=`; `GET /accounting/books`, `POST /accounting/terms/{id}/close`, `POST /accounting/books/reopen` |
 | Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |
 | Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |

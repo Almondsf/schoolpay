@@ -363,4 +363,68 @@ describe('dashboard and reports', () => {
     await vi.waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true));
     expect(await calls.find((c) => c.method === 'PUT')!.json()).toEqual({ code: '', name: 'GTBank current' }); // code left at the default
   });
+
+  it('closes an ended term and lets the proprietor re-open it with a reason', async () => {
+    const ended = [
+      {
+        id: 's0',
+        name: '2025/2026',
+        start_date: '2025-09-01',
+        end_date: '2026-07-31',
+        terms: [{ id: 't3', label: 'Third term', is_current: false, start_date: '2026-04-20', end_date: '2026-07-24' }],
+      },
+    ];
+    let closedThrough: string | null = null;
+    const calls = mockApi({
+      'POST /api/v1/auth/refresh': () =>
+        json(signedIn(me({ role: 'proprietor', capabilities: [...bursar.capabilities, 'payments.approve', 'books.reopen'] }))),
+      'GET /api/v1/academic-sessions': () => json(ended),
+      'GET /api/v1/reports/debtors': () => json({ items: [], total: 0, limit: 50, offset: 0, total_owed_kobo: 0 }),
+      'GET /api/v1/accounting/journal': () =>
+        json({ start: '2026-10-01', end: '2026-10-20', entries: 0, debit_kobo: 0, credit_kobo: 0, totals: [], unchecked_deposits: 0 }),
+      'GET /api/v1/accounting/accounts': () => json([]),
+      'GET /api/v1/accounting/books': () => json({ closed_through: closedThrough, history: [] }),
+      'POST /api/v1/accounting/terms/t3/close': () => {
+        closedThrough = '2026-07-24';
+        return json({
+          id: 'b1',
+          action: 'close',
+          term_id: 't3',
+          closed_through_before: null,
+          closed_through_after: '2026-07-24',
+          reason: '',
+          figures: {},
+          by: 'u1',
+          created_at: '2026-10-24T10:00:00Z',
+        });
+      },
+      'POST /api/v1/accounting/books/reopen': () =>
+        json({
+          id: 'b2',
+          action: 'reopen',
+          term_id: 't3',
+          closed_through_before: '2026-07-24',
+          closed_through_after: null,
+          reason: 'Late teller',
+          figures: {},
+          by: 'u1',
+          created_at: '2026-10-24T11:00:00Z',
+        }),
+    });
+    renderConsole('/console/reports');
+    await userEvent.click(await screen.findByRole('tab', { name: 'For your accountant' }));
+    const books = within(await screen.findByRole('region', { name: 'Closing the books' }));
+    expect(books.getByText('No term has been closed yet.')).toBeInTheDocument();
+    await userEvent.click(books.getByRole('button', { name: 'Close 2025/2026 Third term' }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close the term' }));
+    expect(await books.findByText(/The books are closed up to/)).toBeInTheDocument();
+
+    await userEvent.click(books.getByRole('button', { name: 'Re-open the last closed term' }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByRole('button', { name: 'Re-open' })).toBeDisabled(); // a reason first
+    await userEvent.type(dialog.getByLabelText('Why'), 'Late teller');
+    await userEvent.click(dialog.getByRole('button', { name: 'Re-open' }));
+    await vi.waitFor(() => expect(calls.some((c) => c.url.endsWith('/books/reopen'))).toBe(true));
+    expect(await calls.find((c) => c.url.endsWith('/books/reopen'))!.json()).toEqual({ reason: 'Late teller' });
+  });
 });

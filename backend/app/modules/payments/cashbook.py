@@ -25,6 +25,7 @@ from sqlalchemy.types import Date
 
 from app.core.clock import LAGOS, lagos_today
 from app.core.errors import Conflict, DomainError, NotFound, PermissionDenied
+from app.modules.accounting import periods
 from app.modules.accounts.deps import StaffContext
 from app.modules.accounts.models import User
 from app.modules.audit.models import AuditAction
@@ -313,6 +314,7 @@ def record_deposit(
         raise DomainError("Enter the amount banked.", field="amount_kobo")
     if banked_on > lagos_today():
         raise DomainError("That date is in the future.", field="banked_on")
+    periods.ensure_open(session, ctx.school_id, banked_on, field="banked_on")
     deposit = CashDeposit(
         id=uuid.uuid4(),
         school_id=ctx.school_id,
@@ -349,6 +351,7 @@ def decide_deposit(
         raise PermissionDenied("Someone other than the person who recorded it must check it.", code="maker_checker")
     if not confirm and len(reason.strip()) < 3:
         raise DomainError("Say why it doesn't match the bank.", field="reason")
+    periods.ensure_open(session, ctx.school_id, deposit.banked_on)
     deposit.status = CashDepositStatus.CONFIRMED if confirm else CashDepositStatus.REJECTED
     deposit.decided_by, deposit.decided_at = ctx.user.id, datetime.now(UTC)
     deposit.rejection_reason = "" if confirm else reason.strip()[:300]
@@ -377,6 +380,7 @@ def close_day(session: Session, ctx: StaffContext, *, day: date, counted_kobo: i
     """Record the drawer count for a day next to what the system expected. Once per day, never changed."""
     if day > lagos_today():
         raise DomainError("That day hasn't happened yet.", field="day")
+    periods.ensure_open(session, ctx.school_id, day, field="day")
     if counted_kobo < 0:
         raise DomainError("Enter the cash counted.", field="counted_kobo")
     if session.scalar(select(CashDayClose.id).where(CashDayClose.day == day)) is not None:

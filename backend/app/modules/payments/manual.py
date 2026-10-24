@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.clock import LAGOS
 from app.core.errors import Conflict, DomainError, PermissionDenied
 from app.core.repo import get_or_404
+from app.modules.accounting import periods
 from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
@@ -48,6 +49,7 @@ def record_manual(
         raise DomainError("The date can't be in the future.", field="received_on")
     if method == PaymentMethod.TELLER and not reference.strip():
         raise DomainError("Enter the teller number.", field="reference")
+    periods.ensure_open(session, ctx.school_id, received_on, field="received_on")
     student = get_or_404(session, Student, student_id, label="Student", field="student_id")
     if reference.strip() and session.scalar(
         select(ManualPayment.id).where(
@@ -102,6 +104,7 @@ def approve(session: Session, ctx: StaffContext, entry_id: uuid.UUID) -> ManualP
     entry = _pending(session, entry_id)
     if entry.recorded_by == ctx.user.id:
         raise PermissionDenied("Someone other than the person who recorded it must approve it.", code="maker_checker")
+    periods.ensure_open(session, ctx.school_id, entry.received_on, field="received_on")
     received_at = datetime.combine(entry.received_on, time(12, 0), tzinfo=LAGOS).astimezone(UTC)
     recorded = record_payment(
         session,

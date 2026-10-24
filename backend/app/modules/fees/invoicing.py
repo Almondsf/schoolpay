@@ -18,9 +18,11 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.sql import Subquery
 
 from app.core import locks
+from app.core.clock import LAGOS
 from app.core.errors import Conflict, DomainError, NotFound
 from app.core.repo import get_or_404
 from app.core.sequences import reserve
+from app.modules.accounting import periods
 from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
@@ -404,6 +406,8 @@ def generate_term_invoices(
     if not dry_run:  # a second "Bill this term" at the same moment waits, then sees these bills
         locks.hold(session, "billing", ctx.school_id)
     term = get_or_404(session, Term, term_id, label="Term")
+    if periods.term_is_closed(session, ctx.school_id, term):
+        raise Conflict("That term is closed. Ask the proprietor to re-open it to bill it again.", code="books_closed")
     if class_level_ids:
         found = set(session.scalars(select(ClassLevel.id).where(ClassLevel.id.in_(class_level_ids))))
         if found != class_level_ids:
@@ -555,6 +559,15 @@ def add_line(
 def void_invoice(session: Session, ctx: StaffContext, invoice_id: uuid.UUID, reason: str) -> Invoice:
     """Cancel an invoice issued by mistake. Only possible while nothing has been paid on it."""
     invoice = _live_invoice(session, invoice_id)
+    issued_on = invoice.issued_at.astimezone(LAGOS).date()
+    term = session.get(Term, invoice.term_id) if invoice.term_id else None
+    if (term and periods.term_is_closed(session, ctx.school_id, term)) or (
+        term is None and periods.closed_on(session, ctx.school_id, issued_on)
+    ):
+        raise Conflict(
+            "This bill belongs to a closed term. Adjust it instead (the correction is dated today).",
+            code="books_closed",
+        )
     amounts = amounts_for(session, [invoice.id])[invoice.id]
     if amounts.paid_kobo > 0:
         raise Conflict("Payments have been applied to this invoice. Reverse them first, or adjust the invoice instead.")

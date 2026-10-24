@@ -42,6 +42,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 22 Oct | **Parent portal redesign**: one page (total at the top, each child with owed, Pay online, account number and fees; pay-all at the bottom), history and settings a tap away; demo code-fill button on laptops | `parent/ParentApp.tsx`, `parent/ParentLogin.tsx` |
 | 22 Oct | **Fees in reminders**: `{fees}` in new-bill notices and reminders (fees with money left, biggest first, max four then "N more"); WhatsApp templates get it as their last parameter | `notifications/service.py` (`fees_phrase`), `templates.py` |
 | 22 Oct | **SMS alphabet**: every text is converted to GSM-7 (NGN for ₦, plain quotes/dashes, emoji dropped) so it isn't billed as Unicode (7 pages became 3); wording preview shows SMS pages | `notifications/sms.py` (`to_gsm`, `sms_pages`) |
+| 24 Oct | **Closing the books**: close an ended term so nothing is backdated into it; the proprietor re-opens with a reason (`books.reopen`) | `accounting/periods.py` |
 | 24 Oct | **End-of-session pack** (Reports → For your accountant): one workbook per school year | `accounting/session_pack.py` |
 | 24 Oct | **General journal for the accountant** (Reports → For your accountant): balanced double entries for any period as Excel or CSV, the school's own account codes | `accounting/journal.py`, `console/reports/Accountant.tsx` |
 | 24 Oct | **Collection curve and cash forecast**: the dashboard's "Pace and forecast" tab compares this term with last at the same day and shows what falls due in 30/60/90 days (plans count only their instalments) | `reports/insights.py`, `console/Dashboard.tsx` |
@@ -174,7 +175,8 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
    24 Oct: `expenses/`; receipt photos not stored yet, no file storage on the free plan);
    ~~collection curve and cash forecast~~ (done 24 Oct: `reports/insights.py`); ~~accountant export~~ (done 24 Oct: `accounting/`;
    Excel takes ~1 s per 1,000 lines, so move big exports to a background job when a large school
-   needs a whole session); ~~end-of-session pack~~ (done 24 Oct: `accounting/session_pack.py`); then write-offs, closing a term, Paystack settlement reconciliation, unusual-activity signals.
+   needs a whole session); ~~end-of-session pack~~ (done 24 Oct: `accounting/session_pack.py`); ~~closing a term~~ (done 24 Oct:
+   `accounting/periods.py`); then write-offs, Paystack settlement reconciliation, unusual-activity signals.
 1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).
    ~~SMS provider switch~~ (done 22 Oct: Termii or Africa's Talking, `notifications/providers.py`).
    ~~Owner tools~~ (done 22–23 Oct): Problems page, helping locked-out staff, 12-month trends, bill discounts

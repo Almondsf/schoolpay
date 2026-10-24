@@ -1,6 +1,6 @@
 import uuid
-from datetime import date
-from typing import Annotated, Literal
+from datetime import date, datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -17,7 +17,8 @@ from app.modules.audit.service import record
 from app.modules.reports.exports import XLSX
 from app.modules.schools.models import School
 
-from . import exports, journal, session_pack
+from . import exports, journal, periods, session_pack
+from .models import BookAction
 
 router = APIRouter(prefix="/accounting", tags=["accounting"], responses=ERROR_RESPONSES)
 VIEW = Depends(require(Capability.REPORTS_VIEW))
@@ -166,3 +167,58 @@ def export_session_pack(
         media_type=XLSX,
         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
     )
+
+
+# --- Closing the books -------------------------------------------------------------------------------
+
+
+class BookClosingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    action: BookAction
+    term_id: uuid.UUID
+    closed_through_before: date | None
+    closed_through_after: date | None
+    reason: str
+    figures: dict[str, Any] = Field(description="The term's figures when it was closed")
+    by: uuid.UUID
+    created_at: datetime
+
+
+class BooksOut(BaseModel):
+    closed_through: date | None = Field(description="Nothing dated on or before this day can be recorded")
+    history: list[BookClosingOut]
+
+
+class ReopenIn(BaseModel):
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
+@router.get("/books", response_model=BooksOut, summary="How far the books are closed, and every close and re-open")
+def books(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> BooksOut:
+    school = db.get(School, ctx.school_id)
+    return BooksOut(
+        closed_through=school.books_closed_through if school else None,
+        history=[BookClosingOut.model_validate(h) for h in periods.history(db)],
+    )
+
+
+@router.post(
+    "/terms/{term_id}/close",
+    response_model=BookClosingOut,
+    summary="Close a term that has ended: nothing dated in it can be recorded afterwards",
+)
+def close_term(term_id: uuid.UUID, ctx: StaffContext = MANAGE, db: Session = Depends(get_db)) -> BookClosingOut:
+    return BookClosingOut.model_validate(periods.close_term(db, ctx, term_id))
+
+
+@router.post(
+    "/books/reopen",
+    response_model=BookClosingOut,
+    summary="Re-open the last closed term (proprietor only, with a reason)",
+)
+def reopen_books(
+    body: ReopenIn, ctx: StaffContext = Depends(require(Capability.BOOKS_REOPEN)), db: Session = Depends(get_db)
+) -> BookClosingOut:
+    return BookClosingOut.model_validate(periods.reopen(db, ctx, body.reason))

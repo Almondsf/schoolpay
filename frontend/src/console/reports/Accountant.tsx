@@ -5,7 +5,7 @@ import { api, unwrap, type Schemas } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { errorMessage, filenameFrom, saveBlob } from '../../lib/download';
 import { formatDate, formatKobo, lagosToday } from '../../lib/format';
-import { Empty, ErrorAlert, Loading } from '../../lib/ui';
+import { Empty, ErrorAlert, Field, Loading, Modal } from '../../lib/ui';
 import { useSessions } from '../hooks';
 
 type Account = Schemas['JournalAccountOut'];
@@ -117,9 +117,153 @@ export function Accountant() {
           )}
         </>
       )}
+      <ClosingTheBooks />
       <SessionPack />
       <ChartOfAccounts editable={can('payments.approve')} />
     </>
+  );
+}
+
+type BookClosing = Schemas['BookClosingOut'];
+
+/** Close a term once it has ended, so its figures can't change; the proprietor can re-open the last one. */
+function ClosingTheBooks() {
+  const { can } = useAuth();
+  const queryClient = useQueryClient();
+  const sessions = useSessions();
+  const books = useQuery({
+    queryKey: ['books'],
+    staleTime: 0,
+    queryFn: async () => unwrap(await api.GET('/api/v1/accounting/books')),
+  });
+  const [closing, setClosing] = useState<{ id: string; label: string; end: string } | null>(null);
+  const [reopening, setReopening] = useState(false);
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ['books'] });
+    void queryClient.invalidateQueries({ queryKey: ['journal'] });
+  };
+  if (books.isPending || sessions.isPending) return <Loading />;
+  if (books.isError) return <ErrorAlert error={books.error} />;
+  const today = lagosToday();
+  const through = books.data.closed_through;
+  const terms = (sessions.data ?? []).flatMap((s) => s.terms.map((t) => ({ id: t.id, label: `${s.name} ${t.label}`, end: t.end_date })));
+  const labels = new Map(terms.map((t) => [t.id, t.label]));
+  // The next term to close: ended, and after the closed date
+  const next = terms
+    .filter((t) => t.end < today && (!through || t.end > through))
+    .sort((a, b) => a.end.localeCompare(b.end))
+    .at(-1);
+  return (
+    <section className="card section" aria-label="Closing the books">
+      <h2>Closing the books</h2>
+      <p className="muted small">
+        Close a term once it has ended and its figures have been reported. After that nothing can be recorded with a date in it; corrections
+        are dated the day they are made.
+      </p>
+      <p>
+        {through ? (
+          <>
+            The books are closed up to <strong>{formatDate(through)}</strong>.
+          </>
+        ) : (
+          'No term has been closed yet.'
+        )}
+      </p>
+      <div className="row wrap">
+        {next && can('payments.approve') && (
+          <button className="secondary small" onClick={() => setClosing(next)}>
+            Close {next.label}
+          </button>
+        )}
+        {through && can('books.reopen') && (
+          <button className="secondary small" onClick={() => setReopening(true)}>
+            Re-open the last closed term
+          </button>
+        )}
+      </div>
+      {books.data.history.length > 0 && (
+        <ul className="small muted">
+          {books.data.history.map((h: BookClosing) => (
+            <li key={h.id}>
+              {formatDate(h.created_at.slice(0, 10))}: {h.action === 'close' ? 'closed' : 're-opened'} {labels.get(h.term_id) ?? 'a term'}
+              {h.action === 'close' && typeof h.figures.collected_kobo === 'number' && typeof h.figures.billed_kobo === 'number' && (
+                <>
+                  {' '}
+                  ({formatKobo(h.figures.collected_kobo)} collected of {formatKobo(h.figures.billed_kobo)} billed)
+                </>
+              )}
+              {h.reason && <>: “{h.reason}”</>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {closing && <CloseTerm term={closing} onClose={() => setClosing(null)} onDone={refresh} />}
+      {reopening && <Reopen onClose={() => setReopening(false)} onDone={refresh} />}
+    </section>
+  );
+}
+
+function CloseTerm({
+  term,
+  onClose,
+  onDone,
+}: {
+  term: { id: string; label: string; end: string };
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const close = useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/accounting/terms/{term_id}/close', { params: { path: { term_id: term.id } } })),
+    onSuccess: () => {
+      onDone();
+      onClose();
+    },
+  });
+  return (
+    <Modal title={`Close ${term.label}?`} onClose={onClose}>
+      <p>
+        Nothing dated on or before {formatDate(term.end)} can be recorded after this: no cash, teller or bank payments, spending, banking or
+        drawer counts, and the term’s bills can’t be billed again or voided. Corrections are still possible, dated today.
+      </p>
+      <p className="muted small">Anything still waiting for a second person’s approval in the term must be decided first.</p>
+      <ErrorAlert error={close.error} />
+      <div className="row">
+        <button onClick={() => close.mutate()} disabled={close.isPending}>
+          Close the term
+        </button>
+        <button className="secondary" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function Reopen({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState('');
+  const reopen = useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/accounting/books/reopen', { body: { reason } })),
+    onSuccess: () => {
+      onDone();
+      onClose();
+    },
+  });
+  return (
+    <Modal title="Re-open the last closed term?" onClose={onClose}>
+      <p>Its figures may then change. The reason is kept with the books.</p>
+      <Field label="Why">
+        <input value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
+      </Field>
+      <ErrorAlert error={reopen.error} />
+      <div className="row">
+        <button onClick={() => reopen.mutate()} disabled={reopen.isPending || reason.trim().length < 3}>
+          Re-open
+        </button>
+        <button className="secondary" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    </Modal>
   );
 }
 

@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import lagos_today
 from app.core.errors import Conflict, DomainError, NotFound, PermissionDenied
+from app.modules.accounting import periods
 from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
@@ -97,6 +98,7 @@ def record_expense(
         raise DomainError("Enter the amount spent.", field="amount_kobo")
     if spent_on > lagos_today():
         raise DomainError("That date is in the future.", field="spent_on")
+    periods.ensure_open(session, ctx.school_id, spent_on, field="spent_on")
     if len(payee.strip()) < 2:
         raise DomainError("Say who was paid.", field="payee")
     expense = Expense(
@@ -141,6 +143,7 @@ def decide(session: Session, ctx: StaffContext, expense_id: uuid.UUID, *, approv
         raise PermissionDenied("Someone other than the person who recorded it must approve it.", code="maker_checker")
     if not approve and len(reason.strip()) < 3:
         raise DomainError("Say why it's rejected.", field="reason")
+    periods.ensure_open(session, ctx.school_id, expense.spent_on)
     expense.status = ExpenseStatus.APPROVED if approve else ExpenseStatus.REJECTED
     expense.decided_by, expense.decided_at = ctx.user.id, datetime.now(UTC)
     expense.rejection_reason = "" if approve else reason.strip()[:300]

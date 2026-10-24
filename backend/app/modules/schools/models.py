@@ -53,6 +53,8 @@ class School(UUIDPrimaryKey, Timestamped, Base):
         default=FamilySplitRule.CLEAR_MOST,
         server_default=FamilySplitRule.CLEAR_MOST.value,
     )
+    # Nothing dated on or before this day can be recorded (a closed term); see accounting/periods.py
+    books_closed_through: Mapped[date | None] = mapped_column(Date)
 
     def __repr__(self) -> str:
         return f"<School {self.slug}>"

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.clock import lagos_today
 from app.core.errors import Conflict, DomainError
 from app.core.repo import get_or_404
+from app.modules.accounting import periods
 from app.modules.accounts.deps import StaffContext
 from app.modules.audit.models import AuditAction
 from app.modules.audit.service import record
@@ -206,6 +207,11 @@ def update_session(
 
 def update_term(session: Session, ctx: StaffContext, term_id: uuid.UUID, dates: TermDates) -> Term:
     term = get_or_404(session, Term, term_id, label="Term", lock=True)
+    # A closed term's dates are fixed, and an open term can't be moved into the closed period
+    if periods.term_is_closed(session, ctx.school_id, term) or periods.closed_on(
+        session, ctx.school_id, dates.start_date
+    ):
+        raise Conflict("The books are closed for those dates. Ask the proprietor to re-open the term first.")
     academic_session = get_or_404(session, AcademicSession, term.session_id, label="Session")
     siblings = {t.number: t for t in session.scalars(select(Term).where(Term.session_id == term.session_id))}
     proposed = [TermDates(t.start_date, t.end_date) if n != term.number else dates for n, t in sorted(siblings.items())]

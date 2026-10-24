@@ -26,6 +26,8 @@ class Capability(enum.StrEnum):
     # Choosing the bank account school money settles into: proprietors only
     PAYMENTS_SETUP = "payments.setup"
     REPORTS_VIEW = "reports.view"
+    # Re-opening a closed term: the proprietor only (proprietors hold every school capability)
+    BOOKS_REOPEN = "books.reopen"
     MESSAGING_MANAGE = "messaging.manage"
     PLATFORM_MANAGE = "platform.manage"
 
