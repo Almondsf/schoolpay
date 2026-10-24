@@ -31,6 +31,8 @@ const AREAS = [
     rows: [
       ['A live dashboard: billed, collected and still owed for the term, per class, with a progress bar each',
         'Know where the money stands without asking the bursar or waiting for month-end'],
+      ['This term against last term at the same point, and what falls due in the next 30, 60 and 90 days',
+        'See early whether collections are behind, and plan salaries and suppliers around money that is actually coming'],
       ['Money received per day and how parents paid (transfer, card, cash, teller, POS)',
         'Spot slow weeks early and see which payment channels parents actually use'],
       ['How late the debts are: not yet due, 1–30, 31–60, 61–90 and over 90 days',
@@ -186,6 +188,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['24 Oct 2026', 'Pace and forecast on the dashboard: this term against last at the same point, and what falls due in the next 30, 60 and 90 days'],
   ['24 Oct 2026', 'Expenses with a second person’s approval, cash spending off the drawer, and income against expenditure'],
   ['24 Oct 2026', 'Cash book: what should be in the drawer, cash banked (checked by a second person), daily cash counts and late entries flagged'],
   ['23 Oct 2026', 'Parents pay for all their children with one tap from their WhatsApp or text link; the school chooses how a smaller amount is shared'],

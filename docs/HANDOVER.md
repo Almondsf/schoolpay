@@ -42,6 +42,7 @@ The roadmap (PLAN.md chunks 0 to 10) is finished. Since then, at the owner's req
 | 22 Oct | **Parent portal redesign**: one page (total at the top, each child with owed, Pay online, account number and fees; pay-all at the bottom), history and settings a tap away; demo code-fill button on laptops | `parent/ParentApp.tsx`, `parent/ParentLogin.tsx` |
 | 22 Oct | **Fees in reminders**: `{fees}` in new-bill notices and reminders (fees with money left, biggest first, max four then "N more"); WhatsApp templates get it as their last parameter | `notifications/service.py` (`fees_phrase`), `templates.py` |
 | 22 Oct | **SMS alphabet**: every text is converted to GSM-7 (NGN for ₦, plain quotes/dashes, emoji dropped) so it isn't billed as Unicode (7 pages became 3); wording preview shows SMS pages | `notifications/sms.py` (`to_gsm`, `sms_pages`) |
+| 24 Oct | **Collection curve and cash forecast**: the dashboard's "Pace and forecast" tab compares this term with last at the same day and shows what falls due in 30/60/90 days (plans count only their instalments) | `reports/insights.py`, `console/Dashboard.tsx` |
 | 22 Oct | **Set-up wizard** (`/console/get-started`): details, school year, classes, fees once per section, pupils, bills; from the dashboard's getting-started card | `console/GetStarted.tsx` |
 | 22 Oct | **Billing and Payments decluttered**: term picker in the header, one strip of figures, lighter lists; a count on Awaiting approval; payment actions in a ⋯ menu | `console/billing/Billing.tsx`, `console/payments/Payments.tsx` |
 | 22 Oct | **Suggested admission numbers** when adding a pupil (latest pattern's highest + 1; initials/year for a new school; editable) | `students/service.py` (`next_admission_number`) |
@@ -160,7 +161,7 @@ about ₦6–9 a page, WhatsApp utility about $0.0067 and marketing about $0.051
 0. **Bookkeeping roadmap** (owner, 2026-10-24: "make the school ledger really great"), in order:
    ~~cash book and banking~~ (done 24 Oct: `payments/cashbook.py`); ~~expenses and income & expenditure~~ (done
    24 Oct: `expenses/`; receipt photos not stored yet, no file storage on the free plan);
-   collection curve and cash forecast on the dashboard; accountant export (journal) and end-of-session
+   ~~collection curve and cash forecast~~ (done 24 Oct: `reports/insights.py`); accountant export (journal) and end-of-session
    pack; then write-offs, closing a term, Paystack settlement reconciliation, unusual-activity signals.
 1. ~~Card payment of school subscriptions~~ (done 22 Oct: `platform/card_payments.py`).
    ~~SMS provider switch~~ (done 22 Oct: Termii or Africa's Talking, `notifications/providers.py`).

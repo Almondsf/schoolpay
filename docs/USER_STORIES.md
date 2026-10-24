@@ -3,6 +3,7 @@
 What each kind of user needs from WardPay. Stories are marked ✅ when built.
 
 ## Proprietor (school owner)
+- ✅ See how this term's collections compare with last term at the same point ("day 21: 54%; last term 61%"), and what falls due in the next 30, 60 and 90 days against money in and spending at the recent pace.
 - ✅ See money in against money out for any period (by payment method and by spending category), with the surplus or deficit, and void spending recorded by mistake.
 - ✅ See cash taken and banked day by day and per staff member, any day the count came up short, and cash recorded for a day after it was closed.
 - ✅ Choose how one amount a parent pays for several children is shared: old balances first then clear as many children as possible, in proportion, eldest first or youngest first.

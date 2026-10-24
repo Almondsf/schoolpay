@@ -20,7 +20,7 @@ from app.modules.payments.models import PaymentMethod
 from app.modules.schools.models import ClassLevel, School
 from app.modules.students.models import Student, StudentStatus
 
-from . import exports, fee_status, service
+from . import exports, fee_status, insights, service
 from .service import AgingBucket, DebtorFilters, DebtorSort
 
 router = APIRouter(prefix="/reports", tags=["reports"], responses=ERROR_RESPONSES)
@@ -165,6 +165,37 @@ def get_collections(
     period: tuple[date, date] = Depends(date_range), ctx: StaffContext = VIEW, db: Session = Depends(get_db)
 ) -> CollectionsOut:
     return CollectionsOut.model_validate(service.collections(db, *period), from_attributes=True)
+
+
+class TermCurveOut(BaseModel):
+    term_id: uuid.UUID
+    label: str
+    start: date
+    billed_kobo: int = Field(description="Term bills (not voided)")
+    days: int = Field(description="Days the curve covers: to today for the current term, else the whole term")
+    collected_kobo: list[int] = Field(description="Cumulative collected on the term's bills, one per day from day 0")
+
+
+class WindowOut(BaseModel):
+    days: int
+    due_kobo: int = Field(description="Falling due in the window and still unpaid (bills, and plan instalments only)")
+    pace_in_kobo: int = Field(description="Money in over the window at the pace of the last 30 days")
+    pace_out_kobo: int = Field(description="Approved spending over the window at the pace of the last 30 days")
+
+
+class InsightsOut(BaseModel):
+    today: date
+    current: TermCurveOut | None
+    previous: TermCurveOut | None = Field(description="The term before the current one, for comparison")
+    overdue_kobo: int = Field(description="Owed now and past due (on a plan: only the missed instalments)")
+    windows: list[WindowOut] = Field(description="The next 30, 60 and 90 days")
+
+
+@router.get(
+    "/insights", response_model=InsightsOut, summary="Collection curve against last term, and the cash forecast"
+)
+def get_insights(ctx: StaffContext = VIEW, db: Session = Depends(get_db)) -> InsightsOut:
+    return InsightsOut.model_validate(insights.insights(db, lagos_today()), from_attributes=True)
 
 
 def _download(content: bytes, kind: Literal["xlsx", "pdf"], name: str) -> Response:

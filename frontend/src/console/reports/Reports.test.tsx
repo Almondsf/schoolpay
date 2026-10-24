@@ -124,6 +124,44 @@ describe('dashboard and reports', () => {
     expect(screen.getByText('Over 90 days late')).toBeInTheDocument();
   });
 
+  it('compares the collection curve with last term and forecasts what falls due', async () => {
+    const curve = (label: string, billed: number, collected: number[]) => ({
+      term_id: label,
+      label,
+      start: '2026-09-08',
+      billed_kobo: billed,
+      days: collected.length - 1,
+      collected_kobo: collected,
+    });
+    mockApi({
+      ...session,
+      'GET /api/v1/academic-sessions': () => json(sessions),
+      'GET /api/v1/reports/overview': () => json(overview),
+      'GET /api/v1/reports/insights': () =>
+        json({
+          today: '2026-09-10',
+          current: curve('2026/2027 First term', 1000, [100, 300, 540]),
+          previous: curve('2025/2026 Third term', 2000, [400, 800, 1220, 1500, 1800]),
+          overdue_kobo: 5_000_000,
+          windows: [30, 60, 90].map((days) => ({
+            days,
+            due_kobo: days * 100_000,
+            pace_in_kobo: days * 50_000,
+            pace_out_kobo: days * 10_000,
+          })),
+        }),
+    });
+    renderConsole('/console');
+    await userEvent.click(await screen.findByRole('tab', { name: 'Pace and forecast' }));
+    const curveSection = within(await screen.findByRole('region', { name: 'Collection curve' }));
+    expect(curveSection.getByText('54%')).toBeInTheDocument(); // day 2: 540 of 1,000
+    expect(curveSection.getByText('61%')).toBeInTheDocument(); // last term by day 2: 1,220 of 2,000
+    expect(curveSection.getByRole('img', { name: 'Share of bills collected by day of term' })).toBeInTheDocument();
+    const forecast = within(screen.getByRole('region', { name: 'Cash forecast' }));
+    expect(forecast.getByText(/₦50,000.00 is overdue now/)).toBeInTheDocument();
+    expect(forecast.getByRole('row', { name: /60 days/ })).toHaveTextContent('₦60,000.00₦30,000.00₦6,000.00');
+  });
+
   it("gives staff who don't see money the school at a glance instead", async () => {
     const admin = me({ role: 'school_admin', capabilities: ['school.view', 'students.view'] });
     const calls = mockApi({

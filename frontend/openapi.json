@@ -3778,6 +3778,58 @@
         "title": "IncomeExpenditureOut",
         "type": "object"
       },
+      "InsightsOut": {
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermCurveOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overdue_kobo": {
+            "description": "Owed now and past due (on a plan: only the missed instalments)",
+            "title": "Overdue Kobo",
+            "type": "integer"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermCurveOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The term before the current one, for comparison"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "windows": {
+            "description": "The next 30, 60 and 90 days",
+            "items": {
+              "$ref": "#/components/schemas/WindowOut"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "today",
+          "current",
+          "previous",
+          "overdue_kobo",
+          "windows"
+        ],
+        "title": "InsightsOut",
+        "type": "object"
+      },
       "InstalmentIn": {
         "properties": {
           "amount_kobo": {
@@ -9219,6 +9271,52 @@
         "title": "TemplatesOut",
         "type": "object"
       },
+      "TermCurveOut": {
+        "properties": {
+          "billed_kobo": {
+            "description": "Term bills (not voided)",
+            "title": "Billed Kobo",
+            "type": "integer"
+          },
+          "collected_kobo": {
+            "description": "Cumulative collected on the term's bills, one per day from day 0",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Collected Kobo",
+            "type": "array"
+          },
+          "days": {
+            "description": "Days the curve covers: to today for the current term, else the whole term",
+            "title": "Days",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "term_id": {
+            "format": "uuid",
+            "title": "Term Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term_id",
+          "label",
+          "start",
+          "billed_kobo",
+          "days",
+          "collected_kobo"
+        ],
+        "title": "TermCurveOut",
+        "type": "object"
+      },
       "TermDatesIn": {
         "properties": {
           "end_date": {
@@ -9553,6 +9651,37 @@
           "received_at"
         ],
         "title": "WebhookProblemOut",
+        "type": "object"
+      },
+      "WindowOut": {
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "due_kobo": {
+            "description": "Falling due in the window and still unpaid (bills, and plan instalments only)",
+            "title": "Due Kobo",
+            "type": "integer"
+          },
+          "pace_in_kobo": {
+            "description": "Money in over the window at the pace of the last 30 days",
+            "title": "Pace In Kobo",
+            "type": "integer"
+          },
+          "pace_out_kobo": {
+            "description": "Approved spending over the window at the pace of the last 30 days",
+            "title": "Pace Out Kobo",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "due_kobo",
+          "pace_in_kobo",
+          "pace_out_kobo"
+        ],
+        "title": "WindowOut",
         "type": "object"
       },
       "WithdrawIn": {
@@ -25957,6 +26086,102 @@
         "summary": "Money received against approved spending for a period",
         "tags": [
           "expenses"
+        ]
+      }
+    },
+    "/api/v1/reports/insights": {
+      "get": {
+        "operationId": "reports_get_insights",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Collection curve against last term, and the cash forecast",
+        "tags": [
+          "reports"
         ]
       }
     },

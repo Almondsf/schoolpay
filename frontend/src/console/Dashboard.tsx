@@ -108,7 +108,7 @@ function MoneyDashboard({ first, schoolName }: { first: string; schoolName: stri
   );
 }
 
-type Panel = 'money' | 'classes' | 'aging' | 'pupils';
+type Panel = 'money' | 'pace' | 'classes' | 'aging' | 'pupils';
 
 function Figures({ data, pupils }: { data: Overview; pupils: ReactNode }) {
   const [panel, setPanel] = useState<Panel>('money');
@@ -131,6 +131,7 @@ function Figures({ data, pupils }: { data: Overview; pupils: ReactNode }) {
   const rate = percent(data.collected_kobo, data.billed_kobo);
   const tabs: { key: Panel; label: string }[] = [
     { key: 'money', label: 'Money in' },
+    { key: 'pace', label: 'Pace and forecast' },
     { key: 'classes', label: 'By class' },
     { key: 'aging', label: 'How late' },
     ...(pupils ? [{ key: 'pupils' as const, label: 'Pupils' }] : []),
@@ -232,6 +233,7 @@ function Figures({ data, pupils }: { data: Overview; pupils: ReactNode }) {
             </section>
           </div>
         )}
+        {panel === 'pace' && <PaceAndForecast />}
         {panel === 'classes' && (
           <section className="panel-body flush table-scroll" aria-label="By class">
             <table>
@@ -286,6 +288,123 @@ function Figures({ data, pupils }: { data: Overview; pupils: ReactNode }) {
         )}
         {panel === 'pupils' && <div className="panel-body nested">{pupils}</div>}
       </section>
+    </>
+  );
+}
+
+type Insights = Schemas['InsightsOut'];
+type Curve = Schemas['TermCurveOut'];
+
+/** This term's collection curve against last term's, and what's due (and likely to come in) next. */
+function PaceAndForecast() {
+  const insights = useQuery({
+    queryKey: ['reports-insights'],
+    staleTime: 0,
+    queryFn: async () => unwrap(await api.GET('/api/v1/reports/insights')),
+  });
+  if (insights.isPending) return <Loading />;
+  if (insights.isError) return <ErrorAlert error={insights.error} />;
+  return <PaceFigures data={insights.data} />;
+}
+
+function share(curve: Curve, day: number): number {
+  const values = curve.collected_kobo;
+  if (values.length === 0) return 0;
+  return percent(values[Math.min(day, values.length - 1)]!, curve.billed_kobo);
+}
+
+function PaceFigures({ data }: { data: Insights }) {
+  const { current, previous } = data;
+  const comparable = previous && previous.billed_kobo > 0 ? previous : null;
+  return (
+    <div className="panel-body split">
+      <section aria-label="Collection curve">
+        <h2>Collection curve</h2>
+        {!current || current.billed_kobo === 0 ? (
+          <p className="muted">No bills for the current term yet.</p>
+        ) : (
+          <>
+            <p className="small">
+              Day {current.days} of {current.label}: <strong>{share(current, current.days)}%</strong> of the term's bills collected.
+              {comparable && (
+                <>
+                  {' '}
+                  By day {current.days} last term: <strong>{share(comparable, current.days)}%</strong>.
+                </>
+              )}
+            </p>
+            <CurveChart current={current} previous={comparable} />
+          </>
+        )}
+      </section>
+      <section aria-label="Cash forecast">
+        <h2>Cash forecast</h2>
+        <p className="muted small">
+          {formatKobo(data.overdue_kobo)} is overdue now. On a payment plan, only the instalments that fall due count.
+        </p>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Next</th>
+                <th className="num">Falling due</th>
+                <th className="num">In at the recent pace</th>
+                <th className="num">Spending at the recent pace</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.windows.map((w) => (
+                <tr key={w.days}>
+                  <td className="nowrap">{w.days} days</td>
+                  <td className="num">{formatKobo(w.due_kobo)}</td>
+                  <td className="num">{formatKobo(w.pace_in_kobo)}</td>
+                  <td className="num">{formatKobo(w.pace_out_kobo)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted small">
+          The recent pace is the last 30 days of money in and approved spending, carried forward. A guide, not a promise.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+/** Percent of each term's bills collected by day since the term began. Plain SVG. */
+function CurveChart({ current, previous }: { current: Curve; previous: Curve | null }) {
+  const width = 600;
+  const height = 160;
+  const span = Math.max(current.days, previous?.days ?? 0, 1);
+  const line = (curve: Curve) =>
+    curve.collected_kobo
+      .map(
+        (v, day) =>
+          `${((day / span) * width).toFixed(1)},${(height - (Math.min(percent(v, curve.billed_kobo), 100) / 100) * height).toFixed(1)}`,
+      )
+      .join(' ');
+  return (
+    <>
+      <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Share of bills collected by day of term">
+        <line x1={0} x2={width} y1={height} y2={height} className="chart-axis" />
+        <line x1={0} x2={width} y1={0} y2={0} className="chart-axis" />
+        {previous && <polyline points={line(previous)} className="chart-line previous" />}
+        <polyline points={line(current)} className="chart-line" />
+      </svg>
+      <div className="row between small muted">
+        <span>Day 0</span>
+        <span>
+          <span className="legend-swatch" /> This term
+          {previous && (
+            <>
+              {' '}
+              <span className="legend-swatch previous" /> {previous.label}
+            </>
+          )}
+        </span>
+        <span>Day {span}</span>
+      </div>
     </>
   );
 }

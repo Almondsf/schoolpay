@@ -1102,6 +1102,31 @@ tr.retired td {
   stroke-width: 1;
 }
 
+.chart-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.chart-line.previous {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  vertical-align: middle;
+  background: var(--primary);
+}
+
+.legend-swatch.previous {
+  background: var(--muted);
+}
+
 .month-labels {
   display: grid;
   grid-auto-flow: column;

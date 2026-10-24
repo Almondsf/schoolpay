@@ -2230,6 +2230,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collection curve against last term, and the cash forecast */
+        get: operations["reports_get_insights"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/overview": {
         parameters: {
             query?: never;
@@ -4724,6 +4741,27 @@ export interface components {
              */
             surplus_kobo: number;
         };
+        /** InsightsOut */
+        InsightsOut: {
+            current: components["schemas"]["TermCurveOut"] | null;
+            /**
+             * Overdue Kobo
+             * @description Owed now and past due (on a plan: only the missed instalments)
+             */
+            overdue_kobo: number;
+            /** @description The term before the current one, for comparison */
+            previous: components["schemas"]["TermCurveOut"] | null;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /**
+             * Windows
+             * @description The next 30, 60 and 90 days
+             */
+            windows: components["schemas"]["WindowOut"][];
+        };
         /** InstalmentIn */
         InstalmentIn: {
             /**
@@ -6932,6 +6970,36 @@ export interface components {
             /** Templates */
             templates: components["schemas"]["TemplateOut"][];
         };
+        /** TermCurveOut */
+        TermCurveOut: {
+            /**
+             * Billed Kobo
+             * @description Term bills (not voided)
+             */
+            billed_kobo: number;
+            /**
+             * Collected Kobo
+             * @description Cumulative collected on the term's bills, one per day from day 0
+             */
+            collected_kobo: number[];
+            /**
+             * Days
+             * @description Days the curve covers: to today for the current term, else the whole term
+             */
+            days: number;
+            /** Label */
+            label: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Term Id
+             * Format: uuid
+             */
+            term_id: string;
+        };
         /** TermDatesIn */
         TermDatesIn: {
             /**
@@ -7082,6 +7150,26 @@ export interface components {
              * @enum {string}
              */
             status: "needs_review" | "failed";
+        };
+        /** WindowOut */
+        WindowOut: {
+            /** Days */
+            days: number;
+            /**
+             * Due Kobo
+             * @description Falling due in the window and still unpaid (bills, and plan instalments only)
+             */
+            due_kobo: number;
+            /**
+             * Pace In Kobo
+             * @description Money in over the window at the pace of the last 30 days
+             */
+            pace_in_kobo: number;
+            /**
+             * Pace Out Kobo
+             * @description Approved spending over the window at the pace of the last 30 days
+             */
+            pace_out_kobo: number;
         };
         /** WithdrawIn */
         WithdrawIn: {
@@ -19539,6 +19627,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IncomeExpenditureOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reports_get_insights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightsOut"];
                 };
             };
             /** @description Bad Request */
