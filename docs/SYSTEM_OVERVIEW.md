@@ -557,6 +557,16 @@ the CSV is flat, for accounting software. Seven queries whatever the period. Exc
 about 1 s per 1,000 journal lines (openpyxl), so a big school's whole session should become a
 background job later.
 
+**End-of-session pack** (`accounting/session_pack.py`, `GET /accounting/session-pack?session_id=`,
+`reports.view`, default: the school year running today, else the latest that has started; for the
+current year it runs to today; rate limited and audited because the debtors sheet has parents'
+phone numbers). One Excel workbook: Summary (term bills, discounts, paid, still owed, owed in all,
+money in against approved spending, the cash drawer at the start and end), By term (one query over
+the session's terms), Money in and Spending (the income and expenditure report), Debtors as of
+today, Cash book by month (from the daily cash book; cash taken includes entries still awaiting
+approval, as in the cash book), then the session's journal, account totals and chart. A fixed
+number of queries.
+
 **Income and expenditure** (`GET /reports/income-expenditure?start=&end=`,
 `reports.view`, up to about a session): money received by how it came in (payments net of
 reversals) against approved spending by category, the surplus or deficit, spending still
@@ -1209,7 +1219,7 @@ production.
 | Phone calls | `PUT /guardians/{id}/calls`; parent: `PUT /parent/preferences` (`prefers_calls`, `language`); provider callback `POST /voice/africastalking` (not in the OpenAPI schema) |
 | Family links | `GET /guardians/{id}/pay-link`, `POST /guardians/{id}/pay-link/replace`; public: `GET /public/pay/{token}`, `POST /public/pay/{token}/checkout` |
 | Manual payments | `GET/POST /manual-payments`; `POST /manual-payments/{id}/approve`, `/reject` |
-| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv` |
+| Accounting | `GET /accounting/accounts`, `PUT /accounting/accounts/{key}`; `GET /accounting/journal?start=&end=`; `GET /accounting/journal/export?format=xlsx\|csv`; `GET /accounting/session-pack?session_id=` |
 | Expenses | `GET/POST /expense-categories`, `PUT /expense-categories/{id}`; `GET/POST /expenses`; `POST /expenses/{id}/approve`, `/reject`, `/void`; `GET /reports/income-expenditure?start=&end=` |
 | Cash book | `GET /cash-book?start=&end=`; `GET/POST /cash-deposits`; `POST /cash-deposits/{id}/confirm`, `/reject`; `POST /cash-book/close` |
 | Card | `POST /students/{id}/payment-link`; `POST /payments/verify` (public, rate limited) |

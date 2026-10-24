@@ -74,6 +74,8 @@ const sessions = [
   {
     id: 's1',
     name: '2026/2027',
+    start_date: '2026-09-01',
+    end_date: '2027-07-31',
     terms: [{ id: 't1', label: 'First term', is_current: true }],
   },
 ];
@@ -329,6 +331,8 @@ describe('dashboard and reports', () => {
         }),
       'GET /api/v1/accounting/accounts': () => json([bank]),
       'PUT /api/v1/accounting/accounts/bank': async (request) => json({ ...bank, ...(await request.json()), name: 'GTBank current' }),
+      'GET /api/v1/accounting/session-pack': () =>
+        new Response('xlsx', { headers: { 'Content-Disposition': 'attachment; filename="end-of-session-2026-2027.xlsx"' } }),
       'GET /api/v1/accounting/journal/export': () =>
         new Response('csv', { headers: { 'Content-Disposition': 'attachment; filename="journal-2026-10-01-to-2026-10-20.csv"' } }),
     });
@@ -346,6 +350,11 @@ describe('dashboard and reports', () => {
     expect(screen.getByText(/1 cash deposit is left out/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
     await vi.waitFor(() => expect(saved).toEqual(['journal-2026-10-01-to-2026-10-20.csv']));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download the pack' }));
+    await vi.waitFor(() => expect(saved).toContain('end-of-session-2026-2027.xlsx'));
+    const pack = new URL(calls.find((c) => c.url.includes('/session-pack'))!.url);
+    expect(pack.searchParams.get('session_id')).toBe(sessions[0]!.id);
 
     const name = await screen.findByLabelText('Name for Bank');
     await userEvent.clear(name);

@@ -31,6 +31,8 @@ const AREAS = [
     rows: [
       ['A live dashboard: billed, collected and still owed for the term, per class, with a progress bar each',
         'Know where the money stands without asking the bursar or waiting for month-end'],
+      ['An end-of-session pack: the year’s summary, each term, money in and out, debtors, cash book and journal in one file',
+        'Close the year in one download, for the accountant, the board or the auditor'],
       ['A general journal for your accountant: every bill, payment, banking and approved expense as double entries, in Excel or CSV',
         'The accountant gets clean books without retyping receipts, using the account codes they already use'],
       ['This term against last term at the same point, and what falls due in the next 30, 60 and 90 days',
@@ -190,6 +192,7 @@ const COMING = [
 
 // Newest first. Add a line whenever something ships.
 const CHANGES = [
+  ['24 Oct 2026', 'End-of-session pack: the whole school year in one Excel file'],
   ['24 Oct 2026', 'A general journal for the accountant (Excel or CSV) with the school’s own account codes'],
   ['24 Oct 2026', 'Pace and forecast on the dashboard: this term against last at the same point, and what falls due in the next 30, 60 and 90 days'],
   ['24 Oct 2026', 'Expenses with a second person’s approval, cash spending off the drawer, and income against expenditure'],

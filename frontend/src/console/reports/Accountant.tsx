@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { errorMessage, filenameFrom, saveBlob } from '../../lib/download';
 import { formatDate, formatKobo, lagosToday } from '../../lib/format';
 import { Empty, ErrorAlert, Loading } from '../../lib/ui';
+import { useSessions } from '../hooks';
 
 type Account = Schemas['JournalAccountOut'];
 type JournalFormat = 'xlsx' | 'csv';
@@ -116,8 +117,51 @@ export function Accountant() {
           )}
         </>
       )}
+      <SessionPack />
       <ChartOfAccounts editable={can('payments.approve')} />
     </>
+  );
+}
+
+/** One workbook that closes a school year: summary, terms, money in and out, debtors, cash book, journal. */
+function SessionPack() {
+  const sessions = useSessions();
+  const today = lagosToday();
+  const started = (sessions.data ?? []).filter((s) => s.start_date <= today);
+  const [chosen, setChosen] = useState('');
+  const sessionId = chosen || [...started].sort((a, b) => b.start_date.localeCompare(a.start_date))[0]?.id || '';
+  const download = useMutation({
+    mutationFn: async () => {
+      const { data, error, response } = await api.GET('/api/v1/accounting/session-pack', {
+        params: { query: { session_id: sessionId || undefined } },
+        parseAs: 'blob',
+      });
+      if (!response.ok || !data) throw new Error(errorMessage(error) ?? 'Could not download the pack.');
+      saveBlob(data as Blob, filenameFrom(response, 'end-of-session.xlsx'));
+    },
+  });
+  if (started.length === 0) return null;
+  return (
+    <section className="card section" aria-label="End of session">
+      <h2>End-of-session pack</h2>
+      <p className="muted small">
+        One Excel file to close the school year: a summary, each term’s bills, money in and spending, who still owes, the cash book month by
+        month and the whole year’s journal. For the current year it runs to today.
+      </p>
+      <div className="row wrap">
+        <select aria-label="School year" value={sessionId} onChange={(e) => setChosen(e.target.value)}>
+          {started.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        <button className="secondary small" onClick={() => download.mutate()} disabled={download.isPending || !sessionId}>
+          {download.isPending ? 'Preparing…' : 'Download the pack'}
+        </button>
+      </div>
+      <ErrorAlert error={download.error} />
+    </section>
   );
 }
 

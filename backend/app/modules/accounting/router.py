@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 from typing import Annotated, Literal
 
@@ -16,7 +17,7 @@ from app.modules.audit.service import record
 from app.modules.reports.exports import XLSX
 from app.modules.schools.models import School
 
-from . import exports, journal
+from . import exports, journal, session_pack
 
 router = APIRouter(prefix="/accounting", tags=["accounting"], responses=ERROR_RESPONSES)
 VIEW = Depends(require(Capability.REPORTS_VIEW))
@@ -130,5 +131,38 @@ def export_journal(
     return Response(
         content,
         media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
+    )
+
+
+@router.get(
+    "/session-pack",
+    summary="Download the end-of-session pack (Excel): summary, terms, money in and out, debtors, cash book, journal",
+    response_class=Response,
+    responses={200: {"content": {XLSX: {}}}},
+)
+def export_session_pack(
+    session_id: uuid.UUID | None = Query(default=None, description="Default: the school year running today"),
+    ctx: StaffContext = VIEW,
+    db: Session = Depends(get_db),
+) -> Response:
+    get_limiter().hit("reports-export:school", EXPORT_RATE, str(ctx.school_id))
+    pack = session_pack.session_pack(db, session_id)
+    school = db.get(School, ctx.school_id)
+    content = exports.session_pack_xlsx(school.name if school else "", pack)
+    # It carries parents' names and phone numbers (the debtors sheet): who downloaded it is recorded
+    record(
+        db,
+        AuditAction.REPORT_EXPORTED,
+        school_id=ctx.school_id,
+        actor=ctx.actor,
+        meta=ctx.meta,
+        changes={"report": "session_pack", "session": pack.name, "entries": len(pack.journal.entries)},
+    )
+    db.commit()
+    name = f"end-of-session-{pack.name.replace('/', '-')}.xlsx"
+    return Response(
+        content,
+        media_type=XLSX,
         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
     )
