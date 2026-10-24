@@ -13,6 +13,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
+from app.core import outbound
 from app.core.config import get_settings
 from app.core.db import engine
 from app.core.errors import install_error_handlers
@@ -99,6 +100,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     yield
     # Close pooled connections on shutdown so restarts don't leave idle sessions on the server
     engine.dispose()
+    outbound.close_all()
 
 
 def create_app() -> FastAPI:

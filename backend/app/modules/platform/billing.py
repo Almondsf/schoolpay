@@ -23,7 +23,7 @@ from sqlalchemy import Select, and_, case, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Subquery
 
-from app.core import outbox
+from app.core import locks, outbox
 from app.core.clock import LAGOS
 from app.core.config import get_settings
 from app.core.errors import Conflict, DomainError, NotFound
@@ -174,6 +174,8 @@ def draft_bills(session: Session) -> BillingRun:
 
 def generate(session: Session, admin: Principal, *, dry_run: bool, today: date | None = None) -> BillingRun:
     """Bill every active school for its current term (dry_run: just show what would be billed)."""
+    if not dry_run:  # two admins billing at once: the second waits, then finds every school billed
+        locks.hold(session, "subscription-billing")
     run = draft_bills(session)
     run.dry_run = dry_run
     if dry_run or not run.bills:

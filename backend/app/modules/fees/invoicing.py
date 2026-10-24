@@ -17,6 +17,7 @@ from sqlalchemy import ColumnElement, Select, and_, case, func, literal, or_, se
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.sql import Subquery
 
+from app.core import locks
 from app.core.errors import Conflict, DomainError, NotFound
 from app.core.repo import get_or_404
 from app.core.sequences import reserve
@@ -400,6 +401,8 @@ def generate_term_invoices(
     dry_run: bool,
     notify_parents: bool = False,
 ) -> GenerationReport:
+    if not dry_run:  # a second "Bill this term" at the same moment waits, then sees these bills
+        locks.hold(session, "billing", ctx.school_id)
     term = get_or_404(session, Term, term_id, label="Term")
     if class_level_ids:
         found = set(session.scalars(select(ClassLevel.id).where(ClassLevel.id.in_(class_level_ids))))

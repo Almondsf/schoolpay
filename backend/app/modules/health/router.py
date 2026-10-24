@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from functools import lru_cache
 from typing import Literal
 
 import redis
@@ -40,14 +41,18 @@ def liveness() -> Health:
 def readiness(session: Session = Depends(get_db)) -> Readiness | JSONResponse:
     settings = get_settings()
     database = _check("database", lambda: session.execute(text("SELECT 1")))
-    if settings.celery_task_always_eager:
-        redis_ok = True  # no broker in use (development/test)
-    else:
-        redis_ok = _check("redis", lambda: redis.Redis.from_url(settings.redis_url, socket_timeout=2).ping())
+    # No broker in development/test (tasks run in-process)
+    redis_ok = settings.celery_task_always_eager or _check("redis", lambda: _redis(settings.redis_url).ping())
     result = Readiness(status="ok" if database and redis_ok else "unavailable", database=database, redis=redis_ok)
     if result.status != "ok":
         return JSONResponse(result.model_dump(), status_code=503)
     return result
+
+
+@lru_cache(maxsize=1)
+def _redis(url: str) -> redis.Redis:
+    """One client (and connection pool) for readiness probes, not a new one on every probe."""
+    return redis.Redis.from_url(url, socket_timeout=2, socket_connect_timeout=2)
 
 
 def _check(name: str, probe: Callable[[], object]) -> bool:

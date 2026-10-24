@@ -265,6 +265,8 @@ class Settings(BaseSettings):
                 raise ValueError("WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID are required for WhatsApp")
             if self.sms_backend == "memory":
                 raise ValueError("SMS_BACKEND=memory is for tests only")
+            if self.voice_backend == "memory":  # it keeps every call in a list, which only grows
+                raise ValueError("VOICE_BACKEND=memory is for tests only")
             if self.sms_backend == "termii" and not self.termii_api_key:
                 raise ValueError("TERMII_API_KEY is required when SMS_BACKEND=termii")
             if self.sms_backend == "africastalking" and not (

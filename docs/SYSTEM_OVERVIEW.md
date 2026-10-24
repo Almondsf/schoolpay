@@ -430,8 +430,8 @@ settles to us. The school bears the gateway's own charges.
 interface: list banks, resolve an account, create a subaccount, create a
 virtual account, start a checkout, verify a transaction, parse a webhook.
 `get_gateway()` only hands out gateways enabled in `PAYMENT_GATEWAYS`. Calls go
-through `app/core/outbound.py`, which logs every call with secrets and card
-details redacted. The **fake gateway** issues account numbers, checkout links
+through `app/core/outbound.py`, which keeps one pooled client per provider and
+logs every call with secrets and card details redacted. The **fake gateway** issues account numbers, checkout links
 and signed webhooks in-process, so the whole flow works in development and
 tests without real money. Production refuses it. (Flutterwave requires a BVN
 for permanent virtual accounts, which we don't collect, so it offers card
@@ -1039,6 +1039,27 @@ Conventions:
 - **No database calls inside loops.** Use one query with `IN (...)` or a join,
   a bulk insert/update, or lock a batch in one `SELECT ... FOR UPDATE SKIP LOCKED`
   and commit once.
+- **Connections are pooled and reused.**
+  - Database: one engine per process (`app/core/db.py`, `DB_POOL_SIZE` +
+    `DB_MAX_OVERFLOW`, pre-ping). Sessions are short and borrow from the pool.
+    A Celery worker child drops the parent's connections on start
+    (`worker_process_init` → `engine.dispose(close=False)`), and the API and
+    workers close the pool at shutdown.
+  - Outbound HTTP (gateways, SMS, WhatsApp, voice): one long-lived httpx client
+    per provider and base URL (`app/core/outbound.py`, up to 20 connections,
+    idle ones kept 30 s), created on first use. API keys go on each request, not
+    on the shared client, so the cache never grows. A forked child starts with
+    no clients, and `close_all()` runs at shutdown.
+  - Redis: the rate limiter and the readiness probe each keep one client.
+- **Check-then-write work is serialised.** Changes to a school's bills (billing
+  a term, adding a fee to sent bills, class charges, a pupil's one-off charge)
+  hold a per-school advisory lock for their transaction (`core/locks.hold(session,
+  "billing", school_id)`), and the platform's subscription run holds its own.
+  A second click at the same moment waits and then sees the first one's work,
+  instead of hitting a unique constraint. Elsewhere row locks
+  (`SELECT ... FOR UPDATE` on the payment, pupil, invoice or checkout) and unique
+  keys (gateway reference, one reversal per payment, one live plan per bill, one
+  bill per pupil per term) keep concurrent requests from acting twice.
 
 ## 18. Background jobs and the outbox
 

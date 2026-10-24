@@ -48,6 +48,11 @@ share that cookie and everyone would be signed out when their 15-minute access t
 ends. `frontend/public/_headers` sets the same security headers as `nginx.conf`.
 When the API's address changes, update `_redirects`.
 
+**Database connections.** Each process keeps a pool of up to `DB_POOL_SIZE` + `DB_MAX_OVERFLOW`
+(10 + 10) connections. The all-in-one container runs the API and one worker process, so it can use
+up to about 40 at peak, well within a small Postgres plan; with separate API and worker services,
+add theirs up (and lower the two settings if the database allows few connections).
+
 With Netlify and Render's proxy both in front of the API, `NUM_PROXIES=2`. Check it once:
 sign in, then look at the address on that entry in the activity log. It should be yours,
 not the same Render address for everyone. `FRONTEND_URL` is the Netlify address (or your

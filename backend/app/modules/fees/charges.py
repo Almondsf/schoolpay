@@ -31,6 +31,7 @@ from sqlalchemy import and_, delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import locks
 from app.core.errors import Conflict, DomainError, NotFound
 from app.core.money import format_naira
 from app.core.repo import get_or_404
@@ -126,6 +127,8 @@ def charge_classes(
     dry_run: bool,
 ) -> ClassChargeReport:
     """Add a fee to whole classes for a term, now and for bills generated later. Fixed number of statements."""
+    if not dry_run:  # bills change: one billing change per school at a time (see core/locks.py)
+        locks.hold(session, "billing", ctx.school_id)
     term = get_or_404(session, Term, term_id, label="Term")
     if not 0 < amount_kobo <= MAX_AMOUNT_KOBO:
         raise DomainError("Enter the amount.", field="amount_kobo")
@@ -268,6 +271,7 @@ def save_schedule(
     every pupil in that class"). Exempt pupils and optional fees a pupil hasn't taken are left
     out; a changed price isn't re-billed on bills that already carry the fee.
     """
+    locks.hold(session, "billing", ctx.school_id)
     set_schedule(session, ctx, term_id, entries)
     report = sync_bills(session, ctx, term_id=term_id, dry_run=False, commit=False)
     session.commit()
@@ -284,6 +288,8 @@ def sync_bills(
     Pupils exempted from it, and optional fees a pupil hasn't taken, are skipped. Fees already on a
     bill are left as they are (a changed price isn't re-billed). Fixed number of statements.
     """
+    if not dry_run:  # two saves at once must not both add the same fee to the same bills
+        locks.hold(session, "billing", ctx.school_id)
     term = get_or_404(session, Term, term_id, label="Term")
     schedule = session.execute(
         select(
@@ -559,6 +565,7 @@ def charge_pupil(
     reason: str,
 ) -> uuid.UUID:
     """An item for one pupil (uniform, textbooks). Returns the bill it went on."""
+    locks.hold(session, "billing", ctx.school_id)  # it adds a line to a bill: positions must not collide
     student = get_or_404(session, Student, student_id, label="Student")
     item = get_or_404(session, FeeItem, fee_item_id, label="Fee", field="fee_item_id") if fee_item_id else None
     unit = unit_kobo if unit_kobo is not None else (item.default_amount_kobo if item else None)

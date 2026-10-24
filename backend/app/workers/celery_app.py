@@ -9,10 +9,15 @@ Tasks take IDs, never ORM objects, and open their own session with an
 explicit tenant scope (see app.workers.tasks).
 """
 
+from typing import Any
+
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_process_init, worker_process_shutdown
 
+from app.core import outbound
 from app.core.config import get_settings
+from app.core.db import engine
 from app.core.logging import configure_logging
 from app.core.monitoring import init_monitoring
 
@@ -49,3 +54,16 @@ celery_app.conf.update(
         "apply-retention": {"task": "privacy.apply_retention", "schedule": crontab(minute=45, hour=3)},
     },
 )
+
+
+@worker_process_init.connect
+def _fresh_connections_in_child(**_: Any) -> None:
+    """A forked worker must not reuse the parent's database sockets: drop them (without closing them
+    under the parent) so the child opens its own. HTTP clients are dropped by outbound's fork hook."""
+    engine.dispose(close=False)
+
+
+@worker_process_shutdown.connect
+def _close_connections(**_: Any) -> None:
+    engine.dispose()
+    outbound.close_all()
